@@ -18,6 +18,7 @@ import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js"
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
 import { WorkflowEngine } from "./engine.js";
 import { generateDiagram } from "./diagram.js";
+import { WorkflowStore, validateWorkflow } from "./store.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -32,48 +33,8 @@ const FLOW_PATH = join(PROJECT_ROOT, ".flow");
 const WORKFLOWS_PATH = join(FLOW_PATH, "workflows");
 const DIAGRAMS_PATH = join(FLOW_PATH, "diagrams");
 
-// In-memory workflow store (stateless - no task storage)
-class WorkflowStore {
-  constructor() {
-    this.workflows = new Map();
-  }
-
-  loadDefinition(id, workflow) {
-    this.workflows.set(id, workflow);
-    return id;
-  }
-
-  getDefinition(id) {
-    return this.workflows.get(id);
-  }
-
-  listWorkflows() {
-    return Array.from(this.workflows.entries()).map(([id, wf]) => ({
-      id,
-      name: wf.name || id,
-      description: wf.description || "",
-      stepCount: Object.keys(wf.nodes || {}).length,
-    }));
-  }
-}
-
 const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
-
-/**
- * Validate workflow schema
- */
-function validateWorkflow(id, content) {
-  if (!content.nodes || typeof content.nodes !== "object") {
-    console.error(`Invalid workflow ${id}: missing 'nodes' object`);
-    return false;
-  }
-  if (!content.edges || !Array.isArray(content.edges)) {
-    console.error(`Invalid workflow ${id}: missing 'edges' array`);
-    return false;
-  }
-  return true;
-}
 
 /**
  * Load workflows from project directory structure: {id}/workflow.json
