@@ -19,6 +19,7 @@ import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprot
 import { WorkflowEngine } from "./engine.js";
 import { generateDiagram } from "./diagram.js";
 import { WorkflowStore, validateWorkflow } from "./store.js";
+import { buildWorkflowSelectionDialog } from "./dialog.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -223,44 +224,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "SelectWorkflow": {
         const workflows = store.listWorkflows();
-        const byId = Object.fromEntries(workflows.map((w) => [w.id, w]));
-        const opt = (id) =>
-          byId[id]
-            ? { label: byId[id].name, description: `${byId[id].description} (${byId[id].stepCount} steps)` }
-            : null;
-
-        return jsonResponse({
-          schemaVersion: 2,
-          workflows,
-          dialog: [
-            {
-              question: "Which workflow?",
-              header: "Primary",
-              multiSelect: false,
-              options: [
-                opt("feature-development"),
-                opt("bug-fix"),
-                opt("context-optimization"),
-                opt("test-coverage"),
-              ].filter(Boolean),
-            },
-            {
-              question: "Or a simpler/specialized workflow?",
-              header: "Other",
-              multiSelect: false,
-              options: [opt("agile-task"), opt("quick-task"), opt("ui-reconstruction")].filter(Boolean),
-            },
-            {
-              question: "Include documentation?",
-              header: "Docs",
-              multiSelect: false,
-              options: [
-                { label: "Yes", description: "Generate documentation for the workflow" },
-                { label: "No", description: "Skip documentation" },
-              ],
-            },
-          ],
-        });
+        return jsonResponse(buildWorkflowSelectionDialog(workflows));
       }
 
       case "Diagram": {
