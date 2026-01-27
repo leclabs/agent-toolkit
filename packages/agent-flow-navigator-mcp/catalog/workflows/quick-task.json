@@ -1,0 +1,78 @@
+{
+  "id": "quick-task",
+  "name": "Quick Task",
+  "description": "Minimal workflow for small, straightforward tasks. Understand, execute, verify - no formal review gates.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Quick task begins"
+    },
+    "understand": {
+      "type": "task",
+      "name": "Understand",
+      "description": "Clarify what needs to be done and identify the approach",
+      "agent": "Developer",
+      "stage": "planning"
+    },
+    "execute": {
+      "type": "task",
+      "name": "Execute",
+      "description": "Make the changes or complete the work",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "verify": {
+      "type": "task",
+      "name": "Verify",
+      "description": "Confirm the work is correct and complete",
+      "agent": "Developer",
+      "stage": "verification",
+      "maxRetries": 1
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Done",
+      "description": "Task completed"
+    },
+    "hitl_blocked": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Blocked",
+      "description": "Task needs help"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "understand"
+    },
+    {
+      "from": "understand",
+      "to": "execute"
+    },
+    {
+      "from": "execute",
+      "to": "verify"
+    },
+    {
+      "from": "verify",
+      "to": "end_success",
+      "on": "passed"
+    },
+    {
+      "from": "verify",
+      "to": "execute",
+      "on": "failed",
+      "label": "Fix issues and try again"
+    },
+    {
+      "from": "verify",
+      "to": "hitl_blocked",
+      "on": "failed",
+      "label": "Needs human help"
+    }
+  ]
+}

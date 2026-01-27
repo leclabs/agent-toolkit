@@ -1,0 +1,104 @@
+{
+  "id": "agile-task",
+  "name": "Agile Task",
+  "description": "Simple workflow for general development tasks: analyze, implement, test, review.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Task entry point"
+    },
+    "analyze": {
+      "type": "task",
+      "name": "Analyze",
+      "description": "Understand requirements and plan approach",
+      "agent": "Planner",
+      "stage": "planning"
+    },
+    "implement": {
+      "type": "task",
+      "name": "Implement",
+      "description": "Write the code or make changes",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "test": {
+      "type": "task",
+      "name": "Test",
+      "description": "Verify the implementation works correctly",
+      "agent": "Tester",
+      "stage": "verification"
+    },
+    "review": {
+      "type": "gate",
+      "name": "Review",
+      "description": "Review code quality and correctness",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 2
+      }
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "Task completed successfully"
+    },
+    "hitl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Needs Help",
+      "description": "Task needs human intervention"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "analyze"
+    },
+    {
+      "from": "analyze",
+      "to": "implement"
+    },
+    {
+      "from": "implement",
+      "to": "test"
+    },
+    {
+      "from": "test",
+      "to": "review"
+    },
+    {
+      "from": "review",
+      "to": "implement",
+      "on": "failed",
+      "label": "Fix issues found in review"
+    },
+    {
+      "from": "review",
+      "to": "hitl_failed",
+      "on": "failed",
+      "label": "Too many review failures"
+    },
+    {
+      "from": "review",
+      "to": "commit",
+      "on": "passed",
+      "label": "All checks passed, commit changes"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    }
+  ]
+}

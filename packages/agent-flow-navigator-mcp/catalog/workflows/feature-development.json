@@ -1,0 +1,199 @@
+{
+  "id": "feature-development",
+  "name": "Feature Development",
+  "description": "End-to-end workflow for building features from GitHub issues or requirements. Includes planning, implementation, testing, and PR creation.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Feature development begins"
+    },
+    "parse_requirements": {
+      "type": "task",
+      "name": "Parse Requirements",
+      "description": "Extract acceptance criteria and requirements from the issue or request",
+      "agent": "Planner",
+      "stage": "planning"
+    },
+    "explore_codebase": {
+      "type": "task",
+      "name": "Explore Codebase",
+      "description": "Find relevant files, understand patterns, identify where changes are needed",
+      "agent": "Planner",
+      "stage": "planning"
+    },
+    "create_plan": {
+      "type": "task",
+      "name": "Create Plan",
+      "description": "Write implementation plan with specific files and changes needed",
+      "agent": "Planner",
+      "stage": "planning"
+    },
+    "plan_review": {
+      "type": "gate",
+      "name": "Review Plan",
+      "description": "Verify plan is complete and feasible",
+      "agent": "Reviewer",
+      "stage": "planning",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 2
+      }
+    },
+    "implement": {
+      "type": "task",
+      "name": "Implement",
+      "description": "Write the code following the plan",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "write_tests": {
+      "type": "task",
+      "name": "Write Tests",
+      "description": "Add unit and integration tests for the new feature",
+      "agent": "Tester",
+      "stage": "development"
+    },
+    "run_tests": {
+      "type": "task",
+      "name": "Run Tests",
+      "description": "Execute test suite and verify all tests pass",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 3
+    },
+    "code_review": {
+      "type": "gate",
+      "name": "Code Review",
+      "description": "Review code quality, patterns, and correctness",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 3
+      }
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message summarizing the work done",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "create_pr": {
+      "type": "task",
+      "name": "Create PR",
+      "description": "Create pull request with summary and test plan",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "Feature delivered successfully"
+    },
+    "hitl_plan_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Plan Needs Help",
+      "description": "Planning phase needs human input"
+    },
+    "hitl_impl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Implementation Blocked",
+      "description": "Implementation needs human intervention"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "parse_requirements"
+    },
+    {
+      "from": "parse_requirements",
+      "to": "explore_codebase"
+    },
+    {
+      "from": "explore_codebase",
+      "to": "create_plan"
+    },
+    {
+      "from": "create_plan",
+      "to": "plan_review"
+    },
+    {
+      "from": "plan_review",
+      "to": "create_plan",
+      "on": "failed",
+      "label": "Revise plan based on feedback"
+    },
+    {
+      "from": "plan_review",
+      "to": "hitl_plan_failed",
+      "on": "failed",
+      "label": "Planning exhausted retries"
+    },
+    {
+      "from": "plan_review",
+      "to": "implement",
+      "on": "passed",
+      "label": "Plan approved, begin implementation"
+    },
+    {
+      "from": "implement",
+      "to": "write_tests"
+    },
+    {
+      "from": "write_tests",
+      "to": "run_tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "implement",
+      "on": "failed",
+      "label": "Fix failing tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "hitl_impl_failed",
+      "on": "failed",
+      "label": "Tests keep failing"
+    },
+    {
+      "from": "run_tests",
+      "to": "code_review",
+      "on": "passed",
+      "label": "Tests pass, ready for review"
+    },
+    {
+      "from": "code_review",
+      "to": "implement",
+      "on": "failed",
+      "label": "Address review feedback"
+    },
+    {
+      "from": "code_review",
+      "to": "hitl_impl_failed",
+      "on": "failed",
+      "label": "Review issues persist"
+    },
+    {
+      "from": "code_review",
+      "to": "commit",
+      "on": "passed",
+      "label": "Code approved, commit changes"
+    },
+    {
+      "from": "commit",
+      "to": "create_pr"
+    },
+    {
+      "from": "create_pr",
+      "to": "end_success"
+    }
+  ]
+}

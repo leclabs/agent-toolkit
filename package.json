@@ -1,0 +1,37 @@
+{
+  "name": "@leclabs/agent-toolkit",
+  "version": "1.0.0",
+  "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration",
+  "main": "index.js",
+  "scripts": {
+    "test": "node --test --test-reporter spec packages/agent-flow-navigator-mcp/engine.test.js",
+    "lint": "eslint .",
+    "format": "prettier --write .",
+    "plugin:reinstall": "(claude plugin uninstall flow@agent-toolkit || true) && claude plugin marketplace update agent-toolkit && claude plugin install flow@agent-toolkit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/leclabs/agent-toolkit.git"
+  },
+  "keywords": [
+    "claude-code",
+    "mcp",
+    "workflow",
+    "agents",
+    "orchestration"
+  ],
+  "author": "Lance Caraccioli",
+  "license": "ISC",
+  "type": "module",
+  "bugs": {
+    "url": "https://github.com/leclabs/agent-toolkit/issues"
+  },
+  "homepage": "https://github.com/leclabs/agent-toolkit#readme",
+  "devDependencies": {
+    "@eslint/js": "^9.39.2",
+    "eslint": "^9.39.2",
+    "eslint-config-prettier": "^10.1.8",
+    "globals": "^17.1.0",
+    "prettier": "^3.8.1"
+  }
+}

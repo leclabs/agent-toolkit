@@ -1,0 +1,204 @@
+{
+  "id": "ui-reconstruction",
+  "name": "UI Reconstruction",
+  "description": "Extract semantic IR from existing UI, rebuild from specification. Implements the 'Platonic Form' philosophy - capturing the essence (what) not the implementation (how).",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "description": "Workflow entry point"
+    },
+    "ir_component_tree": {
+      "type": "task",
+      "name": "ir_component_tree",
+      "description": "Extract UI component hierarchy with element types, nesting, and framework imports. Output: Component tree with semantic roles.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_feature_boundary": {
+      "type": "task",
+      "name": "ir_feature_boundary",
+      "description": "Determine logical groupings of components that form discrete features. Output: Feature map with parent-child relationships.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_interactivity": {
+      "type": "task",
+      "name": "ir_interactivity",
+      "description": "Document user interactions: click handlers, form submissions, state mutations, and data flow. Output: Interaction inventory.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_business_object": {
+      "type": "task",
+      "name": "ir_business_object",
+      "description": "Identify domain entities displayed or manipulated by the UI and their CRUD operations. Output: Business object catalog.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_annotate": {
+      "type": "task",
+      "name": "ir_annotate",
+      "description": "Overlay visual markers on screenshot identifying components, features, and interactions. Output: Annotated screenshot.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_ascii": {
+      "type": "task",
+      "name": "ir_ascii",
+      "description": "Create text-based diagrams showing UI state transitions and user flows. Output: ASCII state machine diagram.",
+      "agent": "Planner",
+      "stage": "semantic-ir-extraction"
+    },
+    "ir_review": {
+      "type": "gate",
+      "name": "Review",
+      "description": "Validate completeness and accuracy of Semantic IR against source UI. Criteria: All visible elements mapped, interactions documented.",
+      "agent": "Reviewer",
+      "stage": "semantic-ir-extraction",
+      "maxRetries": 3,
+      "config": {
+        "scrutinyLevel": 3
+      }
+    },
+    "uiRebuild_build": {
+      "type": "task",
+      "name": "uiRebuild_build",
+      "description": "Implement UI from Semantic IR specification, matching visual layout and behavior. Preserve semantic structure over visual mimicry.",
+      "agent": "Developer",
+      "stage": "ui-build-from-ir"
+    },
+    "uiRebuild_review": {
+      "type": "gate",
+      "name": "Review",
+      "description": "Compare rebuilt UI against original screenshot and Semantic IR. Verify functional equivalence and semantic fidelity.",
+      "agent": "Reviewer",
+      "stage": "ui-build-from-ir",
+      "maxRetries": 3,
+      "config": {
+        "scrutinyLevel": 4
+      }
+    },
+    "final_review": {
+      "type": "gate",
+      "name": "Review",
+      "description": "Verify rebuilt UI captures essential purpose (Platonic Form) not just appearance. Test: Could this IR reconstruct the UI in a different framework?",
+      "agent": "Reviewer",
+      "stage": "unbiased-review",
+      "maxRetries": 1,
+      "config": {
+        "scrutinyLevel": 2
+      }
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "description": "Workflow completed successfully"
+    },
+    "hitl_ir_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "description": "IR extraction failed after max retries - requires human intervention"
+    },
+    "hitl_build_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "description": "UI rebuild failed after max retries - requires human intervention"
+    },
+    "hitl_final_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "description": "Final review failed after max retries - requires human intervention"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "ir_component_tree"
+    },
+    {
+      "from": "ir_component_tree",
+      "to": "ir_feature_boundary"
+    },
+    {
+      "from": "ir_feature_boundary",
+      "to": "ir_interactivity"
+    },
+    {
+      "from": "ir_interactivity",
+      "to": "ir_business_object"
+    },
+    {
+      "from": "ir_business_object",
+      "to": "ir_annotate"
+    },
+    {
+      "from": "ir_annotate",
+      "to": "ir_ascii"
+    },
+    {
+      "from": "ir_ascii",
+      "to": "ir_review"
+    },
+    {
+      "from": "ir_review",
+      "to": "ir_component_tree",
+      "on": "failed",
+      "label": "Reviewer feedback is provided to the analyzer"
+    },
+    {
+      "from": "ir_review",
+      "to": "hitl_ir_failed",
+      "on": "failed",
+      "label": "IR extraction exhausted retries"
+    },
+    {
+      "from": "ir_review",
+      "to": "uiRebuild_build",
+      "on": "passed",
+      "label": "Semantic IR is verified"
+    },
+    {
+      "from": "uiRebuild_build",
+      "to": "uiRebuild_review"
+    },
+    {
+      "from": "uiRebuild_review",
+      "to": "uiRebuild_build",
+      "on": "failed",
+      "label": "Reviewer feedback is provided to the builder"
+    },
+    {
+      "from": "uiRebuild_review",
+      "to": "hitl_build_failed",
+      "on": "failed",
+      "label": "UI rebuild exhausted retries"
+    },
+    {
+      "from": "uiRebuild_review",
+      "to": "final_review",
+      "on": "passed",
+      "label": "Build review passed"
+    },
+    {
+      "from": "final_review",
+      "to": "uiRebuild_build",
+      "on": "failed",
+      "label": "Reviewer feedback is provided to the builder"
+    },
+    {
+      "from": "final_review",
+      "to": "hitl_final_failed",
+      "on": "failed",
+      "label": "Final review exhausted retries"
+    },
+    {
+      "from": "final_review",
+      "to": "end_success",
+      "on": "passed",
+      "label": "Platonic form verified"
+    }
+  ]
+}

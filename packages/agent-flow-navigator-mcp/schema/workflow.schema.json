@@ -1,0 +1,169 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://agent-toolkit/flow/workflow.schema.json",
+  "title": "Flow Workflow Schema",
+  "description": "DAG-based workflow definition for agent orchestration",
+  "type": "object",
+  "required": ["id", "name", "nodes", "edges"],
+  "additionalProperties": false,
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]*$",
+      "description": "Unique workflow identifier (kebab-case)"
+    },
+    "name": {
+      "type": "string",
+      "description": "Human-readable workflow name"
+    },
+    "description": {
+      "type": "string",
+      "description": "What this workflow accomplishes"
+    },
+    "nodes": {
+      "type": "object",
+      "description": "Map of node ID to node definition",
+      "additionalProperties": { "$ref": "#/$defs/node" }
+    },
+    "edges": {
+      "type": "array",
+      "description": "Directed edges connecting nodes",
+      "items": { "$ref": "#/$defs/edge" }
+    }
+  },
+  "$defs": {
+    "node": {
+      "oneOf": [
+        { "$ref": "#/$defs/startNode" },
+        { "$ref": "#/$defs/endNode" },
+        { "$ref": "#/$defs/taskNode" },
+        { "$ref": "#/$defs/gateNode" },
+        { "$ref": "#/$defs/subflowNode" }
+      ]
+    },
+    "startNode": {
+      "type": "object",
+      "required": ["type"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "start" },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "endNode": {
+      "type": "object",
+      "required": ["type", "result"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "end" },
+        "result": {
+          "type": "string",
+          "enum": ["success", "failure", "blocked", "cancelled"],
+          "description": "How the workflow concluded"
+        },
+        "escalation": {
+          "type": "string",
+          "enum": ["hitl", "alert", "ticket"],
+          "description": "What action follows this end state"
+        },
+        "name": { "type": "string" },
+        "description": { "type": "string" }
+      }
+    },
+    "taskNode": {
+      "type": "object",
+      "required": ["type", "name"],
+      "additionalProperties": false,
+      "properties": {
+        "type": { "const": "task" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "agent": { "type": "string", "description": "Agent type to perform this task" },
+        "stage": {
+          "type": "string",
+          "enum": ["planning", "development", "verification", "delivery"],
+          "description": "Workflow phase this task belongs to"
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["passed", "failed"],
+          "description": "Possible outcomes from this task"
+        },
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0,
+          "description": "How many times this task can be retried on failure"
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Task-specific configuration"
+        }
+      }
+    },
+    "gateNode": {
+      "type": "object",
+      "required": ["type", "name"],
+      "additionalProperties": false,
+      "description": "Review or approval checkpoint",
+      "properties": {
+        "type": { "const": "gate" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "agent": { "type": "string" },
+        "stage": {
+          "type": "string",
+          "enum": ["planning", "development", "verification", "delivery"]
+        },
+        "outputs": {
+          "type": "array",
+          "items": { "type": "string" },
+          "default": ["passed", "failed"]
+        },
+        "maxRetries": {
+          "type": "integer",
+          "minimum": 0,
+          "default": 0
+        },
+        "config": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "subflowNode": {
+      "type": "object",
+      "required": ["type", "workflow"],
+      "additionalProperties": false,
+      "description": "Connector to another workflow",
+      "properties": {
+        "type": { "const": "subflow" },
+        "workflow": { "type": "string", "description": "ID of workflow to invoke" },
+        "name": { "type": "string" },
+        "description": { "type": "string" },
+        "inputs": {
+          "type": "object",
+          "additionalProperties": { "type": "string" },
+          "description": "Input mappings to pass to subflow"
+        }
+      }
+    },
+    "edge": {
+      "type": "object",
+      "required": ["from", "to"],
+      "additionalProperties": false,
+      "properties": {
+        "from": { "type": "string", "description": "Source node ID" },
+        "to": { "type": "string", "description": "Target node ID" },
+        "on": {
+          "type": "string",
+          "description": "Output value that triggers this edge (from node's outputs)"
+        },
+        "label": { "type": "string", "description": "Edge description for display" }
+      }
+    }
+  }
+}

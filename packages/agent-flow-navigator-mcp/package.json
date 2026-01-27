@@ -1,0 +1,37 @@
+{
+  "name": "@leclabs/agent-flow-navigator-mcp",
+  "version": "1.0.0",
+  "description": "MCP server that navigates agents through DAG-based workflows",
+  "bin": {
+    "agent-flow-navigator": "./index.js"
+  },
+  "main": "index.js",
+  "type": "module",
+  "scripts": {
+    "start": "node index.js",
+    "test": "node --test engine.test.js diagram.test.js"
+  },
+  "keywords": [
+    "mcp",
+    "workflow",
+    "flow",
+    "navigator",
+    "state-machine",
+    "claude",
+    "ai-agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/leclabs/agent-toolkit.git",
+    "directory": "packages/agent-flow-navigator-mcp"
+  },
+  "files": [
+    "index.js",
+    "engine.js",
+    "catalog/**/*.json"
+  ],
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.25.3",
+    "zod": "^3.22.4"
+  }
+}

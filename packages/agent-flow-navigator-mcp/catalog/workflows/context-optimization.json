@@ -1,0 +1,130 @@
+{
+  "id": "context-optimization",
+  "name": "Context Optimization",
+  "description": "Workflow for optimizing agent context, instructions, and integration points. Use when improving how agents communicate and preserve state.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Context optimization begins"
+    },
+    "map_connections": {
+      "type": "task",
+      "name": "Map Connections",
+      "description": "Identify all connection points between components (MCP, skills, agents, subagents)",
+      "agent": "Context Engineer",
+      "stage": "analysis"
+    },
+    "identify_pathologies": {
+      "type": "task",
+      "name": "Identify Pathologies",
+      "description": "Find context pathologies: specification bloat, attention dilution, redundant framing",
+      "agent": "Context Engineer",
+      "stage": "analysis"
+    },
+    "design_improvements": {
+      "type": "task",
+      "name": "Design Improvements",
+      "description": "Apply compression techniques: lead with conclusions, causal chains, precise terminology",
+      "agent": "Context Engineer",
+      "stage": "design"
+    },
+    "review_design": {
+      "type": "gate",
+      "name": "Review Design",
+      "description": "Verify improvements don't sacrifice meaning for brevity",
+      "agent": "Reviewer",
+      "stage": "design",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 2
+      }
+    },
+    "implement": {
+      "type": "task",
+      "name": "Implement",
+      "description": "Apply the optimizations to actual files and configurations",
+      "agent": "Developer",
+      "stage": "implementation"
+    },
+    "verify": {
+      "type": "task",
+      "name": "Verify",
+      "description": "Test that agents still function correctly with optimized context",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 2
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "Context optimization complete"
+    },
+    "hitl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Needs Help",
+      "description": "Optimization needs human guidance"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "map_connections"
+    },
+    {
+      "from": "map_connections",
+      "to": "identify_pathologies"
+    },
+    {
+      "from": "identify_pathologies",
+      "to": "design_improvements"
+    },
+    {
+      "from": "design_improvements",
+      "to": "review_design"
+    },
+    {
+      "from": "review_design",
+      "to": "design_improvements",
+      "on": "failed",
+      "label": "Revise optimizations"
+    },
+    {
+      "from": "review_design",
+      "to": "hitl_failed",
+      "on": "failed",
+      "label": "Design needs human input"
+    },
+    {
+      "from": "review_design",
+      "to": "implement",
+      "on": "passed",
+      "label": "Design approved"
+    },
+    {
+      "from": "implement",
+      "to": "verify"
+    },
+    {
+      "from": "verify",
+      "to": "implement",
+      "on": "failed",
+      "label": "Fix issues"
+    },
+    {
+      "from": "verify",
+      "to": "hitl_failed",
+      "on": "failed",
+      "label": "Verification failed"
+    },
+    {
+      "from": "verify",
+      "to": "end_success",
+      "on": "passed",
+      "label": "Optimization verified"
+    }
+  ]
+}

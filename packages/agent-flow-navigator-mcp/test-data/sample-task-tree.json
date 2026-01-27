@@ -1,0 +1,46 @@
+{
+  "tasks": [
+    {
+      "id": "task-001",
+      "issueId": "ISSUE-042",
+      "workflowType": "ui-reconstruction",
+      "currentStep": "start",
+      "priority": 100,
+      "status": "PENDING",
+      "retryCount": 0,
+      "context": {
+        "targetUrl": "https://app.example.com/dashboard",
+        "feature": "user-settings-panel",
+        "description": "Reconstruct the user settings panel from design mockups"
+      }
+    },
+    {
+      "id": "task-002",
+      "issueId": "ISSUE-037",
+      "workflowType": "context-engineering",
+      "currentStep": "ce_start",
+      "priority": 90,
+      "status": "PENDING",
+      "retryCount": 0,
+      "context": {
+        "domain": "e-commerce checkout flow",
+        "targetAgents": ["checkout-analyzer", "payment-builder"],
+        "description": "Define context and personas for checkout flow agents"
+      }
+    },
+    {
+      "id": "task-003",
+      "issueId": "ISSUE-051",
+      "workflowType": "research",
+      "currentStep": "research_start",
+      "priority": 80,
+      "status": "PENDING",
+      "retryCount": 0,
+      "context": {
+        "question": "What authentication patterns does the codebase use?",
+        "scope": ["src/auth", "src/middleware"],
+        "description": "Research authentication patterns for security audit"
+      }
+    }
+  ]
+}

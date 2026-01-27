@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "navigator": {
+      "command": "npx",
+      "args": ["-y", "@leclabs/agent-flow-navigator-mcp"]
+    }
+  }
+}

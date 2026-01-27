@@ -1,0 +1,127 @@
+{
+  "id": "test-coverage",
+  "name": "Test Coverage",
+  "description": "Analyze test coverage gaps and write tests to improve coverage.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Begin test coverage analysis"
+    },
+    "analyze_coverage": {
+      "type": "task",
+      "name": "Analyze Coverage",
+      "description": "Run coverage tools and identify untested code paths",
+      "agent": "Tester",
+      "stage": "analysis"
+    },
+    "identify_gaps": {
+      "type": "task",
+      "name": "Identify Gaps",
+      "description": "Prioritize coverage gaps by risk and importance",
+      "agent": "Planner",
+      "stage": "analysis"
+    },
+    "write_tests": {
+      "type": "task",
+      "name": "Write Tests",
+      "description": "Write tests for identified gaps",
+      "agent": "Tester",
+      "stage": "development"
+    },
+    "run_tests": {
+      "type": "task",
+      "name": "Run Tests",
+      "description": "Execute test suite and verify new tests pass",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 2
+    },
+    "review": {
+      "type": "gate",
+      "name": "Review",
+      "description": "Review test quality and coverage improvement",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 1,
+      "config": {
+        "scrutinyLevel": 2
+      }
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Tests",
+      "description": "Commit new tests with coverage metrics",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "Coverage improved successfully"
+    },
+    "hitl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Needs Help",
+      "description": "Coverage goals not achievable without guidance"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "analyze_coverage"
+    },
+    {
+      "from": "analyze_coverage",
+      "to": "identify_gaps"
+    },
+    {
+      "from": "identify_gaps",
+      "to": "write_tests"
+    },
+    {
+      "from": "write_tests",
+      "to": "run_tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "write_tests",
+      "on": "failed",
+      "label": "Fix failing tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "hitl_failed",
+      "on": "failed",
+      "label": "Tests keep failing"
+    },
+    {
+      "from": "run_tests",
+      "to": "review",
+      "on": "passed"
+    },
+    {
+      "from": "review",
+      "to": "write_tests",
+      "on": "failed",
+      "label": "Improve test quality"
+    },
+    {
+      "from": "review",
+      "to": "hitl_failed",
+      "on": "failed"
+    },
+    {
+      "from": "review",
+      "to": "commit",
+      "on": "passed"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    }
+  ]
+}

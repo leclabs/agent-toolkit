@@ -1,0 +1,127 @@
+{
+  "id": "bug-fix",
+  "name": "Bug Fix",
+  "description": "Workflow for fixing bugs: reproduce, investigate, fix, verify, and create PR.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Bug fix begins"
+    },
+    "reproduce": {
+      "type": "task",
+      "name": "Reproduce Bug",
+      "description": "Understand the bug and create a reliable reproduction case",
+      "agent": "Investigator",
+      "stage": "investigation"
+    },
+    "investigate": {
+      "type": "task",
+      "name": "Investigate",
+      "description": "Find root cause by tracing code paths and debugging",
+      "agent": "Investigator",
+      "stage": "investigation"
+    },
+    "write_fix": {
+      "type": "task",
+      "name": "Write Fix",
+      "description": "Implement the fix with minimal changes",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "add_regression_test": {
+      "type": "task",
+      "name": "Add Regression Test",
+      "description": "Write a test that would have caught this bug",
+      "agent": "Tester",
+      "stage": "development"
+    },
+    "verify_fix": {
+      "type": "task",
+      "name": "Verify Fix",
+      "description": "Run all tests and verify the bug is fixed",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit the fix and regression test with a descriptive message",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Fixed",
+      "description": "Bug fixed and PR created"
+    },
+    "hitl_cannot_reproduce": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Cannot Reproduce",
+      "description": "Unable to reproduce the bug - need more info"
+    },
+    "hitl_fix_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Fix Failed",
+      "description": "Unable to fix the bug - needs human help"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "reproduce"
+    },
+    {
+      "from": "reproduce",
+      "to": "investigate",
+      "on": "passed",
+      "label": "Bug reproduced successfully"
+    },
+    {
+      "from": "reproduce",
+      "to": "hitl_cannot_reproduce",
+      "on": "failed",
+      "label": "Could not reproduce bug"
+    },
+    {
+      "from": "investigate",
+      "to": "write_fix"
+    },
+    {
+      "from": "write_fix",
+      "to": "add_regression_test"
+    },
+    {
+      "from": "add_regression_test",
+      "to": "verify_fix"
+    },
+    {
+      "from": "verify_fix",
+      "to": "write_fix",
+      "on": "failed",
+      "label": "Fix didn't work, try again"
+    },
+    {
+      "from": "verify_fix",
+      "to": "hitl_fix_failed",
+      "on": "failed",
+      "label": "Cannot fix the bug"
+    },
+    {
+      "from": "verify_fix",
+      "to": "commit",
+      "on": "passed",
+      "label": "Bug verified fixed, commit changes"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    }
+  ]
+}
