@@ -16,7 +16,7 @@
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
 import { StdioServerTransport } from "@modelcontextprotocol/sdk/server/stdio.js";
 import { CallToolRequestSchema, ListToolsRequestSchema } from "@modelcontextprotocol/sdk/types.js";
-import { WorkflowEngine } from "./engine.js";
+import { WorkflowEngine, isTerminalNode, getTerminalType, toSubagentRef } from "./engine.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -57,16 +57,6 @@ function sanitizeMermaidLabel(label, maxLen = 40) {
 function sanitizeEdgeLabel(on) {
   if (!on) return "";
   return on.replace(/[|"]/g, "");
-}
-
-/**
- * Convert agent ID to subagent reference
- * e.g., "developer" -> "@flow:developer"
- */
-function toSubagentRef(agentId) {
-  if (!agentId) return null;
-  if (agentId.startsWith("@")) return agentId;
-  return `@flow:${agentId}`;
 }
 
 // In-memory workflow store (stateless - no task storage)
@@ -196,59 +186,6 @@ function jsonResponse(data) {
   return { content: [{ type: "text", text: JSON.stringify(data, null, 2) }] };
 }
 
-/**
- * Check if a node is a terminal node (start or end)
- */
-function isTerminalNode(node) {
-  if (!node) return false;
-  return node.type === "start" || node.type === "end";
-}
-
-/**
- * Get terminal type for a node
- * Returns: "start" | "success" | "hitl" | "failure" | null
- */
-function getTerminalType(node) {
-  if (!node) return null;
-  if (node.type === "start") return "start";
-  if (node.type === "end") {
-    if (node.escalation === "hitl") return "hitl";
-    return node.result === "success" ? "success" : "failure";
-  }
-  return null;
-}
-
-/**
- * Build unified response shape for Navigate
- * Minimal output: only what Orchestrator needs for control flow and delegation
- */
-function buildNavigateResponse(workflowType, stepId, stepDef, action, retriesIncremented = false) {
-  const stage = stepDef.stage || null;
-  // Build subject suffix: [workflow.stage.step] or [workflow.step] if no stage
-  const subjectSuffix = stage ? `[${workflowType}.${stage}.${stepId}]` : `[${workflowType}.${stepId}]`;
-
-  // Build step instructions from workflow definition + baseline
-  const isTerminal = isTerminalNode(stepDef);
-  const stepInstructions = isTerminal
-    ? null
-    : {
-        name: stepDef.name || stepId,
-        description: stepDef.description || null,
-        guidance: stepDef.instructions || getBaselineInstructions(stepId, stepDef.name),
-      };
-
-  return {
-    currentStep: stepId,
-    stage,
-    subagent: stepDef.agent ? toSubagentRef(stepDef.agent) : null,
-    stepInstructions,
-    terminal: getTerminalType(stepDef),
-    subjectSuffix,
-    action,
-    retriesIncremented,
-  };
-}
-
 // Define tools
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
@@ -334,77 +271,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "Navigate": {
-        const wfDef = store.getDefinition(args.workflowType);
-        if (!wfDef) {
-          throw new Error(`Workflow '${args.workflowType}' not found. Use ListWorkflows to see available workflows.`);
-        }
-
-        if (!wfDef.nodes) {
-          throw new Error(`Workflow '${args.workflowType}' must have nodes`);
-        }
-
-        const { nodes } = wfDef;
-        const retryCount = args.retryCount || 0;
-
-        // Case 1: No currentStep - start at first work step
-        if (!args.currentStep) {
-          const startEntry = Object.entries(nodes).find(([, node]) => node.type === "start");
-          if (!startEntry) {
-            throw new Error(`Workflow '${args.workflowType}' has no start node`);
-          }
-          const startStepId = startEntry[0];
-
-          const firstEdge = wfDef.edges.find((e) => e.from === startStepId);
-          if (!firstEdge) {
-            throw new Error(`No edge from start step in workflow '${args.workflowType}'`);
-          }
-
-          const firstStepDef = nodes[firstEdge.to];
-          if (!firstStepDef) {
-            throw new Error(`First step '${firstEdge.to}' not found in workflow`);
-          }
-
-          return jsonResponse(buildNavigateResponse(args.workflowType, firstEdge.to, firstStepDef, "start"));
-        }
-
-        // Case 2: currentStep but no result - return current state
-        if (!args.result) {
-          const stepDef = nodes[args.currentStep];
-          if (!stepDef) {
-            throw new Error(`Step '${args.currentStep}' not found in workflow '${args.workflowType}'`);
-          }
-
-          return jsonResponse(buildNavigateResponse(args.workflowType, args.currentStep, stepDef, "current"));
-        }
-
-        // Case 3: currentStep and result - advance to next step
-        const evaluation = engine.evaluateEdge(args.workflowType, args.currentStep, args.result, retryCount);
-
-        if (!evaluation.nextStep) {
-          return jsonResponse({
-            error: `No matching edge from '${args.currentStep}' with result '${args.result}'`,
-            currentStep: args.currentStep,
-            evaluation,
-          });
-        }
-
-        const nextStepDef = nodes[evaluation.nextStep];
-        if (!nextStepDef) {
-          throw new Error(`Next step '${evaluation.nextStep}' not found in workflow`);
-        }
-
-        // Determine action and whether retries incremented
-        const isRetry = evaluation.action === "retry";
-        let action;
-        if (isRetry) {
-          action = "retry";
-        } else if (getTerminalType(nextStepDef) === "hitl") {
-          action = "escalate";
-        } else {
-          action = "advance";
-        }
-
-        return jsonResponse(buildNavigateResponse(args.workflowType, evaluation.nextStep, nextStepDef, action, isRetry));
+        const result = engine.navigate(
+          args.workflowType,
+          args.currentStep,
+          args.result,
+          args.retryCount || 0
+        );
+        return jsonResponse(result);
       }
 
       case "ListWorkflows": {
@@ -832,69 +705,6 @@ Flow's workflows work directly from the catalog in the flow->navigator mcp. If y
 3. **Subagent Delegation** - Steps delegated to specialized agents (planner, developer, tester, reviewer)
 4. **Retry Logic** - Failed steps retry with configurable limits, escalate to HITL if exceeded
 `;
-}
-
-/**
- * Generate baseline instructions based on step type
- */
-function getBaselineInstructions(stepId, stepName) {
-  const id = stepId.toLowerCase();
-  const name = (stepName || "").toLowerCase();
-
-  // Analysis/Planning steps
-  if (id.includes("analyze") || id.includes("analysis") || name.includes("analyze")) {
-    return "Review the task requirements carefully. Identify key constraints, dependencies, and acceptance criteria. Create a clear plan before proceeding.";
-  }
-  if (id.includes("plan") || id.includes("design") || name.includes("plan")) {
-    return "Design the solution architecture. Consider edge cases, error handling, and how this fits with existing code. Document your approach.";
-  }
-  if (id.includes("investigate") || id.includes("reproduce")) {
-    return "Gather evidence and understand the root cause. Document reproduction steps and any patterns observed.";
-  }
-
-  // Implementation steps
-  if (id.includes("implement") || id.includes("build") || id.includes("develop") || id.includes("fix")) {
-    return "Write clean, well-structured code following project conventions. Keep changes focused and minimal. Add comments only where the logic isn't self-evident.";
-  }
-  if (id.includes("refactor")) {
-    return "Improve code structure without changing behavior. Ensure all tests pass before and after changes.";
-  }
-
-  // Testing steps
-  if (id.includes("test") || id.includes("verify") || id.includes("validate")) {
-    return "Verify the implementation works correctly. Test happy paths, edge cases, and error conditions. Document any issues found.";
-  }
-
-  // Review steps
-  if (id.includes("review")) {
-    return "Check for correctness, code quality, and adherence to project standards. Verify the implementation meets requirements.";
-  }
-
-  // Documentation steps
-  if (id.includes("document") || id.includes("readme")) {
-    return "Write clear, concise documentation. Focus on what users need to know, not implementation details.";
-  }
-
-  // Commit/PR steps
-  if (id.includes("commit")) {
-    return "Stage relevant changes and create a descriptive commit message. Follow project commit conventions.";
-  }
-  if (id.includes("pr") || id.includes("pull_request") || id.includes("pull-request")) {
-    return "Create a pull request with a clear title and description. Link related issues and describe what was changed and why.";
-  }
-
-  // Context/optimization steps
-  if (id.includes("context") || id.includes("optimize") || id.includes("compress")) {
-    return "Analyze the current state and identify improvements. Focus on clarity and efficiency.";
-  }
-
-  // Extract/transform steps
-  if (id.includes("extract") || id.includes("ir_")) {
-    return "Extract the relevant information systematically. Preserve important details while filtering noise.";
-  }
-
-  // Default
-  return "Complete this step thoroughly. Document your findings and any decisions made.";
 }
 
 /**

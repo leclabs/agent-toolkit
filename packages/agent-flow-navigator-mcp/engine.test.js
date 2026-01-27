@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { WorkflowEngine } from "./engine.js";
+import { WorkflowEngine, isTerminalNode, getTerminalType, toSubagentRef, getBaselineInstructions } from "./engine.js";
 
 /**
  * Minimal WorkflowStore for testing - matches production interface
@@ -231,6 +231,268 @@ describe("WorkflowEngine", () => {
 
       assert.strictEqual(result.nextStep, "C");
       assert.strictEqual(result.action, "conditional");
+    });
+  });
+
+  describe("navigate", () => {
+    it("should start at first work step when no currentStep provided", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "planner" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "analyze" },
+          { from: "analyze", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf");
+
+      assert.strictEqual(result.currentStep, "analyze");
+      assert.strictEqual(result.action, "start");
+      assert.strictEqual(result.stage, "planning");
+      assert.strictEqual(result.subagent, "@flow:planner");
+      assert.strictEqual(result.terminal, null);
+      assert.ok(result.stepInstructions);
+      assert.strictEqual(result.stepInstructions.name, "Analyze");
+    });
+
+    it("should return current state when currentStep but no result", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          implement: { type: "task", name: "Implement", description: "Build it" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "implement" },
+          { from: "implement", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf", "implement");
+
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.action, "current");
+      assert.ok(result.stepInstructions);
+    });
+
+    it("should advance to next step when result is passed", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          analyze: { type: "task", name: "Analyze" },
+          implement: { type: "task", name: "Implement" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "analyze" },
+          { from: "analyze", to: "implement", on: "passed" },
+          { from: "implement", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf", "analyze", "passed");
+
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.action, "advance");
+      assert.strictEqual(result.retriesIncremented, false);
+    });
+
+    it("should navigate to terminal with correct type", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task" },
+          done: { type: "end", result: "success", name: "Done" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "done", on: "passed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf", "task", "passed");
+
+      assert.strictEqual(result.currentStep, "done");
+      assert.strictEqual(result.terminal, "success");
+      assert.strictEqual(result.stepInstructions, null);
+    });
+
+    it("should handle retry with incremented flag", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task", maxRetries: 2 },
+          retry: { type: "task", name: "Retry Task" },
+          escalate: { type: "end", escalation: "hitl", name: "HITL" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "retry", on: "failed" },
+          { from: "task", to: "escalate", on: "failed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf", "task", "failed", 0);
+
+      assert.strictEqual(result.currentStep, "retry");
+      assert.strictEqual(result.action, "retry");
+      assert.strictEqual(result.retriesIncremented, true);
+    });
+
+    it("should escalate to HITL when retries exhausted", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task", maxRetries: 1 },
+          retry: { type: "task", name: "Retry Task" },
+          escalate: { type: "end", escalation: "hitl", name: "HITL" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "retry", on: "failed" },
+          { from: "task", to: "escalate", on: "failed" },
+        ],
+      };
+      store.loadDefinition("test-wf", def);
+
+      const result = engine.navigate("test-wf", "task", "failed", 1);
+
+      assert.strictEqual(result.currentStep, "escalate");
+      assert.strictEqual(result.action, "escalate");
+      assert.strictEqual(result.terminal, "hitl");
+    });
+
+    it("should throw for non-existent workflow", () => {
+      assert.throws(() => engine.navigate("nonexistent"), /not found/);
+    });
+
+    it("should throw for non-existent step", () => {
+      const def = {
+        nodes: { start: { type: "start" }, A: { type: "task", name: "A" } },
+        edges: [{ from: "start", to: "A" }],
+      };
+      store.loadDefinition("test", def);
+
+      assert.throws(() => engine.navigate("test", "nonexistent"), /not found/);
+    });
+
+    it("should build correct subjectSuffix with stage", () => {
+      const def = {
+        nodes: {
+          start: { type: "start" },
+          task: { type: "task", name: "Task", stage: "development" },
+        },
+        edges: [{ from: "start", to: "task" }],
+      };
+      store.loadDefinition("my-workflow", def);
+
+      const result = engine.navigate("my-workflow");
+
+      assert.strictEqual(result.subjectSuffix, "[my-workflow.development.task]");
+    });
+
+    it("should build correct subjectSuffix without stage", () => {
+      const def = {
+        nodes: {
+          start: { type: "start" },
+          task: { type: "task", name: "Task" },
+        },
+        edges: [{ from: "start", to: "task" }],
+      };
+      store.loadDefinition("simple", def);
+
+      const result = engine.navigate("simple");
+
+      assert.strictEqual(result.subjectSuffix, "[simple.task]");
+    });
+  });
+});
+
+describe("Helper functions", () => {
+  describe("isTerminalNode", () => {
+    it("should return true for start nodes", () => {
+      assert.strictEqual(isTerminalNode({ type: "start" }), true);
+    });
+
+    it("should return true for end nodes", () => {
+      assert.strictEqual(isTerminalNode({ type: "end" }), true);
+    });
+
+    it("should return false for task nodes", () => {
+      assert.strictEqual(isTerminalNode({ type: "task" }), false);
+    });
+
+    it("should return false for null/undefined", () => {
+      assert.strictEqual(isTerminalNode(null), false);
+      assert.strictEqual(isTerminalNode(undefined), false);
+    });
+  });
+
+  describe("getTerminalType", () => {
+    it("should return 'start' for start nodes", () => {
+      assert.strictEqual(getTerminalType({ type: "start" }), "start");
+    });
+
+    it("should return 'success' for successful end nodes", () => {
+      assert.strictEqual(getTerminalType({ type: "end", result: "success" }), "success");
+    });
+
+    it("should return 'failure' for failed end nodes", () => {
+      assert.strictEqual(getTerminalType({ type: "end", result: "failure" }), "failure");
+    });
+
+    it("should return 'hitl' for HITL escalation nodes", () => {
+      assert.strictEqual(getTerminalType({ type: "end", escalation: "hitl" }), "hitl");
+    });
+
+    it("should return null for task nodes", () => {
+      assert.strictEqual(getTerminalType({ type: "task" }), null);
+    });
+  });
+
+  describe("toSubagentRef", () => {
+    it("should prefix with @flow:", () => {
+      assert.strictEqual(toSubagentRef("developer"), "@flow:developer");
+    });
+
+    it("should not double-prefix", () => {
+      assert.strictEqual(toSubagentRef("@flow:developer"), "@flow:developer");
+    });
+
+    it("should return null for falsy input", () => {
+      assert.strictEqual(toSubagentRef(null), null);
+      assert.strictEqual(toSubagentRef(""), null);
+    });
+  });
+
+  describe("getBaselineInstructions", () => {
+    it("should return analyze instructions for analyze steps", () => {
+      const result = getBaselineInstructions("analyze_task", "");
+      assert.ok(result.includes("requirements"));
+    });
+
+    it("should return implement instructions for implement steps", () => {
+      const result = getBaselineInstructions("implement", "Build Feature");
+      assert.ok(result.includes("code"));
+    });
+
+    it("should return test instructions for test steps", () => {
+      const result = getBaselineInstructions("test_unit", "");
+      assert.ok(result.includes("Verify"));
+    });
+
+    it("should return default instructions for unknown steps", () => {
+      const result = getBaselineInstructions("unknown_step", "");
+      assert.ok(result.includes("Complete"));
     });
   });
 });
