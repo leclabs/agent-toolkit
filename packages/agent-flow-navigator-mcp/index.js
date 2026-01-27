@@ -106,20 +106,25 @@ function loadCatalogWorkflows(dirPath) {
 }
 
 /**
- * Load workflows: project .flow/workflows/ first (directory structure),
- * then catalog as fallback (flat files)
+ * Load workflows: catalog first, then project overwrites (project takes precedence)
  */
 function loadWorkflows() {
-  if (existsSync(WORKFLOWS_PATH)) {
-    const projectLoaded = loadProjectWorkflows(WORKFLOWS_PATH);
-    if (projectLoaded.length > 0) {
-      return { source: "project", loaded: projectLoaded };
-    }
-  }
-
   const catalogPath = join(CATALOG_PATH, "workflows");
   const catalogLoaded = loadCatalogWorkflows(catalogPath);
-  return { source: "catalog", loaded: catalogLoaded };
+
+  const projectLoaded = existsSync(WORKFLOWS_PATH)
+    ? loadProjectWorkflows(WORKFLOWS_PATH)
+    : [];
+
+  // Determine which IDs came from where (project overwrites catalog)
+  const fromCatalog = catalogLoaded.filter((id) => !projectLoaded.includes(id));
+  const fromProject = projectLoaded;
+
+  return {
+    catalog: fromCatalog,
+    project: fromProject,
+    loaded: [...new Set([...catalogLoaded, ...projectLoaded])],
+  };
 }
 
 // Initialize server
@@ -368,7 +373,10 @@ await server.connect(transport);
 
 console.error(`Navigator MCP Server v2 running (stateless)`);
 console.error(`  Project: ${PROJECT_ROOT}`);
-console.error(`  Workflows: ${workflowInfo.loaded.length} from ${workflowInfo.source}`);
-if (workflowInfo.loaded.length > 0) {
-  console.error(`  Loaded: ${workflowInfo.loaded.join(", ")}`);
+console.error(`  Workflows: ${workflowInfo.loaded.length} total`);
+if (workflowInfo.catalog.length > 0) {
+  console.error(`    Catalog: ${workflowInfo.catalog.join(", ")}`);
+}
+if (workflowInfo.project.length > 0) {
+  console.error(`    Project: ${workflowInfo.project.join(", ")}`);
 }

@@ -4,7 +4,7 @@
   "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration",
   "main": "index.js",
   "scripts": {
-    "test": "node --test --test-reporter spec packages/agent-flow-navigator-mcp/engine.test.js",
+    "test": "npm test --prefix packages/agent-flow-navigator-mcp",
     "lint": "eslint .",
     "format": "prettier --write .",
     "plugin:reinstall": "(claude plugin uninstall flow@agent-toolkit || true) && claude plugin marketplace update agent-toolkit && claude plugin install flow@agent-toolkit"

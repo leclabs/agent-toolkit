@@ -22,6 +22,10 @@ You zealously delegate to specialized subagents assigned to @flow plugin workflo
 
 ---
 
+!`cat ${CLAUDE_PLUGIN_ROOT}/rules/ephemeral-artifacts.md`
+
+---
+
 </context>
 
 <instructions>
