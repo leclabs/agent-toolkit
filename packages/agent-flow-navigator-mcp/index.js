@@ -26,6 +26,11 @@ import {
   isValidWorkflowForCopy,
   computeWorkflowsToCopy,
 } from "./copier.js";
+import {
+  buildWorkflowSummary,
+  buildCatalogResponse,
+  buildEmptyCatalogResponse,
+} from "./catalog.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -311,7 +316,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "ListCatalog": {
         const catalogPath = join(CATALOG_PATH, "workflows");
         if (!existsSync(catalogPath)) {
-          return jsonResponse({ schemaVersion: 2, workflows: [], selectionOptions: [] });
+          return jsonResponse(buildEmptyCatalogResponse());
         }
 
         const workflows = [];
@@ -320,30 +325,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         for (const file of files) {
           try {
             const content = JSON.parse(readFileSync(join(catalogPath, file), "utf-8"));
-            workflows.push({
-              id: content.id || file.replace(".json", ""),
-              name: content.name || content.id,
-              description: content.description || "",
-              stepCount: Object.keys(content.nodes || {}).length,
-            });
+            workflows.push(buildWorkflowSummary(file.replace(".json", ""), content));
           } catch {
             // Skip invalid files
           }
         }
 
-        // Build AskUserQuestion-ready options with "All" first
-        const selectionOptions = [
-          {
-            label: "All workflows (Recommended)",
-            description: `Copy all ${workflows.length} workflows to your project`,
-          },
-          ...workflows.map((wf) => ({
-            label: wf.name,
-            description: `${wf.description} (${wf.stepCount} steps)`,
-          })),
-        ];
-
-        return jsonResponse({ schemaVersion: 2, workflows, selectionOptions });
+        return jsonResponse(buildCatalogResponse(workflows));
       }
 
       default:

@@ -9,7 +9,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test engine.test.js diagram.test.js store.test.js dialog.test.js copier.test.js"
+    "test": "node --test engine.test.js diagram.test.js store.test.js dialog.test.js copier.test.js catalog.test.js"
   },
   "keywords": [
     "mcp",
@@ -32,6 +32,7 @@
     "store.js",
     "dialog.js",
     "copier.js",
+    "catalog.js",
     "catalog/**/*.json"
   ],
   "dependencies": {
