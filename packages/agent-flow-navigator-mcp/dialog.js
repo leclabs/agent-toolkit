@@ -36,22 +36,15 @@ export function buildWorkflowSelectionDialog(workflows) {
         question: "Which workflow?",
         header: "Primary",
         multiSelect: false,
-        options: [
-          opt("feature-development"),
-          opt("bug-fix"),
-          opt("context-optimization"),
-          opt("test-coverage"),
-        ].filter(Boolean),
+        options: [opt("feature-development"), opt("bug-fix"), opt("context-optimization"), opt("test-coverage")].filter(
+          Boolean
+        ),
       },
       {
         question: "Or a simpler/specialized workflow?",
         header: "Other",
         multiSelect: false,
-        options: [
-          opt("agile-task"),
-          opt("quick-task"),
-          opt("ui-reconstruction"),
-        ].filter(Boolean),
+        options: [opt("agile-task"), opt("quick-task"), opt("ui-reconstruction")].filter(Boolean),
       },
       {
         question: "Include documentation?",

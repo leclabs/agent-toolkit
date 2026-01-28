@@ -1,6 +1,13 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { WorkflowEngine, isTerminalNode, getTerminalType, toSubagentRef, getBaselineInstructions, readTaskFile } from "./engine.js";
+import {
+  WorkflowEngine,
+  isTerminalNode,
+  getTerminalType,
+  toSubagentRef,
+  getBaselineInstructions,
+  readTaskFile,
+} from "./engine.js";
 import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
@@ -285,15 +292,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "implement",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "implement",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile });
@@ -326,15 +336,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "analyze",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "analyze",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
@@ -366,15 +379,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "task",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "task",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
@@ -407,15 +423,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "task",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "task",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });
@@ -449,15 +468,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "task",
-          retryCount: 1,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "task",
+            retryCount: 1,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });
@@ -486,10 +508,13 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+        })
+      );
 
       try {
         assert.throws(() => engine.navigate({ taskFilePath: taskFile }), /Task has no metadata/);
@@ -575,15 +600,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "analyze",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "analyze",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile });
@@ -615,15 +643,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "analyze",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "analyze",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
@@ -653,15 +684,18 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "task",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "task",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
@@ -713,16 +747,19 @@ describe("WorkflowEngine", () => {
       const taskDir = join(tmpdir(), "flow-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "analyze",
-          retryCount: 0,
-          userDescription: "Build the auth system",
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "analyze",
+            retryCount: 0,
+            userDescription: "Build the auth system",
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile });
@@ -987,15 +1024,18 @@ describe("lint_format gate behavior", () => {
       const taskDir = join(tmpdir(), "flow-lint-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "lint_format",
-          retryCount: 0,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "lint_format",
+            retryCount: 0,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });
@@ -1017,15 +1057,18 @@ describe("lint_format gate behavior", () => {
       const taskDir = join(tmpdir(), "flow-lint-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "lint_format",
-          retryCount: 1,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "lint_format",
+            retryCount: 1,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
@@ -1048,15 +1091,18 @@ describe("lint_format gate behavior", () => {
       const taskDir = join(tmpdir(), "flow-lint-test-" + Date.now());
       mkdirSync(taskDir, { recursive: true });
       const taskFile = join(taskDir, "task.json");
-      writeFileSync(taskFile, JSON.stringify({
-        id: "1",
-        subject: "Test task",
-        metadata: {
-          workflowType: "test-wf",
-          currentStep: "lint_format",
-          retryCount: 3,
-        },
-      }));
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: {
+            workflowType: "test-wf",
+            currentStep: "lint_format",
+            retryCount: 3,
+          },
+        })
+      );
 
       try {
         const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });

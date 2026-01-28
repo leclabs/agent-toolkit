@@ -82,9 +82,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
   lines.push("    classDef successStep fill:#87CEEB,stroke:#4169E1");
   lines.push("    classDef hitlStep fill:#FFB6C1,stroke:#DC143C");
   lines.push("    classDef gateStep fill:#E6E6FA,stroke:#9370DB");
-  lines.push(
-    "    classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px"
-  );
+  lines.push("    classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px");
 
   const startSteps = Object.entries(nodes)
     .filter(([, s]) => getTerminalType(s) === "start")
@@ -93,17 +91,14 @@ export function generateDiagram(workflowDef, currentStep = null) {
     .filter(([, s]) => getTerminalType(s) === "success")
     .map(([id]) => id);
   const hitlSteps = Object.entries(nodes)
-    .filter(
-      ([, s]) => getTerminalType(s) === "hitl" || getTerminalType(s) === "failure"
-    )
+    .filter(([, s]) => getTerminalType(s) === "hitl" || getTerminalType(s) === "failure")
     .map(([id]) => id);
   const gateSteps = Object.entries(nodes)
     .filter(([, s]) => s.type === "gate")
     .map(([id]) => id);
 
   if (startSteps.length) lines.push(`    class ${startSteps.join(",")} startStep`);
-  if (successSteps.length)
-    lines.push(`    class ${successSteps.join(",")} successStep`);
+  if (successSteps.length) lines.push(`    class ${successSteps.join(",")} successStep`);
   if (hitlSteps.length) lines.push(`    class ${hitlSteps.join(",")} hitlStep`);
   if (gateSteps.length) lines.push(`    class ${gateSteps.join(",")} gateStep`);
 
@@ -117,9 +112,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
   tableRows.push("|-------|------|------|-------|--------------|");
 
   // Group steps by stage for organized display - filter out terminal/start/end nodes
-  const stepEntries = Object.entries(nodes).filter(
-    ([, step]) => !isTerminalNode(step)
-  );
+  const stepEntries = Object.entries(nodes).filter(([, step]) => !isTerminalNode(step));
 
   for (const [stepId, step] of stepEntries) {
     const stage = step.stage || "-";
@@ -128,9 +121,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
     const instructions = step.instructions || step.description || "-";
     // Escape pipes in table cells
     const safeInstructions = instructions.replace(/\|/g, "\\|");
-    tableRows.push(
-      `| ${stage} | ${stepId} | ${name} | ${agent} | ${safeInstructions} |`
-    );
+    tableRows.push(`| ${stage} | ${stepId} | ${name} | ${agent} | ${safeInstructions} |`);
   }
 
   // Assemble output with markdown code block for mermaid

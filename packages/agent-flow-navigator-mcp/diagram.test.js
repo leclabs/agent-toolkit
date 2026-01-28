@@ -357,10 +357,7 @@ function setupTestProject() {
 
   // Create workflow directory structure
   mkdirSync(join(WORKFLOWS_PATH, "test-workflow"), { recursive: true });
-  writeFileSync(
-    join(WORKFLOWS_PATH, "test-workflow", "workflow.json"),
-    JSON.stringify(SIMPLE_WORKFLOW, null, 2)
-  );
+  writeFileSync(join(WORKFLOWS_PATH, "test-workflow", "workflow.json"), JSON.stringify(SIMPLE_WORKFLOW, null, 2));
 }
 
 /**
@@ -447,10 +444,7 @@ describe("Diagram Tool", () => {
         ...SIMPLE_WORKFLOW,
         name: "Modified Test Workflow",
       };
-      writeFileSync(
-        join(WORKFLOWS_PATH, "test-workflow", "workflow.json"),
-        JSON.stringify(modifiedWorkflow, null, 2)
-      );
+      writeFileSync(join(WORKFLOWS_PATH, "test-workflow", "workflow.json"), JSON.stringify(modifiedWorkflow, null, 2));
 
       // Reconnect to reload workflows
       await client.disconnect();

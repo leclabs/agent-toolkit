@@ -26,11 +26,7 @@ import {
   isValidWorkflowForCopy,
   computeWorkflowsToCopy,
 } from "./copier.js";
-import {
-  buildWorkflowSummary,
-  buildCatalogResponse,
-  buildEmptyCatalogResponse,
-} from "./catalog.js";
+import { buildWorkflowSummary, buildCatalogResponse, buildEmptyCatalogResponse } from "./catalog.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -112,9 +108,7 @@ function loadWorkflows() {
   const catalogPath = join(CATALOG_PATH, "workflows");
   const catalogLoaded = loadCatalogWorkflows(catalogPath);
 
-  const projectLoaded = existsSync(WORKFLOWS_PATH)
-    ? loadProjectWorkflows(WORKFLOWS_PATH)
-    : [];
+  const projectLoaded = existsSync(WORKFLOWS_PATH) ? loadProjectWorkflows(WORKFLOWS_PATH) : [];
 
   // Determine which IDs came from where (project overwrites catalog)
   const fromCatalog = catalogLoaded.filter((id) => !projectLoaded.includes(id));
@@ -147,7 +141,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            taskFilePath: { type: "string", description: "Path to task file (for advance/current). Reads workflow state from task metadata." },
+            taskFilePath: {
+              type: "string",
+              description: "Path to task file (for advance/current). Reads workflow state from task metadata.",
+            },
             workflowType: { type: "string", description: "Workflow ID (for start only, e.g., 'feature-development')" },
             result: {
               type: "string",

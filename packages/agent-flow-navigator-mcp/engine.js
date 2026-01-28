@@ -131,9 +131,7 @@ export function getBaselineInstructions(stepId, stepName) {
 function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description) {
   if (!stepInstructions) return null; // Terminal nodes have no instructions
 
-  const delegationPrefix = subagent
-    ? `Invoke ${subagent} to complete the following task: `
-    : "";
+  const delegationPrefix = subagent ? `Invoke ${subagent} to complete the following task: ` : "";
 
   return `${delegationPrefix}${stepInstructions.guidance}
 
@@ -144,7 +142,15 @@ ${description || "{task description}"}`;
  * Build unified response shape for Navigate
  * Minimal output: only what Orchestrator needs for control flow and delegation
  */
-function buildNavigateResponse(workflowType, stepId, stepDef, action, retriesIncremented = false, retryCount = 0, description = null) {
+function buildNavigateResponse(
+  workflowType,
+  stepId,
+  stepDef,
+  action,
+  retriesIncremented = false,
+  retryCount = 0,
+  description = null
+) {
   const stage = stepDef.stage || null;
   const subagent = stepDef.agent ? toSubagentRef(stepDef.agent) : null;
 
@@ -276,12 +282,8 @@ export class WorkflowEngine {
     }
 
     // Separate retry edges (to non-end) from escalation edges (to end)
-    const retryEdges = matchingEdges.filter(
-      (e) => !this.isEndNode(graph.nodes[e.to])
-    );
-    const escalateEdges = matchingEdges.filter((e) =>
-      this.isEndNode(graph.nodes[e.to])
-    );
+    const retryEdges = matchingEdges.filter((e) => !this.isEndNode(graph.nodes[e.to]));
+    const escalateEdges = matchingEdges.filter((e) => this.isEndNode(graph.nodes[e.to]));
 
     // Handle failed with both retry and escalation paths
     if (result === "failed" && retryEdges.length > 0 && escalateEdges.length > 0) {
@@ -366,7 +368,12 @@ export class WorkflowEngine {
         throw new Error("Task has no metadata");
       }
 
-      const { userDescription, workflowType: metaWorkflow, currentStep: metaStep, retryCount: metaRetry = 0 } = task.metadata;
+      const {
+        userDescription,
+        workflowType: metaWorkflow,
+        currentStep: metaStep,
+        retryCount: metaRetry = 0,
+      } = task.metadata;
       workflowType = metaWorkflow;
       currentStep = metaStep;
       retryCount = metaRetry;
@@ -447,6 +454,14 @@ export class WorkflowEngine {
       action = "advance";
     }
 
-    return buildNavigateResponse(workflowType, evaluation.nextStep, nextStepDef, action, isRetry, retryCount, description);
+    return buildNavigateResponse(
+      workflowType,
+      evaluation.nextStep,
+      nextStepDef,
+      action,
+      isRetry,
+      retryCount,
+      description
+    );
   }
 }

@@ -25,16 +25,16 @@ task: Update config file         # → quick-task workflow
 
 ## Commands
 
-| Command | Description |
-|---------|-------------|
-| `/flow:list` | List available workflows |
-| `/flow:task-create` | Create a new task with workflow tracking |
-| `/flow:task-list` | List all flow tasks with current status |
-| `/flow:task-get` | Get detailed task info including workflow diagram |
-| `/flow:task-advance` | Advance task: `<taskId> <passed|failed> <navigator> [summary]` |
-| `/flow:run` | Execute flow tasks autonomously |
-| `/flow:init` | Copy workflows to .flow/workflows/ for customization |
-| `/flow:load` | Reload workflows after editing .flow/workflows/ |
+| Command              | Description                                          |
+| -------------------- | ---------------------------------------------------- | ------------------------------ |
+| `/flow:list`         | List available workflows                             |
+| `/flow:task-create`  | Create a new task with workflow tracking             |
+| `/flow:task-list`    | List all flow tasks with current status              |
+| `/flow:task-get`     | Get detailed task info including workflow diagram    |
+| `/flow:task-advance` | Advance task: `<taskId> <passed                      | failed> <navigator> [summary]` |
+| `/flow:run`          | Execute flow tasks autonomously                      |
+| `/flow:init`         | Copy workflows to .flow/workflows/ for customization |
+| `/flow:load`         | Reload workflows after editing .flow/workflows/      |
 
 ## Available Workflows
 
@@ -58,6 +58,7 @@ Flow's workflows work directly from the catalog in the flow->navigator mcp. If y
 ```
 
 **Customization options:**
+
 - Modify step definitions in workflow.json
 - Add custom `instructions` to steps for project-specific guidance
 - Create new workflows by adding new directories

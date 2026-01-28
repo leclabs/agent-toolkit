@@ -93,9 +93,7 @@ describe("buildCatalogSelectionOptions", () => {
 });
 
 describe("buildCatalogResponse", () => {
-  const workflows = [
-    { id: "wf1", name: "Workflow One", description: "First", stepCount: 5 },
-  ];
+  const workflows = [{ id: "wf1", name: "Workflow One", description: "First", stepCount: 5 }];
 
   it("should have schemaVersion 2", () => {
     const result = buildCatalogResponse(workflows);

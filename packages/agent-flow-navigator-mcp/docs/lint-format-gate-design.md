@@ -28,11 +28,11 @@ Design specification for adding a `lint_format` gate node to commit workflows.
 
 Every `lint_format` gate has 3 outgoing edges:
 
-| Edge | Condition | Target | Purpose |
-|------|-----------|--------|---------|
-| 1 | `on: passed` | `commit` | Lint passes, proceed to commit |
-| 2 | `on: failed` | Implementation node | Retry: fix issues and rerun |
-| 3 | `on: failed` | HITL node | Escalation: retries exhausted |
+| Edge | Condition    | Target              | Purpose                        |
+| ---- | ------------ | ------------------- | ------------------------------ |
+| 1    | `on: passed` | `commit`            | Lint passes, proceed to commit |
+| 2    | `on: failed` | Implementation node | Retry: fix issues and rerun    |
+| 3    | `on: failed` | HITL node           | Escalation: retries exhausted  |
 
 ## Workflow Integration
 
@@ -47,13 +47,14 @@ code_review --[passed]--> lint_format --[passed]--> commit
                               +--[failed]--> hitl_impl_failed (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | implement | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_impl_failed | failed | Lint issues persist |
+| Edge | From        | To               | Condition | Label                       |
+| ---- | ----------- | ---------------- | --------- | --------------------------- |
+| 1    | lint_format | commit           | passed    | Lint passes, commit changes |
+| 2    | lint_format | implement        | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_impl_failed | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Change `code_review --[passed]--> commit` to `code_review --[passed]--> lint_format`
 - Add 3 edges from `lint_format`
@@ -71,13 +72,14 @@ verify_fix --[passed]--> lint_format --[passed]--> commit
                               +--[failed]--> hitl_fix_failed (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | write_fix | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_fix_failed | failed | Lint issues persist |
+| Edge | From        | To              | Condition | Label                       |
+| ---- | ----------- | --------------- | --------- | --------------------------- |
+| 1    | lint_format | commit          | passed    | Lint passes, commit changes |
+| 2    | lint_format | write_fix       | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_fix_failed | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Change `verify_fix --[passed]--> commit` to `verify_fix --[passed]--> lint_format`
 - Add 3 edges from `lint_format`
@@ -97,13 +99,14 @@ verify --[passed]--> lint_format --[passed]--> commit --> end_success
                           +--[failed]--> hitl_blocked (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | execute | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_blocked | failed | Lint issues persist |
+| Edge | From        | To           | Condition | Label                       |
+| ---- | ----------- | ------------ | --------- | --------------------------- |
+| 1    | lint_format | commit       | passed    | Lint passes, commit changes |
+| 2    | lint_format | execute      | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_blocked | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Add `commit` node (does not exist in quick-task)
 - Change `verify --[passed]--> end_success` to `verify --[passed]--> lint_format`
@@ -123,13 +126,14 @@ review --[passed]--> lint_format --[passed]--> commit
                           +--[failed]--> hitl_failed (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | implement | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_failed | failed | Lint issues persist |
+| Edge | From        | To          | Condition | Label                       |
+| ---- | ----------- | ----------- | --------- | --------------------------- |
+| 1    | lint_format | commit      | passed    | Lint passes, commit changes |
+| 2    | lint_format | implement   | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_failed | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Change `review --[passed]--> commit` to `review --[passed]--> lint_format`
 - Add 3 edges from `lint_format`
@@ -147,13 +151,14 @@ review --[passed]--> lint_format --[passed]--> commit
                           +--[failed]--> hitl_failed (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | write_tests | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_failed | failed | Lint issues persist |
+| Edge | From        | To          | Condition | Label                       |
+| ---- | ----------- | ----------- | --------- | --------------------------- |
+| 1    | lint_format | commit      | passed    | Lint passes, commit changes |
+| 2    | lint_format | write_tests | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_failed | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Change `review --[passed]--> commit` to `review --[passed]--> lint_format`
 - Add 3 edges from `lint_format`
@@ -173,13 +178,14 @@ final_review --[passed]--> lint_format --[passed]--> commit --> end_success
                                 +--[failed]--> hitl_final_failed (escalation)
 ```
 
-| Edge | From | To | Condition | Label |
-|------|------|-----|-----------|-------|
-| 1 | lint_format | commit | passed | Lint passes, commit changes |
-| 2 | lint_format | uiRebuild_build | failed | Fix lint/format issues |
-| 3 | lint_format | hitl_final_failed | failed | Lint issues persist |
+| Edge | From        | To                | Condition | Label                       |
+| ---- | ----------- | ----------------- | --------- | --------------------------- |
+| 1    | lint_format | commit            | passed    | Lint passes, commit changes |
+| 2    | lint_format | uiRebuild_build   | failed    | Fix lint/format issues      |
+| 3    | lint_format | hitl_final_failed | failed    | Lint issues persist         |
 
 **Changes required:**
+
 - Add `lint_format` node
 - Add `commit` node (does not exist in ui-reconstruction)
 - Change `final_review --[passed]--> end_success` to `final_review --[passed]--> lint_format`
@@ -198,14 +204,14 @@ final_review --[passed]--> lint_format --[passed]--> commit --> end_success
 
 ## Summary Table
 
-| Workflow | Predecessor | Implementation Node | HITL Node | Needs Commit Node |
-|----------|-------------|---------------------|-----------|-------------------|
-| feature-development | code_review | implement | hitl_impl_failed | No |
-| bug-fix | verify_fix | write_fix | hitl_fix_failed | No |
-| quick-task | verify | execute | hitl_blocked | Yes |
-| agile-task | review | implement | hitl_failed | No |
-| test-coverage | review | write_tests | hitl_failed | No |
-| ui-reconstruction | final_review | uiRebuild_build | hitl_final_failed | Yes |
+| Workflow            | Predecessor  | Implementation Node | HITL Node         | Needs Commit Node |
+| ------------------- | ------------ | ------------------- | ----------------- | ----------------- |
+| feature-development | code_review  | implement           | hitl_impl_failed  | No                |
+| bug-fix             | verify_fix   | write_fix           | hitl_fix_failed   | No                |
+| quick-task          | verify       | execute             | hitl_blocked      | Yes               |
+| agile-task          | review       | implement           | hitl_failed       | No                |
+| test-coverage       | review       | write_tests         | hitl_failed       | No                |
+| ui-reconstruction   | final_review | uiRebuild_build     | hitl_final_failed | Yes               |
 
 ## Implementation Order
 

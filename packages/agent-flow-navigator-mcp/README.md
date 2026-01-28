@@ -284,39 +284,39 @@ After persisting to primary store, confirm the sync:
 
 ### Node Types
 
-| Type      | Description                                                           |
-| --------- | --------------------------------------------------------------------- |
-| `start`   | Workflow entry point (exactly one per workflow)                       |
-| `end`     | Exit point with `result` (success/failure/blocked/cancelled)          |
-| `task`    | Executable work unit                                                  |
-| `gate`    | Quality gate / review checkpoint                                      |
-| `subflow` | Connector to another workflow                                         |
+| Type      | Description                                                  |
+| --------- | ------------------------------------------------------------ |
+| `start`   | Workflow entry point (exactly one per workflow)              |
+| `end`     | Exit point with `result` (success/failure/blocked/cancelled) |
+| `task`    | Executable work unit                                         |
+| `gate`    | Quality gate / review checkpoint                             |
+| `subflow` | Connector to another workflow                                |
 
 ### End Node Properties
 
-| Property     | Description                                              |
-| ------------ | -------------------------------------------------------- |
-| `result`     | `"success"`, `"failure"`, `"blocked"`, or `"cancelled"`  |
-| `escalation` | Optional: `"hitl"`, `"alert"`, or `"ticket"`             |
+| Property     | Description                                             |
+| ------------ | ------------------------------------------------------- |
+| `result`     | `"success"`, `"failure"`, `"blocked"`, or `"cancelled"` |
+| `escalation` | Optional: `"hitl"`, `"alert"`, or `"ticket"`            |
 
 ### Task/Gate Node Properties
 
-| Property     | Description                                              |
-| ------------ | -------------------------------------------------------- |
-| `name`       | Human-readable name (required)                           |
-| `outputs`    | Possible outcomes (default: `["passed", "failed"]`)      |
-| `maxRetries` | Retry count on failure before following "failed" edge    |
-| `agent`      | Agent type to perform this task                          |
+| Property     | Description                                                |
+| ------------ | ---------------------------------------------------------- |
+| `name`       | Human-readable name (required)                             |
+| `outputs`    | Possible outcomes (default: `["passed", "failed"]`)        |
+| `maxRetries` | Retry count on failure before following "failed" edge      |
+| `agent`      | Agent type to perform this task                            |
 | `stage`      | Workflow phase: planning/development/verification/delivery |
 
 ### Edge Properties
 
-| Property | Description                                                 |
-| -------- | ----------------------------------------------------------- |
-| `from`   | Source node ID                                              |
-| `to`     | Target node ID                                              |
+| Property | Description                                                    |
+| -------- | -------------------------------------------------------------- |
+| `from`   | Source node ID                                                 |
+| `to`     | Target node ID                                                 |
 | `on`     | Output value that triggers this edge (for conditional routing) |
-| `label`  | Human-readable edge description                             |
+| `label`  | Human-readable edge description                                |
 
 ## Task Schema
 
