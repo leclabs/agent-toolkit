@@ -1,0 +1,110 @@
+{
+  "id": "build-review-murder-board",
+  "name": "Build-Review Murder Board",
+  "description": "High-scrutiny iterative build-review loop. A fresh reviewer agent tears apart each build attempt with maximum rigor. Ideal for critical changes requiring independent verification.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Build-review cycle begins"
+    },
+    "build": {
+      "type": "task",
+      "name": "Build",
+      "description": "Implement or revise the changes based on requirements or review feedback",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "review": {
+      "type": "gate",
+      "name": "Murder Board Review",
+      "description": "Independent high-scrutiny review. Reviewer must be a fresh agent with no prior context of this build. Approval requires confidence score >= 80.",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 3,
+      "config": {
+        "scrutinyLevel": 5,
+        "blindShot": true,
+        "approvalThreshold": 80
+      }
+    },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message summarizing the work done",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Approved",
+      "description": "Build passed murder board review and delivered"
+    },
+    "hitl_blocked": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Review Blocked",
+      "description": "Build failed murder board review after all retries - needs human intervention"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "build"
+    },
+    {
+      "from": "build",
+      "to": "review"
+    },
+    {
+      "from": "review",
+      "to": "build",
+      "on": "failed",
+      "label": "Revise build based on review feedback"
+    },
+    {
+      "from": "review",
+      "to": "hitl_blocked",
+      "on": "failed",
+      "label": "Review failures exhausted retries"
+    },
+    {
+      "from": "review",
+      "to": "lint_format",
+      "on": "passed",
+      "label": "Review passed, run lint checks"
+    },
+    {
+      "from": "lint_format",
+      "to": "commit",
+      "on": "passed",
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "build",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_blocked",
+      "on": "failed",
+      "label": "Lint issues persist"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    }
+  ]
+}
