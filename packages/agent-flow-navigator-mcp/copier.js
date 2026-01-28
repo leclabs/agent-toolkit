@@ -39,12 +39,14 @@ task: Update config file         # → quick-task workflow
 
 | Command | Description |
 |---------|-------------|
-| \`/flow:list\` | List available workflows |
+| \`/flow:prime\` | Load Orchestrator context (invoke at session start) |
 | \`/flow:task-create\` | Create a new task with workflow tracking |
 | \`/flow:task-list\` | List all flow tasks with current status |
 | \`/flow:task-get\` | Get detailed task info including workflow diagram |
-| \`/flow:task-advance\` | Advance task: \`<taskId> <passed|failed> <navigator> [summary]\` |
+| \`/flow:task-advance\` | Advance task: \`<taskId> <passed|failed> [summary]\` |
 | \`/flow:run\` | Execute flow tasks autonomously |
+| \`/flow:list\` | List available workflows |
+| \`/flow:diagram\` | Generate mermaid diagram for a workflow |
 | \`/flow:init\` | Copy workflows to .flow/workflows/ for customization |
 | \`/flow:load\` | Reload workflows after editing .flow/workflows/ |
 
@@ -54,7 +56,9 @@ task: Update config file         # → quick-task workflow
 - **agile-task** - Simple: analyze → implement → test → review
 - **feature-development** - Full lifecycle: requirements → planning → implementation → testing → PR
 - **bug-fix** - Bug workflow: reproduce → investigate → fix → verify → PR
+- **test-coverage** - Analyze coverage gaps and write tests
 - **context-optimization** - Optimize agent context and instructions
+- **ui-reconstruction** - Reconstruct UI components from screenshots or designs
 
 ## Customization (Optional)
 
