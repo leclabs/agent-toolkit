@@ -4,7 +4,7 @@ description: Execute flow tasks autonomously with subagent delegation. Primary c
 
 # /flow:run
 
-Execute flow tasks autonomously, delegating to subagents based on `metadata.navigator.subagent`.
+Execute flow tasks autonomously, delegating to subagents based on Navigate response.
 
 ## Usage
 
@@ -19,27 +19,39 @@ Execute flow tasks autonomously, delegating to subagents based on `metadata.navi
 
 **If taskId provided:**
 
-- Call `TaskGet(taskId)` to get the task
+- Construct task file path: `.claude/todos/{taskId}.json`
+- Read task file to get metadata
 
 **If no taskId:**
 
-- Call `TaskList` and filter for flow tasks (those with `metadata.navigator`)
+- List all task files in `.claude/todos/`
+- Filter for flow tasks (those with `metadata.workflowType`)
 - Get highest priority pending task
 
 ### 2. The Execution Loop
 
 WHILE task not at terminal, HITL, blocked, or interrupted step:
 
-1. READ: Get subagent from Navigate response (or stored in metadata)
-2. DELEGATE: If subagent set, use Task tool
-3. EXECUTE: If no subagent, handle directly
-4. ADVANCE: Call Navigator.Navigate with result
-5. UPDATE: TaskUpdate with new metadata AND subjectSuffix
-6. REPEAT: Continue until terminal or HITL
+1. **NAVIGATE**: Call Navigate with taskFilePath to get current step state
+2. **DELEGATE**: If subagent set, use Task tool
+3. **EXECUTE**: If no subagent, handle directly
+4. **ADVANCE**: Call Navigate with taskFilePath and result
+5. **UPDATE**: TaskUpdate with new metadata from Navigate response
+6. **REPEAT**: Continue until terminal or HITL
 
-**Important:** Always update the task subject with `subjectSuffix` from Navigate response.
+### 3. Getting Current Step
 
-### 3. Delegation Protocol
+Call `Navigator.Navigate` with taskFilePath:
+
+```json
+{
+  "taskFilePath": ".claude/todos/1.json"
+}
+```
+
+Response includes `subagent`, `stepInstructions`, `terminal`, `metadata`, etc.
+
+### 4. Delegation Protocol
 
 **If subagent is set (e.g., `@flow:Developer`):**
 
@@ -54,7 +66,7 @@ Task(
     Execute the '{stepName}' step for task {taskId}.
 
     ## Task
-    {task title and description}
+    {task subject and description}
 
     ## Current Step
     {stepInstructions.name}: {stepInstructions.description}
@@ -72,21 +84,19 @@ Task(
 
 - Handle the step directly
 
-### 4. Processing Results
+### 5. Processing Results
 
 Parse subagent response:
 
 - `success: true` -> result = "passed"
 - `success: false` -> result = "failed"
 
-**Call Navigator.Navigate directly** with minimal inputs:
+**Call Navigator.Navigate** with taskFilePath and result:
 
 ```json
 {
-  "workflowType": "{from metadata.navigator.workflowType}",
-  "currentStep": "{from metadata.navigator.currentStep}",
-  "result": "passed|failed",
-  "retryCount": "{from metadata.navigator.retryCount}"
+  "taskFilePath": ".claude/todos/1.json",
+  "result": "passed"
 }
 ```
 
@@ -99,86 +109,60 @@ Navigate returns:
 | `subagent` | Who executes next step |
 | `stepInstructions` | `{name, description, guidance}` |
 | `terminal` | `"success"` or `"hitl"` if done |
-| `subjectSuffix` | `[workflow.stage.step]` |
+| `orchestratorInstructions` | Updated task description |
+| `metadata` | `{ workflowType, currentStep, retryCount }` |
 | `action` | `"advance"`, `"retry"`, or `"escalate"` |
 | `retriesIncremented` | `true` if retry count increased |
 
-Then call TaskUpdate:
+Then call TaskUpdate with new metadata:
 
 ```json
 {
-  "taskId": "...",
-  "subject": "{title} {subjectSuffix}",
+  "taskId": "1",
+  "description": "{response.orchestratorInstructions}",
   "metadata": {
-    "navigator": {
-      "workflowType": "{unchanged}",
-      "currentStep": "{response.currentStep}",
-      "retryCount": "{increment if retriesIncremented, else 0}"
-    }
+    "currentStep": "{response.metadata.currentStep}",
+    "retryCount": "{response.metadata.retryCount}"
   }
 }
 ```
 
-### 5. Progress Reporting
+### 6. Progress Reporting
 
-After each step:
+After each step, show brief progress:
 
-```markdown
-## Step: {stepName}
-
-**Subagent:** {subagent or "(none)"}
-**Result:** {passed|failed}
-**Summary:** {brief summary}
-
----
+```
+✓ parse_requirements (@flow:Planner) → passed
+✓ implement (@flow:Developer) → passed
+⟳ test (@flow:Tester) → in progress...
 ```
 
-### 6. Loop Termination
+### 7. Loop Termination
 
 Exit when:
 
 - Task reaches terminal step (success or hitl)
 - User interrupts
 
-### 7. Final Report
+### 8. Final Report
 
-```markdown
-## Execution Complete
+**Success:**
 
-**Task:** {taskId}
-**Final Status:** {completed|hitl}
-**Steps Executed:** {count}
+```
+Completed: #1 Add user auth (@flow:Developer)
+ → feature-development · end
+ → end_success · completed ✓
 
-### Execution Trace
-
-1. analyze - passed (Planner)
-2. implement - passed (Developer)
-3. test - passed (Tester)
-...
-
-### Result
-
-{If success: "Task completed successfully!"}
-{If HITL: "Task needs human intervention at {step}"}
+Steps: parse_requirements → implement → test → commit → end_success
 ```
 
-## Handling HITL
+**HITL:**
 
-When task reaches HITL terminal:
+```
+⚠ HITL: #1 Add user auth (direct)
+ → feature-development · verification
+ → hitl_test · pending
 
-```markdown
-## Task Needs Human Intervention
-
-**Task:** task-123
-**Reason:** Max retries exceeded
-
-### What Happened
-
-{Brief explanation}
-
-### Next Steps
-
-1. Review the issues manually
-2. Make necessary fixes
-3. Run `/flow:task-advance task-123 passed` to continue
+Reason: Max retries exceeded at test step
+Action: Fix manually, then `/flow:task-advance 1 passed`
 ```

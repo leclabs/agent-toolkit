@@ -147,16 +147,15 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         inputSchema: {
           type: "object",
           properties: {
-            workflowType: { type: "string", description: "Workflow ID (e.g., 'feature-development')" },
-            currentStep: { type: "string", description: "Current step ID. Omit to start at first work step." },
+            taskFilePath: { type: "string", description: "Path to task file (for advance/current). Reads workflow state from task metadata." },
+            workflowType: { type: "string", description: "Workflow ID (for start only, e.g., 'feature-development')" },
             result: {
               type: "string",
               enum: ["passed", "failed"],
-              description: "Result of current step. Omit to just get current state.",
+              description: "Step result (for advance). Omit to just get current state.",
             },
-            retryCount: { type: "number", description: "Retry count for current step (default 0)" },
+            description: { type: "string", description: "User's task description (for start)" },
           },
-          required: ["workflowType"],
         },
       },
       {
@@ -222,12 +221,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       case "Navigate": {
-        const result = engine.navigate(
-          args.workflowType,
-          args.currentStep,
-          args.result,
-          args.retryCount || 0
-        );
+        const result = engine.navigate({
+          taskFilePath: args.taskFilePath,
+          workflowType: args.workflowType,
+          result: args.result,
+          description: args.description,
+        });
         return jsonResponse(result);
       }
 

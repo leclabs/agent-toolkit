@@ -6,38 +6,98 @@ description: List flow tasks and their workflow progress. Use to find pending wo
 
 Display all tasks that have flow workflow tracking.
 
-## What To Do
+## Instructions
 
-### 1. Get All Tasks
+### 1. List All Task Files
 
-Call `TaskList` to get all native tasks.
-
-### 2. Identify Flow Tasks
-
-Decorate flow task title with metadata.navigator:
-
-- **Suffix:** `[workflow.stage.step]`
-- **Prefix:** `[extendedStatus]`
-
-Examples:
-
-- [start] Implement feature X [feature-dev.development.implement]
-- [analyze] Fix login bug [bug-fix/investigation/reproduce]
-- [in_progress] Quick fix [agile-task/development/implement]
-- [HITL] Refactor auth [agile-task/review/review]
-
-## Extract Navigator Info
-
-From each task with `metadata.navigator`:
+Read all task files from `.claude/todos/` directory:
 
 ```javascript
-const nav = task.metadata.navigator;
-const info = {
-  workflow: nav.workflowType,
-  currentStep: nav.currentStep,
-  subagent: nav.subagent, // e.g., "@flow:developer" or null
-  stage: nav.stage,
-  priority: nav.priority,
-  status: nav.extendedStatus, // "HITL" or null
-};
+const taskFiles = glob(".claude/todos/*.json");
+```
+
+### 2. Identify Flow Tasks by Metadata
+
+Read each task file and check for workflow metadata:
+
+```javascript
+for (const file of taskFiles) {
+  const task = JSON.parse(readFile(file));
+
+  // Flow task has workflowType in metadata
+  if (task.metadata?.workflowType) {
+    const { workflowType, currentStep, retryCount } = task.metadata;
+    // This is a flow task
+  }
+}
+```
+
+To get `subagent`, call `Navigator.Navigate` with `taskFilePath`.
+
+### 3. Display with Standard Flow Format
+
+For each flow task, use this format:
+
+```
+#<id> <subject> (<subagent>)
+ → <workflowType> · <stage>
+ → <currentStep> · <status> [· <blockers>]
+```
+
+**Example output:**
+
+```
+#2 Add lint gate to workflows (@flow:Planner)
+ → feature-development · planning
+ → parse_requirements · pending
+
+#3 Add format gate to workflows (@flow:Planner)
+ → feature-development · planning
+ → parse_requirements · pending · blocked by #2
+
+#4 Add test gate to workflows (@flow:Planner)
+ → feature-development · planning
+ → parse_requirements · pending · blocked by #3
+```
+
+### 4. Status Indicators
+
+Use these status labels:
+
+| Status | Display |
+|--------|---------|
+| pending | `pending` |
+| in_progress | `in progress` |
+| completed | `completed` |
+| HITL terminal | `⚠ HITL` |
+| Has retries | `retry {n}/3` |
+
+### 5. Non-Flow Tasks
+
+Tasks without workflow metadata are regular tasks:
+
+```
+#<id> <subject>
+ → <status>
+```
+
+### Reference: Identifying Flow Tasks
+
+Flow tasks have `workflowType` in metadata:
+
+```javascript
+// Flow task
+{
+  "subject": "Add lint gate",
+  "metadata": {
+    "workflowType": "feature-development",
+    "currentStep": "parse_requirements"
+  }
+}
+
+// Regular task
+{
+  "subject": "Add lint gate",
+  "metadata": {}
+}
 ```

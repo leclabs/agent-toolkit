@@ -44,6 +44,14 @@
       "stage": "verification",
       "maxRetries": 3
     },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
     "commit": {
       "type": "task",
       "name": "Commit Changes",
@@ -115,9 +123,27 @@
     },
     {
       "from": "verify_fix",
+      "to": "lint_format",
+      "on": "passed",
+      "label": "Bug verified fixed, run lint checks"
+    },
+    {
+      "from": "lint_format",
       "to": "commit",
       "on": "passed",
-      "label": "Bug verified fixed, commit changes"
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "write_fix",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_fix_failed",
+      "on": "failed",
+      "label": "Lint issues persist"
     },
     {
       "from": "commit",

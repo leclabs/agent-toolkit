@@ -111,6 +111,21 @@
       "result": "blocked",
       "escalation": "hitl",
       "description": "Final review failed after max retries - requires human intervention"
+    },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message",
+      "agent": "Developer",
+      "stage": "delivery"
     }
   },
   "edges": [
@@ -196,9 +211,31 @@
     },
     {
       "from": "final_review",
-      "to": "end_success",
+      "to": "lint_format",
       "on": "passed",
       "label": "Platonic form verified"
+    },
+    {
+      "from": "lint_format",
+      "to": "commit",
+      "on": "passed",
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "uiRebuild_build",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_final_failed",
+      "on": "failed",
+      "label": "Lint issues persist"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
     }
   ]
 }

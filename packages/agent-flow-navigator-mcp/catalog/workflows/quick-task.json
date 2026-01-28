@@ -30,6 +30,21 @@
       "stage": "verification",
       "maxRetries": 1
     },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
     "end_success": {
       "type": "end",
       "result": "success",
@@ -59,7 +74,7 @@
     },
     {
       "from": "verify",
-      "to": "end_success",
+      "to": "lint_format",
       "on": "passed"
     },
     {
@@ -73,6 +88,28 @@
       "to": "hitl_blocked",
       "on": "failed",
       "label": "Needs human help"
+    },
+    {
+      "from": "lint_format",
+      "to": "commit",
+      "on": "passed",
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "execute",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_blocked",
+      "on": "failed",
+      "label": "Lint issues persist"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
     }
   ]
 }

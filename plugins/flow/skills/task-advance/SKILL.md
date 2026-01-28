@@ -9,42 +9,43 @@ Advance a task to the next workflow step based on pass/fail result.
 ## Usage
 
 ```
-/flow:task-advance <taskId> <passed|failed> <navigator> ["summary"]
+/flow:task-advance <taskId> <passed|failed> ["summary"]
 ```
 
 Where:
 
 - `taskId`: The task to advance
 - `result`: Either "passed" or "failed"
-- `navigator`: JSON object with current navigator state from `metadata.navigator`
 - `summary`: Optional description of work done or issues found
 
 Example:
 
 ```
-/flow:task-advance 1 passed {"workflowType":"quick-task","currentStep":"execute","retryCount":0} "Implementation complete"
+/flow:task-advance 1 passed "Implementation complete"
 ```
-
-## Why Navigator State is Required
-
-The Skill tool creates an isolated execution context that cannot access native Claude Code tasks. The Orchestrator must pass the navigator state it already holds rather than fetching via TaskGet.
 
 ## What To Do
 
-### 1. Advance with Navigate
+### 1. Construct Task File Path
 
-Call `Navigator.Navigate` with minimal inputs:
+Build the task file path from taskId:
+
+```javascript
+const taskFilePath = `.claude/todos/${taskId}.json`;
+```
+
+### 2. Advance with Navigate
+
+Call `Navigator.Navigate` with taskFilePath and result:
 
 ```json
 {
-  "workflowType": "{navigator.workflowType}",
-  "currentStep": "{navigator.currentStep}",
-  "result": "passed|failed",
-  "retryCount": "{navigator.retryCount}"
+  "taskFilePath": ".claude/todos/1.json",
+  "result": "passed"
 }
 ```
 
-Navigate returns minimal output:
+Navigate reads the task file, extracts workflow state from metadata, and returns:
 
 | Field | Purpose |
 |-------|---------|
@@ -53,73 +54,61 @@ Navigate returns minimal output:
 | `subagent` | Who executes this step (e.g., `@flow:Developer`) |
 | `stepInstructions` | `{name, description, guidance}` for delegation |
 | `terminal` | `"success"` or `"hitl"` if workflow ended |
-| `subjectSuffix` | `[workflow.stage.step]` for task subject |
+| `orchestratorInstructions` | Updated task description |
+| `metadata` | `{ workflowType, currentStep, retryCount }` for task update |
 | `action` | `"advance"`, `"retry"`, or `"escalate"` |
 | `retriesIncremented` | `true` if this was a retry |
 
-### 2. Update Task
+### 3. Update Task
 
-Call `TaskUpdate` with the new state:
+Call `TaskUpdate` with new metadata:
 
 ```json
 {
-  "taskId": "task-123",
-  "subject": "{original title} {response.subjectSuffix}",
-  "status": "in_progress",
+  "taskId": "1",
+  "description": "{response.orchestratorInstructions}",
   "metadata": {
-    "navigator": {
-      "workflowType": "{unchanged}",
-      "currentStep": "{response.currentStep}",
-      "retryCount": "{increment if retriesIncremented, else reset to 0}"
-    }
-  }
+    "currentStep": "{response.metadata.currentStep}",
+    "retryCount": "{response.metadata.retryCount}"
+  },
+  "status": "in_progress"
 }
 ```
 
-**Retry count logic:**
-- If `retriesIncremented`: increment `retryCount`
-- If advancing to new step: reset `retryCount` to 0
+For terminal steps, set appropriate status:
+- `terminal: "success"` → `status: "completed"`
+- `terminal: "hitl"` → `status: "pending"`
 
-### 3. Show Result
+### 4. Show Result
 
 **Normal advancement:**
 
-```markdown
-## Task Advanced
+```
+Advanced: #1 Task title (@flow:Reviewer)
+ → feature-development · verification
+ → code_review · in_progress
 
-**Task:** task-123
-**Subject:** Task title [feature-development.verification.code_review]
-**Previous step:** implement
-**Current step:** code_review
-**Subagent:** @flow:Reviewer
-
-### Next Action
-
-Delegate to @flow:Reviewer, then advance again.
+Previous: implement → code_review
+Next: Delegate to @flow:Reviewer, then advance again
 ```
 
 **Terminal - Success:**
 
-```markdown
-## Task Completed!
-
-**Task:** task-123 reached successful completion.
-
-The task has been marked as completed.
+```
+Completed: #1 Task title
+ → feature-development · end
+ → end_success · completed ✓
 ```
 
 **Terminal - HITL:**
 
-```markdown
-## Task Needs Human Intervention
+```
+⚠ HITL: #1 Task title (direct)
+ → feature-development · verification
+ → hitl_review · pending
 
-**Task:** task-123
-**Reason:** Max retries exceeded
-
-Human input required. Review the issue and either:
-
-1. Make manual fixes, then run `/flow:task-advance task-123 passed`
-2. Cancel/reassign the task
+Reason: Max retries exceeded
+Action: Review and fix manually, then `/flow:task-advance 1 passed`
 ```
 
 ## Status Mapping

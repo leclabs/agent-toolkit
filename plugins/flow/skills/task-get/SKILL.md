@@ -14,22 +14,42 @@ Show detailed status for a specific flow task.
 
 ## What To Do
 
-### 1. Get Task Details
+### 1. Read Task File
 
-Call `TaskGet(taskId)` to get the task with its `metadata.navigator`.
+Read the task file directly to get all metadata:
 
-### 2. Get Current Step State
+```javascript
+const taskFilePath = `.claude/todos/${taskId}.json`;
+const task = readFile(taskFilePath);
+```
 
-Call `Navigator.Navigate` with workflowType and currentStep (no result = get current state):
-
+Task structure:
 ```json
 {
-  "workflowType": "feature-development",
-  "currentStep": "implement"
+  "id": "1",
+  "subject": "Add user authentication",
+  "description": "...",
+  "status": "in_progress",
+  "metadata": {
+    "userDescription": "Add user authentication with OAuth",
+    "workflowType": "feature-development",
+    "currentStep": "implement",
+    "retryCount": 0
+  }
 }
 ```
 
-Returns: `currentStep`, `stage`, `subagent`, `stepInstructions`, `terminal`, `subjectSuffix`, `action`.
+### 2. Get Current Step State
+
+Call `Navigator.Navigate` with taskFilePath (no result = get current state):
+
+```json
+{
+  "taskFilePath": ".claude/todos/1.json"
+}
+```
+
+Returns: `currentStep`, `stage`, `subagent`, `stepInstructions`, `terminal`, `orchestratorInstructions`, `metadata`.
 
 ### 3. Generate Diagram
 
@@ -44,16 +64,12 @@ Call `Navigator.Diagram` with current position highlighted:
 
 ### 4. Display Results
 
+Use standard flow task format with diagram:
+
 ````markdown
-## Task: task-123 "Implement feature X"
-
-**Status:** in_progress
-**Workflow:** feature-development
-**Current step:** implement (stage: development, step: code)
-**Subagent:** @flow:developer
-**Priority:** 75
-
-### Progress
+#1 Implement feature X (@flow:Developer)
+ → feature-development · development
+ → implement · in_progress
 
 ```mermaid
 flowchart TD
@@ -61,80 +77,48 @@ flowchart TD
     parse_requirements["Parse Requirements"]
     implement["Implement"]:::currentstep
     ...
-    class implement currentstep
-```
-````
-
-### Context
-
-- **Title:** Implement feature X
-- **Description:** Add user authentication with OAuth
-- **Last Output:** "Plan approved, ready for implementation"
-
-### Next Action
-
-Delegate to @flow:developer using Task tool:
-
-```
-Task(subagent_type: "general-purpose", prompt: "...")
 ```
 
-Then call: `/flow:task-advance task-123 <passed|failed> "summary"`
+**Description:** Add user authentication with OAuth
 
+**Next:** Delegate to @flow:Developer, then `/flow:task-advance 1 <passed|failed>`
 ````
 
 ## If No Subagent
 
-When `metadata.navigator.subagent` is null:
+When Navigate returns `subagent: null`, show `(direct)` instead:
 
-```markdown
-### Next Action
+```
+#1 Review changes (direct)
+ → feature-development · verification
+ → code_review · in_progress
 
-This step should be handled directly (no subagent delegation needed).
-
-When complete: `/flow:task-advance task-123 <passed|failed> "summary"`
-````
+**Next:** Handle step directly, then `/flow:task-advance 1 <passed|failed>`
+```
 
 ## Task Not Found
 
 ```
-Task 'task-xyz' not found or is not a flow task.
+Task '123' not found or is not a flow task.
 
 Use `/flow:task-list` to see available tasks.
 ```
 
-## Extracting Information
+## Identifying Flow Tasks
+
+Flow tasks have metadata with `workflowType`:
 
 ```javascript
-const task = await TaskGet(taskId);
-const nav = task.metadata?.navigator;
-
-if (!nav) {
-  // Not a flow task - check subject for [flow] prefix
-  return;
+// Flow task - has workflow metadata
+{
+  "metadata": {
+    "workflowType": "feature-development",
+    "currentStep": "implement"
+  }
 }
 
-// Metadata stores minimal state
-const stored = {
-  workflowType: nav.workflowType,
-  currentStep: nav.currentStep,
-  retryCount: nav.retryCount || 0,
-};
-
-// Call Navigate to get current step details (subagent, stage, stepInstructions)
-const current = await Navigate({
-  workflowType: stored.workflowType,
-  currentStep: stored.currentStep,
-});
-
-const info = {
-  id: task.id,
-  subject: task.subject,
-  status: task.status,
-  workflow: stored.workflowType,
-  currentStep: current.currentStep,
-  stage: current.stage,
-  subagent: current.subagent,
-  stepInstructions: current.stepInstructions,
-};
+// Regular task - no workflow metadata
+{
+  "metadata": {}  // or no metadata at all
+}
 ```

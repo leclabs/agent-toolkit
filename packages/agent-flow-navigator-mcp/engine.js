@@ -13,6 +13,22 @@
  * - Edge to end node = escalation (taken if retries exhausted)
  */
 
+import { existsSync, readFileSync } from "fs";
+
+/**
+ * Read and parse a task file
+ * @param {string} taskFilePath - Path to task JSON file
+ * @returns {Object|null} Task object or null if not found/invalid
+ */
+export function readTaskFile(taskFilePath) {
+  if (!taskFilePath || !existsSync(taskFilePath)) return null;
+  try {
+    return JSON.parse(readFileSync(taskFilePath, "utf-8"));
+  } catch {
+    return null;
+  }
+}
+
 /**
  * Check if a node is a terminal node (start or end)
  */
@@ -109,13 +125,28 @@ export function getBaselineInstructions(stepId, stepName) {
 }
 
 /**
+ * Build orchestrator instructions for task creation/update
+ * Returns null for terminal nodes (no further work)
+ */
+function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description) {
+  if (!stepInstructions) return null; // Terminal nodes have no instructions
+
+  const delegationPrefix = subagent
+    ? `Invoke ${subagent} to complete the following task: `
+    : "";
+
+  return `${delegationPrefix}${stepInstructions.guidance}
+
+${description || "{task description}"}`;
+}
+
+/**
  * Build unified response shape for Navigate
  * Minimal output: only what Orchestrator needs for control flow and delegation
  */
-function buildNavigateResponse(workflowType, stepId, stepDef, action, retriesIncremented = false) {
+function buildNavigateResponse(workflowType, stepId, stepDef, action, retriesIncremented = false, retryCount = 0, description = null) {
   const stage = stepDef.stage || null;
-  // Build subject suffix: [workflow.stage.step] or [workflow.step] if no stage
-  const subjectSuffix = stage ? `[${workflowType}.${stage}.${stepId}]` : `[${workflowType}.${stepId}]`;
+  const subagent = stepDef.agent ? toSubagentRef(stepDef.agent) : null;
 
   // Build step instructions from workflow definition + baseline
   const isTerminal = isTerminalNode(stepDef);
@@ -127,15 +158,28 @@ function buildNavigateResponse(workflowType, stepId, stepDef, action, retriesInc
         guidance: stepDef.instructions || getBaselineInstructions(stepId, stepDef.name),
       };
 
+  // Build orchestrator instructions for all non-terminal actions
+  const orchestratorInstructions = isTerminal
+    ? null
+    : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description);
+
+  // Build metadata for task storage
+  const metadata = {
+    workflowType,
+    currentStep: stepId,
+    retryCount: retriesIncremented ? retryCount + 1 : retryCount,
+  };
+
   return {
     currentStep: stepId,
     stage,
-    subagent: stepDef.agent ? toSubagentRef(stepDef.agent) : null,
+    subagent,
     stepInstructions,
     terminal: getTerminalType(stepDef),
-    subjectSuffix,
     action,
     retriesIncremented,
+    orchestratorInstructions,
+    metadata,
   };
 }
 
@@ -297,13 +341,43 @@ export class WorkflowEngine {
   /**
    * Navigate through workflow: start, get current state, or advance
    *
-   * @param {string} workflowType - Workflow ID
-   * @param {string} [currentStep] - Current step ID (omit to start)
-   * @param {string} [result] - Step result: "passed" | "failed" (omit to get current state)
-   * @param {number} [retryCount=0] - Current retry count
-   * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, etc.
+   * Two calling modes:
+   * 1. Task file mode: Pass taskFilePath to read workflow state from task metadata
+   * 2. Direct mode: Pass workflowType directly (for starting workflows)
+   *
+   * @param {Object} options - Navigation options
+   * @param {string} [options.taskFilePath] - Path to task file (for advance/current)
+   * @param {string} [options.workflowType] - Workflow ID (for start only)
+   * @param {string} [options.result] - Step result: "passed" | "failed" (for advance)
+   * @param {string} [options.description] - User's task description
+   * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, metadata, etc.
    */
-  navigate(workflowType, currentStep, result, retryCount = 0) {
+  navigate({ taskFilePath, workflowType, result, description } = {}) {
+    let currentStep = null;
+    let retryCount = 0;
+
+    // Task file mode: read workflow state from task metadata
+    if (taskFilePath) {
+      const task = readTaskFile(taskFilePath);
+      if (!task) {
+        throw new Error(`Task file not found: ${taskFilePath}`);
+      }
+      if (!task.metadata) {
+        throw new Error("Task has no metadata");
+      }
+
+      const { userDescription, workflowType: metaWorkflow, currentStep: metaStep, retryCount: metaRetry = 0 } = task.metadata;
+      workflowType = metaWorkflow;
+      currentStep = metaStep;
+      retryCount = metaRetry;
+      description = description || userDescription;
+    }
+
+    // Validate workflowType
+    if (!workflowType) {
+      throw new Error("workflowType is required (either directly or via task metadata)");
+    }
+
     const wfDef = this.store.getDefinition(workflowType);
     if (!wfDef) {
       throw new Error(`Workflow '${workflowType}' not found. Use ListWorkflows to see available workflows.`);
@@ -333,7 +407,7 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
-      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start");
+      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description);
     }
 
     // Case 2: currentStep but no result - return current state
@@ -343,7 +417,7 @@ export class WorkflowEngine {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
       }
 
-      return buildNavigateResponse(workflowType, currentStep, stepDef, "current");
+      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description);
     }
 
     // Case 3: currentStep and result - advance to next step
@@ -373,6 +447,6 @@ export class WorkflowEngine {
       action = "advance";
     }
 
-    return buildNavigateResponse(workflowType, evaluation.nextStep, nextStepDef, action, isRetry);
+    return buildNavigateResponse(workflowType, evaluation.nextStep, nextStepDef, action, isRetry, retryCount, description);
   }
 }
