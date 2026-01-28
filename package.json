@@ -3,6 +3,12 @@
   "version": "1.0.0",
   "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration",
   "main": "index.js",
+  "bin": {
+    "setup-agent-toolkit": "./bin/setup-agent-toolkit.js"
+  },
+  "files": [
+    "bin/"
+  ],
   "scripts": {
     "test": "npm test --prefix packages/agent-flow-navigator-mcp",
     "lint": "eslint .",
@@ -21,7 +27,7 @@
     "orchestration"
   ],
   "author": "Lance Caraccioli",
-  "license": "ISC",
+  "license": "MIT",
   "type": "module",
   "bugs": {
     "url": "https://github.com/leclabs/agent-toolkit/issues"

@@ -1,8 +1,93 @@
-# Navigator
+# @leclabs/agent-flow-navigator-mcp
 
-A workflow state machine that navigates agents through DAG-based workflows.
+[![npm](https://img.shields.io/npm/v/@leclabs/agent-flow-navigator-mcp)](https://npmjs.com/package/@leclabs/agent-flow-navigator-mcp)
 
-Navigator is an MCP server that tracks task state and evaluates graph edges - it tells the orchestrator _where to go next_, but doesn't drive. Think of it like a GPS navigator: you tell it where you are and what happened, it tells you where to go.
+A workflow state machine MCP server that navigates agents through DAG-based workflows.
+
+Navigator tracks task state and evaluates graph edges - it tells the orchestrator _where to go next_, but doesn't drive. Think of it like a GPS: you tell it where you are and what happened, it tells you where to go.
+
+## Installation
+
+Run directly with npx:
+
+```bash
+npx -y @leclabs/agent-flow-navigator-mcp
+```
+
+Or install globally:
+
+```bash
+npm install -g @leclabs/agent-flow-navigator-mcp
+```
+
+## Claude Code Configuration
+
+Add to your `.mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "navigator": {
+      "command": "npx",
+      "args": ["-y", "@leclabs/agent-flow-navigator-mcp"]
+    }
+  }
+}
+```
+
+## Quick Start
+
+Navigator works with the [flow plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) to provide structured workflow execution:
+
+1. **Initialize workflows** - Copy workflow templates to your project with `CopyWorkflows`
+2. **Start a task** - Use `Navigate` with a workflow type and description
+3. **Follow the flow** - Navigator tells you the current step and what to do
+4. **Advance on completion** - Report `passed` or `failed` to move to the next step
+
+```
+User: "Add dark mode support"
+  ↓
+Navigate(workflowType: "feature-development", description: "Add dark mode support")
+  ↓
+Navigator returns: Step 1 of 8 - "Create implementation plan"
+  ↓
+Agent executes step, then calls Navigate(result: "passed")
+  ↓
+Navigator returns: Step 2 of 8 - "Implement changes"
+  ↓
+... continues through workflow ...
+```
+
+## MCP Tools Reference
+
+| Tool | Description |
+| ---- | ----------- |
+| `Navigate` | Start a workflow, get current state, or advance to next step |
+| `Diagram` | Generate a mermaid flowchart for a workflow |
+| `ListWorkflows` | List all available workflows |
+| `SelectWorkflow` | Get workflow selection dialog for user interaction |
+| `CopyWorkflows` | Copy workflows from catalog to project |
+| `ListCatalog` | List workflows available in the catalog |
+
+### Navigate
+
+The primary tool for workflow navigation.
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `workflowType` | string | Workflow ID (for start only, e.g., "feature-development") |
+| `description` | string | User's task description (for start) |
+| `taskFilePath` | string | Path to task file (for advance/current) |
+| `result` | "passed" \| "failed" | Step result (for advance) |
+
+### Diagram
+
+Generates a mermaid diagram for visualizing workflow structure.
+
+| Parameter | Type | Description |
+| --------- | ---- | ----------- |
+| `workflowType` | string | Workflow ID to visualize (required) |
+| `currentStep` | string | Optional step to highlight |
 
 ## Architecture Overview
 
@@ -53,233 +138,6 @@ Navigator is an MCP server that tracks task state and evaluates graph edges - it
 | **Conditional Edges**   | Edges with `on` condition (passed/failed) - retry logic is on nodes via `maxRetries` |
 | **HITL Escalation**     | When retries are exhausted, tasks route to end nodes with `escalation: "hitl"`       |
 
-## Installation
-
-```bash
-cd packages/navigator
-npm install
-```
-
-## Running the Server
-
-```bash
-# As MCP server (stdio transport)
-step index.js
-
-# Run tests
-npm test
-
-# Run integration test
-step test-data/integration-test.mjs
-```
-
-## MCP Tools Reference
-
-### Workflow Definition Tools
-
-| Tool                 | Description                               |
-| -------------------- | ----------------------------------------- |
-| `list_workflows`     | List all loaded workflow definitions      |
-| `load_workflow`      | Load a workflow definition from JSON      |
-| `get_execution_plan` | Get topologically sorted execution levels |
-
-### Task Tree Tools
-
-| Tool                       | Description                                  |
-| -------------------------- | -------------------------------------------- |
-| `load_task_tree`           | Load task array from orchestrator            |
-| `get_next_tasks_from_tree` | Get N highest priority PENDING tasks         |
-| `advance_task`             | Evaluate edges and advance task to next step |
-| `get_task`                 | Get a specific task by ID                    |
-| `get_task_progress`        | Get workflow progress for a task             |
-| `get_tasks_by_status`      | Get all tasks grouped by status              |
-
-### Sync Tracking Tools
-
-| Tool                    | Description                               |
-| ----------------------- | ----------------------------------------- |
-| `get_pending_syncs`     | List mutations awaiting sync confirmation |
-| `confirm_sync`          | Confirm mutations have been persisted     |
-| `confirm_sync_for_task` | Confirm all syncs for a specific task     |
-
-## How It Works
-
-### 1. Load Workflow Definitions
-
-The orchestrator loads workflow definitions (DAGs) into the MCP server:
-
-```json
-{
-  "tool": "load_workflow",
-  "arguments": {
-    "id": "ui-reconstruction",
-    "definition": {
-      "nodes": {
-        "start": { "type": "start" },
-        "analyze": { "type": "task", "name": "Analyze Components" },
-        "review": { "type": "gate", "name": "Review Analysis", "maxRetries": 3 },
-        "end": { "type": "end", "result": "success" },
-        "hitl": { "type": "end", "result": "blocked", "escalation": "hitl" }
-      },
-      "edges": [
-        { "from": "start", "to": "analyze" },
-        { "from": "analyze", "to": "review" },
-        { "from": "review", "to": "analyze", "on": "failed", "label": "Retry on failure" },
-        { "from": "review", "to": "hitl", "on": "max_retries_exceeded", "label": "Escalate after 3 failures" },
-        { "from": "review", "to": "end", "on": "passed" }
-      ]
-    }
-  }
-}
-```
-
-### 2. Load Task Tree
-
-The orchestrator loads a priority queue of tasks:
-
-```json
-{
-  "tool": "load_task_tree",
-  "arguments": {
-    "tasks": [
-      {
-        "id": "task-001",
-        "issueId": "ISSUE-042",
-        "workflowType": "ui-reconstruction",
-        "currentStep": "start",
-        "priority": 100,
-        "status": "PENDING",
-        "context": { "targetUrl": "https://example.com" }
-      },
-      {
-        "id": "task-002",
-        "issueId": "ISSUE-037",
-        "workflowType": "research",
-        "currentStep": "start",
-        "priority": 80,
-        "status": "PENDING"
-      }
-    ]
-  }
-}
-```
-
-### 3. Get Next Task
-
-Query for the highest priority PENDING task:
-
-```json
-{
-  "tool": "get_next_tasks_from_tree",
-  "arguments": { "limit": 1 }
-}
-```
-
-Response:
-
-```json
-{
-  "data": {
-    "count": 1,
-    "tasks": [
-      {
-        "id": "task-001",
-        "issueId": "ISSUE-042",
-        "workflowType": "ui-reconstruction",
-        "currentStep": "start",
-        "priority": 100,
-        "status": "PENDING"
-      }
-    ]
-  }
-}
-```
-
-### 4. Advance Task
-
-After executing a task step, advance to the next step:
-
-```json
-{
-  "tool": "advance_task",
-  "arguments": {
-    "taskId": "task-001",
-    "result": "passed",
-    "output": "Analysis complete, found 5 components"
-  }
-}
-```
-
-Response:
-
-```json
-{
-  "data": {
-    "success": true,
-    "previousStep": "analyze",
-    "nextStep": "review",
-    "action": "conditional",
-    "task": { "id": "task-001", "currentStep": "review", "status": "PENDING" }
-  },
-  "_sync_reminder": {
-    "message": "Mutations pending sync to primary store. Please persist and confirm.",
-    "pending": [{ "id": "sync-123", "taskId": "task-001" }]
-  }
-}
-```
-
-### 5. Handle Failures and Retries
-
-When a review fails, the engine evaluates conditional edges:
-
-```json
-{
-  "tool": "advance_task",
-  "arguments": { "taskId": "task-001", "result": "failed" }
-}
-```
-
-If within retry limit:
-
-```json
-{
-  "data": {
-    "success": true,
-    "previousStep": "review",
-    "nextStep": "analyze",
-    "action": "retry",
-    "retriesUsed": 1,
-    "retriesRemaining": 2
-  }
-}
-```
-
-If max retries exceeded:
-
-```json
-{
-  "data": {
-    "success": true,
-    "previousStep": "review",
-    "nextStep": "hitl",
-    "action": "escalate",
-    "reason": "max_retries_exceeded",
-    "task": { "status": "HITL" }
-  }
-}
-```
-
-### 6. Confirm Syncs
-
-After persisting to primary store, confirm the sync:
-
-```json
-{
-  "tool": "confirm_sync",
-  "arguments": { "syncIds": ["sync-123", "sync-124"] }
-}
-```
-
 ## Workflow Definition Schema
 
 ### Node Types
@@ -318,65 +176,85 @@ After persisting to primary store, confirm the sync:
 | `on`     | Output value that triggers this edge (for conditional routing) |
 | `label`  | Human-readable edge description                                |
 
-## Task Schema
+## Advanced Usage
 
-```typescript
-interface Task {
-  id: string; // Unique task identifier
-  issueId: string; // Issue/ticket this task belongs to
-  workflowType: string; // Workflow definition ID to use
-  currentStep: string; // Current position in workflow
-  priority: number; // Higher = more important
-  status: string; // PENDING, IN_PROGRESS, COMPLETED, FAILED, HITL, PAUSED
-  retryCount: number; // Global retry count
-  context: object; // Task-specific data
-  stepRetries: Map; // Per-step retry tracking
-  createdAt: number; // Timestamp
-  updatedAt: number; // Timestamp
+### Loading Workflow Definitions
+
+```json
+{
+  "tool": "load_workflow",
+  "arguments": {
+    "id": "ui-reconstruction",
+    "definition": {
+      "nodes": {
+        "start": { "type": "start" },
+        "analyze": { "type": "task", "name": "Analyze Components" },
+        "review": { "type": "gate", "name": "Review Analysis", "maxRetries": 3 },
+        "end": { "type": "end", "result": "success" },
+        "hitl": { "type": "end", "result": "blocked", "escalation": "hitl" }
+      },
+      "edges": [
+        { "from": "start", "to": "analyze" },
+        { "from": "analyze", "to": "review" },
+        { "from": "review", "to": "analyze", "on": "failed", "label": "Retry on failure" },
+        { "from": "review", "to": "hitl", "on": "max_retries_exceeded", "label": "Escalate after 3 failures" },
+        { "from": "review", "to": "end", "on": "passed" }
+      ]
+    }
+  }
+}
+```
+
+### Task Tree Management
+
+Load a priority queue of tasks:
+
+```json
+{
+  "tool": "load_task_tree",
+  "arguments": {
+    "tasks": [
+      {
+        "id": "task-001",
+        "issueId": "ISSUE-042",
+        "workflowType": "ui-reconstruction",
+        "currentStep": "start",
+        "priority": 100,
+        "status": "PENDING",
+        "context": { "targetUrl": "https://example.com" }
+      }
+    ]
+  }
+}
+```
+
+### Advancing Tasks
+
+After executing a task step:
+
+```json
+{
+  "tool": "advance_task",
+  "arguments": {
+    "taskId": "task-001",
+    "result": "passed",
+    "output": "Analysis complete, found 5 components"
+  }
 }
 ```
 
 ## Testing
 
 ```bash
-# Run unit tests (55 tests)
 npm test
-
-# Run integration test
-step test-data/integration-test.mjs
 ```
 
-The integration test demonstrates:
+## Links
 
-1. Loading a workflow definition
-2. Loading a task tree with multiple tasks
-3. Advancing a task through the complete workflow
-4. Sync tracking and confirmation
-5. Retry logic with HITL escalation
+- [GitHub Repository](https://github.com/leclabs/agent-toolkit)
+- [Flow Plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow)
+- [Full Documentation](https://github.com/leclabs/agent-toolkit/tree/main/packages/agent-flow-navigator-mcp)
 
-## File Structure
+## License
 
-```
-packages/navigator/
-├── index.js              # MCP server with tool handlers
-├── engine.js             # State machine (edge evaluation, task advancement)
-├── store.js              # Data store (workflows, tasks, syncs)
-├── engine.test.js        # Unit tests
-├── package.json
-├── README.md
-└── test-data/
-    ├── sample-task-tree.json    # Sample task tree
-    └── integration-test.mjs     # End-to-end test
-```
-
-## Design Decisions
-
-1. **In-Memory Only**: The MCP server is not a source of truth. The orchestrator owns persistence.
-
-2. **Sync Reminders**: Every mutation is tracked. Responses include pending sync reminders to nag the orchestrator.
-
-3. **Per-Step Retry Tracking**: Retries are tracked per-step, not globally. This allows different retry limits at different stages.
-
-4. **Conditional Edge Evaluation**: Edges are sorted by specificity. Conditional edges are evaluated before unconditional fallbacks.
-
-5. **End Node Status**: Tasks automatically get status `COMPLETED` at success end nodes and `HITL` at end nodes with `escalation: "hitl"`.
+MIT

@@ -1,0 +1,19 @@
+# Test files
+*.test.js
+test-data/
+
+# Documentation (README.md is included by npm default)
+docs/
+
+# Development artifacts
+.flow/
+
+# IDE and editor
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db

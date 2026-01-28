@@ -2,6 +2,12 @@
   "name": "@leclabs/agent-flow-navigator-mcp",
   "version": "1.0.0",
   "description": "MCP server that navigates agents through DAG-based workflows",
+  "license": "MIT",
+  "author": "leclabs",
+  "homepage": "https://github.com/leclabs/agent-toolkit",
+  "bugs": {
+    "url": "https://github.com/leclabs/agent-toolkit/issues"
+  },
   "bin": {
     "agent-flow-navigator": "./index.js"
   },
@@ -22,7 +28,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "https://github.com/leclabs/agent-toolkit.git",
+    "url": "git+https://github.com/leclabs/agent-toolkit.git",
     "directory": "packages/agent-flow-navigator-mcp"
   },
   "files": [
@@ -33,7 +39,8 @@
     "dialog.js",
     "copier.js",
     "catalog.js",
-    "catalog/**/*.json"
+    "catalog/**/*.json",
+    "types.d.ts"
   ],
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.25.3",
