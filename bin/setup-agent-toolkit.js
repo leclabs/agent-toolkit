@@ -5,7 +5,7 @@ import fs from 'fs';
 import path from 'path';
 import readline from 'readline';
 
-const MARKETPLACE_SOURCE = 'github:leclabs/agent-toolkit';
+const MARKETPLACE_SOURCE = 'leclabs/agent-toolkit';
 const PLUGIN_NAME = 'flow@agent-toolkit';
 
 const args = process.argv.slice(2);

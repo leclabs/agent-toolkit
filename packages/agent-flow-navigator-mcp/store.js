@@ -29,16 +29,19 @@ export function validateWorkflow(id, content) {
 export class WorkflowStore {
   constructor() {
     this.workflows = new Map();
+    this.sources = new Map(); // Track source: "catalog" | "project"
   }
 
   /**
    * Load a workflow definition into the store
    * @param {string} id - Workflow identifier
    * @param {Object} workflow - Workflow definition
+   * @param {string} source - Source: "catalog" | "project"
    * @returns {string} The workflow id
    */
-  loadDefinition(id, workflow) {
+  loadDefinition(id, workflow, source = "catalog") {
     this.workflows.set(id, workflow);
+    this.sources.set(id, source);
     return id;
   }
 
@@ -53,15 +56,43 @@ export class WorkflowStore {
 
   /**
    * List all loaded workflows with metadata
+   * @param {string} filter - Filter by source: "all" | "project" | "catalog"
    * @returns {Array} Array of workflow summaries
    */
-  listWorkflows() {
-    return Array.from(this.workflows.entries()).map(([id, wf]) => ({
-      id,
-      name: wf.name || id,
-      description: wf.description || "",
-      stepCount: Object.keys(wf.nodes || {}).length,
-    }));
+  listWorkflows(filter = "all") {
+    const results = [];
+    for (const [id, wf] of this.workflows.entries()) {
+      const source = this.sources.get(id) || "catalog";
+      if (filter !== "all" && source !== filter) continue;
+      results.push({
+        id,
+        name: wf.name || id,
+        description: wf.description || "",
+        stepCount: Object.keys(wf.nodes || {}).length,
+        source,
+      });
+    }
+    return results;
+  }
+
+  /**
+   * Check if any project workflows exist
+   * @returns {boolean}
+   */
+  hasProjectWorkflows() {
+    for (const source of this.sources.values()) {
+      if (source === "project") return true;
+    }
+    return false;
+  }
+
+  /**
+   * Get the source of a workflow
+   * @param {string} id - Workflow identifier
+   * @returns {string|undefined} Source or undefined
+   */
+  getSource(id) {
+    return this.sources.get(id);
   }
 
   /**
@@ -78,6 +109,7 @@ export class WorkflowStore {
    */
   clear() {
     this.workflows.clear();
+    this.sources.clear();
   }
 
   /**

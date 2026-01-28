@@ -51,14 +51,24 @@ Use `Navigator.Diagram`:
 
 The tool returns:
 
-- A mermaid flowchart diagram with color-coded steps:
-  - Green: Start step
-  - Blue: Success/terminal step
-  - Pink: HITL (human-in-the-loop) step
-  - Gold: Current step (if specified)
-- A table of all steps with stage, name, agent, and instructions
+```json
+{
+  "savedTo": ".flow/diagrams/feature-development.md",
+  "source": "project"  // or "catalog"
+}
+```
 
-Display the output directly to the user.
+Read and display the saved diagram file. Include source indicator:
+
+```markdown
+## feature-development (project)
+
+[mermaid diagram content from file]
+```
+
+The diagram includes:
+- Color-coded steps (green=start, blue=success, pink=HITL, gold=current)
+- A table of all steps with stage, name, agent, and instructions
 
 ## Examples
 

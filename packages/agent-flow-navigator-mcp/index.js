@@ -64,7 +64,7 @@ function loadProjectWorkflows(dirPath) {
     try {
       const content = JSON.parse(readFileSync(workflowFile, "utf-8"));
       if (validateWorkflow(id, content)) {
-        store.loadDefinition(id, content);
+        store.loadDefinition(id, content, "project");
         loaded.push(id);
       }
     } catch (e) {
@@ -90,7 +90,7 @@ function loadCatalogWorkflows(dirPath) {
     try {
       const content = JSON.parse(readFileSync(join(dirPath, file), "utf-8"));
       if (validateWorkflow(id, content)) {
-        store.loadDefinition(id, content);
+        store.loadDefinition(id, content, "catalog");
         loaded.push(id);
       }
     } catch (e) {
@@ -157,10 +157,16 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "ListWorkflows",
-        description: "List all available workflows. Returns data only, no dialog.",
+        description: "List available workflows. Filters by source when project workflows exist.",
         inputSchema: {
           type: "object",
-          properties: {},
+          properties: {
+            source: {
+              type: "string",
+              enum: ["all", "project", "catalog"],
+              description: "Filter by source. Default: 'project' if project workflows exist, else 'all'.",
+            },
+          },
         },
       },
       {
@@ -228,9 +234,18 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "ListWorkflows": {
+        // Default to project-only if project workflows exist
+        const hasProject = store.hasProjectWorkflows();
+        const filter = args.source || (hasProject ? "project" : "all");
+        const workflows = store.listWorkflows(filter);
         return jsonResponse({
           schemaVersion: 2,
-          workflows: store.listWorkflows(),
+          workflows,
+          filter,
+          hasProjectWorkflows: hasProject,
+          hint: hasProject && filter === "project"
+            ? "Showing project workflows. Use source='all' to include catalog."
+            : undefined,
         });
       }
 
@@ -245,6 +260,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           throw new Error(`Workflow '${args.workflowType}' not found`);
         }
 
+        const source = store.getSource(args.workflowType);
         const markdown = generateDiagram(wfDef, args.currentStep);
 
         // Save diagram to file
@@ -254,7 +270,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const filePath = join(DIAGRAMS_PATH, `${args.workflowType}.md`);
         writeFileSync(filePath, markdown);
 
-        return jsonResponse({ savedTo: filePath });
+        return jsonResponse({ savedTo: filePath, source });
       }
 
       case "CopyWorkflows": {
