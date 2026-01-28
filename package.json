@@ -15,6 +15,7 @@
     "format": "prettier --write .",
     "changeset": "changeset",
     "version": "changeset version && node scripts/sync-versions.js",
+    "publish:all": "npm publish --access public && cd packages/agent-flow-navigator-mcp && npm publish --access public",
     "plugin:reinstall": "(claude plugin uninstall flow@agent-toolkit || true) && claude plugin marketplace update agent-toolkit && claude plugin install flow@agent-toolkit"
   },
   "repository": {
