@@ -54,7 +54,7 @@ The tool returns:
 ```json
 {
   "savedTo": ".flow/diagrams/feature-development.md",
-  "source": "project"  // or "catalog"
+  "source": "project" // or "catalog"
 }
 ```
 
@@ -67,6 +67,7 @@ Read and display the saved diagram file. Include source indicator:
 ```
 
 The diagram includes:
+
 - Color-coded steps (green=start, blue=success, pink=HITL, gold=current)
 - A table of all steps with stage, name, agent, and instructions
 

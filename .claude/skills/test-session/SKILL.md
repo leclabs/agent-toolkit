@@ -9,6 +9,7 @@ description: Test skill to verify session ID availability
 **Task List ID (env var):** Check `$CLAUDE_CODE_TASK_LIST_ID`
 
 The task directory resolves to:
+
 ```
 ~/.claude/tasks/${CLAUDE_CODE_TASK_LIST_ID:-${CLAUDE_SESSION_ID}}/
 ```

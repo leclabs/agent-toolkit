@@ -243,9 +243,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           workflows,
           filter,
           hasProjectWorkflows: hasProject,
-          hint: hasProject && filter === "project"
-            ? "Showing project workflows. Use source='all' to include catalog."
-            : undefined,
+          hint:
+            hasProject && filter === "project"
+              ? "Showing project workflows. Use source='all' to include catalog."
+              : undefined,
         });
       }
 

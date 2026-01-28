@@ -26,7 +26,7 @@ Discover workflows from your project's existing processes, diagrams, and documen
 
 Use the Task tool with Explore subagent to scan the project:
 
-```
+````
 Task(
   subagent_type: "Explore",
   prompt: """
@@ -73,7 +73,7 @@ Task(
     }
   """
 )
-```
+````
 
 ### Phase 2: Present Findings (One Category at a Time)
 
@@ -122,7 +122,7 @@ AskUserQuestion(
 
 When mermaid diagrams are selected, parse them for workflow structure:
 
-```
+````
 Task(
   subagent_type: "Explore",
   prompt: """
@@ -153,7 +153,7 @@ Task(
     }
   """
 )
-```
+````
 
 ### Phase 4: Workflow Assembly
 
@@ -186,13 +186,13 @@ Present editable step list:
 ```markdown
 ## Proposed Steps for "Feature Development"
 
-| # | Step Name          | Type | Agent     | Keep? |
-|---|-------------------|------|-----------|-------|
-| 1 | Requirement Review | task | Planner   | Yes   |
-| 2 | Design Approval    | gate | Reviewer  | Yes   |
-| 3 | Implementation     | task | Developer | Yes   |
-| 4 | Code Review        | gate | Reviewer  | Yes   |
-| 5 | QA Testing         | task | Tester    | Yes   |
+| #   | Step Name          | Type | Agent     | Keep? |
+| --- | ------------------ | ---- | --------- | ----- |
+| 1   | Requirement Review | task | Planner   | Yes   |
+| 2   | Design Approval    | gate | Reviewer  | Yes   |
+| 3   | Implementation     | task | Developer | Yes   |
+| 4   | Code Review        | gate | Reviewer  | Yes   |
+| 5   | QA Testing         | task | Tester    | Yes   |
 
 **What would you like to change?**
 ```
@@ -234,12 +234,12 @@ Or batch assignment for efficiency:
 
 I'll use these default assignments based on step types:
 
-| Step Type | Default Agent |
-|-----------|---------------|
-| Planning/Analysis | @flow:Planner |
-| Implementation | @flow:Developer |
-| Testing | @flow:Tester |
-| Review/Gate | @flow:Reviewer |
+| Step Type         | Default Agent   |
+| ----------------- | --------------- |
+| Planning/Analysis | @flow:Planner   |
+| Implementation    | @flow:Developer |
+| Testing           | @flow:Tester    |
+| Review/Gate       | @flow:Reviewer  |
 ```
 
 ```
@@ -275,8 +275,8 @@ Build the workflow.json matching project terminology:
     }
   },
   "edges": [
-    {"from": "start", "to": "requirement_review"},
-    {"from": "requirement_review", "to": "design_approval", "on": "passed"}
+    { "from": "start", "to": "requirement_review" },
+    { "from": "requirement_review", "to": "design_approval", "on": "passed" }
   ]
 }
 ```
@@ -301,7 +301,7 @@ AskUserQuestion(
 3. Generate `README.md` with diagram
 4. Call `Navigator.ListWorkflows` to reload
 
-```markdown
+````markdown
 ## Workflow Created
 
 Saved to `.flow/workflows/feature-development/`
@@ -313,11 +313,14 @@ flowchart TD
     design_approval{"Design Approval"}
     ...
 ```
+````
 
 **Next steps:**
+
 - Create a task: `/flow:task-create "description" feature-development`
 - View workflow: `/flow:diagram feature-development`
 - Edit: `.flow/workflows/feature-development/workflow.json`
+
 ```
 
 ## Quick Mode (--quick)
@@ -330,15 +333,17 @@ Skip interactive confirmations:
 4. Show summary and ask single confirmation before saving
 
 ```
+
 AskUserQuestion(
-  question: "Quick analysis found 2 potential workflows. Create them?",
-  options: [
-    {"label": "Create both", "description": "feature-flow (7 steps), deploy-pipeline (4 steps)"},
-    {"label": "Review first", "description": "Switch to interactive mode"},
-    {"label": "Cancel", "description": "Don't create workflows"}
-  ]
+question: "Quick analysis found 2 potential workflows. Create them?",
+options: [
+{"label": "Create both", "description": "feature-flow (7 steps), deploy-pipeline (4 steps)"},
+{"label": "Review first", "description": "Switch to interactive mode"},
+{"label": "Cancel", "description": "Don't create workflows"}
+]
 )
-```
+
+````
 
 ## When No Patterns Found
 
@@ -355,7 +360,7 @@ I didn't find:
 1. Use a catalog workflow: `/flow:init`
 2. Describe your workflow and I'll help build it
 3. Point me to specific files to analyze
-```
+````
 
 ```
 AskUserQuestion(

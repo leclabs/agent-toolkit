@@ -60,34 +60,34 @@ Navigator returns: Step 2 of 8 - "Implement changes"
 
 ## MCP Tools Reference
 
-| Tool | Description |
-| ---- | ----------- |
-| `Navigate` | Start a workflow, get current state, or advance to next step |
-| `Diagram` | Generate a mermaid flowchart for a workflow |
-| `ListWorkflows` | List all available workflows |
-| `SelectWorkflow` | Get workflow selection dialog for user interaction |
-| `CopyWorkflows` | Copy workflows from catalog to project |
-| `ListCatalog` | List workflows available in the catalog |
+| Tool             | Description                                                  |
+| ---------------- | ------------------------------------------------------------ |
+| `Navigate`       | Start a workflow, get current state, or advance to next step |
+| `Diagram`        | Generate a mermaid flowchart for a workflow                  |
+| `ListWorkflows`  | List all available workflows                                 |
+| `SelectWorkflow` | Get workflow selection dialog for user interaction           |
+| `CopyWorkflows`  | Copy workflows from catalog to project                       |
+| `ListCatalog`    | List workflows available in the catalog                      |
 
 ### Navigate
 
 The primary tool for workflow navigation.
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
-| `workflowType` | string | Workflow ID (for start only, e.g., "feature-development") |
-| `description` | string | User's task description (for start) |
-| `taskFilePath` | string | Path to task file (for advance/current) |
-| `result` | "passed" \| "failed" | Step result (for advance) |
+| Parameter      | Type                 | Description                                               |
+| -------------- | -------------------- | --------------------------------------------------------- |
+| `workflowType` | string               | Workflow ID (for start only, e.g., "feature-development") |
+| `description`  | string               | User's task description (for start)                       |
+| `taskFilePath` | string               | Path to task file (for advance/current)                   |
+| `result`       | "passed" \| "failed" | Step result (for advance)                                 |
 
 ### Diagram
 
 Generates a mermaid diagram for visualizing workflow structure.
 
-| Parameter | Type | Description |
-| --------- | ---- | ----------- |
+| Parameter      | Type   | Description                         |
+| -------------- | ------ | ----------------------------------- |
 | `workflowType` | string | Workflow ID to visualize (required) |
-| `currentStep` | string | Optional step to highlight |
+| `currentStep`  | string | Optional step to highlight          |
 
 ## Architecture Overview
 

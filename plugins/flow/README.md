@@ -29,28 +29,28 @@ feat: add user authentication --run
 
 Flow recognizes these prefixes to auto-select workflows:
 
-| Prefix  | Workflow              | Use Case                                     |
-| ------- | --------------------- | -------------------------------------------- |
-| `fix:`  | quick-task            | Small, straightforward changes               |
-| `feat:` | feature-development   | New features with planning and review        |
-| `bug:`  | bug-fix               | Bug reproduction, investigation, and fix     |
-| `test:` | test-coverage         | Analyze and improve test coverage            |
-| `ctx:`  | context-optimization  | Optimize agent prompts and context           |
+| Prefix  | Workflow             | Use Case                                 |
+| ------- | -------------------- | ---------------------------------------- |
+| `fix:`  | quick-task           | Small, straightforward changes           |
+| `feat:` | feature-development  | New features with planning and review    |
+| `bug:`  | bug-fix              | Bug reproduction, investigation, and fix |
+| `test:` | test-coverage        | Analyze and improve test coverage        |
+| `ctx:`  | context-optimization | Optimize agent prompts and context       |
 
 ## Available Skills
 
-| Skill                | Description                                              |
-| -------------------- | -------------------------------------------------------- |
-| `/flow:prime`        | Load orchestrator context at session start               |
-| `/flow:task-create`  | Create a new task with workflow tracking                 |
-| `/flow:task-list`    | List all flow tasks and their progress                   |
-| `/flow:task-get`     | Get detailed task info with workflow diagram             |
-| `/flow:task-advance` | Advance a task to the next step (passed/failed)          |
-| `/flow:run`          | Execute tasks autonomously with subagent delegation      |
-| `/flow:init`         | Set up workflows for a project (copy from catalog)       |
-| `/flow:list`         | List available workflows                                 |
-| `/flow:load`         | Reload workflows from `.flow/workflows/`                 |
-| `/flow:diagram`      | Generate mermaid diagram for a workflow                  |
+| Skill                | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `/flow:prime`        | Load orchestrator context at session start          |
+| `/flow:task-create`  | Create a new task with workflow tracking            |
+| `/flow:task-list`    | List all flow tasks and their progress              |
+| `/flow:task-get`     | Get detailed task info with workflow diagram        |
+| `/flow:task-advance` | Advance a task to the next step (passed/failed)     |
+| `/flow:run`          | Execute tasks autonomously with subagent delegation |
+| `/flow:init`         | Set up workflows for a project (copy from catalog)  |
+| `/flow:list`         | List available workflows                            |
+| `/flow:load`         | Reload workflows from `.flow/workflows/`            |
+| `/flow:diagram`      | Generate mermaid diagram for a workflow             |
 
 ## Workflows
 
@@ -151,13 +151,13 @@ User Request
 
 Flow delegates work to specialized subagents:
 
-| Agent      | Role                                    |
-| ---------- | --------------------------------------- |
-| Planner    | Parse requirements, explore code, plan  |
-| Developer  | Write code, fix issues, commit          |
-| Tester     | Write tests, run tests, verify          |
-| Reviewer   | Review plans and code                   |
-| Investigator | Reproduce bugs, find root causes      |
+| Agent        | Role                                   |
+| ------------ | -------------------------------------- |
+| Planner      | Parse requirements, explore code, plan |
+| Developer    | Write code, fix issues, commit         |
+| Tester       | Write tests, run tests, verify         |
+| Reviewer     | Review plans and code                  |
+| Investigator | Reproduce bugs, find root causes       |
 
 ## Human-in-the-Loop (HITL)
 
