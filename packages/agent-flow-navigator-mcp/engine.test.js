@@ -8,7 +8,7 @@ import {
   getBaselineInstructions,
   readTaskFile,
 } from "./engine.js";
-import { writeFileSync, unlinkSync, mkdirSync, rmSync } from "fs";
+import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
 

@@ -1,17 +1,17 @@
 #!/usr/bin/env node
 
-import { execSync, spawnSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
-import readline from 'readline';
+import { execSync, spawnSync } from "child_process";
+import fs from "fs";
+import path from "path";
+import readline from "readline";
 
-const MARKETPLACE_SOURCE = 'github:leclabs/agent-toolkit';
-const PLUGIN_NAME = 'flow@agent-toolkit';
+const MARKETPLACE_SOURCE = "leclabs/agent-toolkit";
+const PLUGIN_NAME = "flow@agent-toolkit";
 
 const args = process.argv.slice(2);
 const flags = {
-  yes: args.includes('--yes') || args.includes('-y'),
-  help: args.includes('--help') || args.includes('-h'),
+  yes: args.includes("--yes") || args.includes("-y"),
+  help: args.includes("--help") || args.includes("-h"),
 };
 
 function printHelp() {
@@ -34,13 +34,15 @@ Steps performed:
 
 function run(cmd) {
   try {
-    return execSync(cmd, { encoding: 'utf8', stdio: ['pipe', 'pipe', 'pipe'] }).trim();
-  } catch { return null; }
+    return execSync(cmd, { encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] }).trim();
+  } catch {
+    return null;
+  }
 }
 
 function runWithOutput(cmd) {
-  const result = spawnSync('sh', ['-c', cmd], { encoding: 'utf8' });
-  return { success: result.status === 0, stdout: (result.stdout || '').trim(), stderr: (result.stderr || '').trim() };
+  const result = spawnSync("sh", ["-c", cmd], { encoding: "utf8" });
+  return { success: result.status === 0, stdout: (result.stdout || "").trim(), stderr: (result.stderr || "").trim() };
 }
 
 async function prompt(question, defaultValue) {
@@ -56,31 +58,31 @@ async function prompt(question, defaultValue) {
 
 async function confirm(question, defaultYes = true) {
   if (flags.yes) return true;
-  const answer = await prompt(`${question} ${defaultYes ? '[Y/n]' : '[y/N]'}`, defaultYes ? 'y' : 'n');
-  return answer.toLowerCase().startsWith('y');
+  const answer = await prompt(`${question} ${defaultYes ? "[Y/n]" : "[y/N]"}`, defaultYes ? "y" : "n");
+  return answer.toLowerCase().startsWith("y");
 }
 
 function checkClaudeCode() {
-  console.log('\nChecking Claude Code CLI...');
-  const version = run('claude --version');
+  console.log("\nChecking Claude Code CLI...");
+  const version = run("claude --version");
   if (!version) {
-    console.error('  Error: Claude Code CLI not found.');
-    console.error('  Install from: https://claude.ai/code');
+    console.error("  Error: Claude Code CLI not found.");
+    console.error("  Install from: https://claude.ai/code");
     process.exit(1);
   }
   console.log(`  Found: ${version}`);
 }
 
 function addMarketplace() {
-  console.log('\nAdding agent-toolkit marketplace...');
-  const list = run('claude plugin marketplace list') || '';
-  if (list.includes('agent-toolkit')) {
-    console.log('  Already added.');
+  console.log("\nAdding agent-toolkit marketplace...");
+  const list = run("claude plugin marketplace list") || "";
+  if (list.includes("agent-toolkit")) {
+    console.log("  Already added.");
     return true;
   }
   const result = runWithOutput(`claude plugin marketplace add ${MARKETPLACE_SOURCE}`);
   if (result.success) {
-    console.log('  Added successfully.');
+    console.log("  Added successfully.");
     return true;
   }
   console.error(`  Failed: ${result.stderr || result.stdout}`);
@@ -89,15 +91,15 @@ function addMarketplace() {
 }
 
 function installPlugin() {
-  console.log('\nInstalling flow plugin...');
-  const list = run('claude plugin list') || '';
+  console.log("\nInstalling flow plugin...");
+  const list = run("claude plugin list") || "";
   if (list.includes(PLUGIN_NAME)) {
-    console.log('  Already installed.');
+    console.log("  Already installed.");
     return true;
   }
   const result = runWithOutput(`claude plugin install ${PLUGIN_NAME} --scope user`);
   if (result.success) {
-    console.log('  Installed successfully.');
+    console.log("  Installed successfully.");
     return true;
   }
   console.error(`  Failed: ${result.stderr || result.stdout}`);
@@ -106,25 +108,29 @@ function installPlugin() {
 }
 
 async function configureTaskListId() {
-  console.log('\nConfiguring project settings...');
+  console.log("\nConfiguring project settings...");
   const cwd = process.cwd();
   const defaultId = path.basename(cwd);
-  const taskListId = await prompt('  Task list ID', defaultId);
+  const taskListId = await prompt("  Task list ID", defaultId);
 
-  const claudeDir = path.join(cwd, '.claude');
-  const settingsPath = path.join(claudeDir, 'settings.local.json');
+  const claudeDir = path.join(cwd, ".claude");
+  const settingsPath = path.join(claudeDir, "settings.local.json");
 
   if (!fs.existsSync(claudeDir)) fs.mkdirSync(claudeDir, { recursive: true });
 
   let settings = {};
   if (fs.existsSync(settingsPath)) {
-    try { settings = JSON.parse(fs.readFileSync(settingsPath, 'utf8')); } catch {}
+    try {
+      settings = JSON.parse(fs.readFileSync(settingsPath, "utf8"));
+    } catch {
+      // Ignore parse errors, start fresh
+    }
   }
 
   settings.env = settings.env || {};
   settings.env.CLAUDE_CODE_TASK_LIST_ID = taskListId;
 
-  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + '\n');
+  fs.writeFileSync(settingsPath, JSON.stringify(settings, null, 2) + "\n");
   console.log(`  Created: ${settingsPath}`);
   console.log(`  CLAUDE_CODE_TASK_LIST_ID: ${taskListId}`);
   return true;
@@ -144,15 +150,18 @@ Quick prefixes: fix: | feat: | bug:
 }
 
 async function main() {
-  if (flags.help) { printHelp(); process.exit(0); }
+  if (flags.help) {
+    printHelp();
+    process.exit(0);
+  }
 
-  console.log('Agent Toolkit Setup');
-  console.log('===================');
+  console.log("Agent Toolkit Setup");
+  console.log("===================");
 
   checkClaudeCode();
 
-  if (!await confirm('\nProceed with setup?')) {
-    console.log('Setup cancelled.');
+  if (!(await confirm("\nProceed with setup?"))) {
+    console.log("Setup cancelled.");
     process.exit(0);
   }
 
@@ -163,9 +172,12 @@ async function main() {
   if (marketplaceOk && pluginOk && configOk) {
     showSuccess();
   } else {
-    console.log('\nSetup completed with errors. Review the messages above.');
+    console.log("\nSetup completed with errors. Review the messages above.");
     process.exit(1);
   }
 }
 
-main().catch((err) => { console.error('Unexpected error:', err.message); process.exit(1); });
+main().catch((err) => {
+  console.error("Unexpected error:", err.message);
+  process.exit(1);
+});

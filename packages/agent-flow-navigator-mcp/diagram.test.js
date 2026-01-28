@@ -264,7 +264,7 @@ class TestMCPClient {
         this.processBuffer();
       });
 
-      this.process.stderr.on("data", (data) => {
+      this.process.stderr.on("data", () => {
         // MCP servers log to stderr, ignore for tests
       });
 

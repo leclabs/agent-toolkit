@@ -37,7 +37,7 @@ Task structure:
 ```json
 {
   "id": "1",
-  "subject": "Add user authentication",
+  "subject": "Add user authentication ✨",
   "description": "...",
   "status": "in_progress",
   "metadata": {
@@ -77,7 +77,7 @@ Call `Navigator.Diagram` with current position highlighted:
 Use standard flow task format with diagram:
 
 ````markdown
-#1 Implement feature X (@flow:Developer)
+#1 Implement feature X ✨ (@flow:Developer)
 → feature-development · development
 → implement · in_progress
 
@@ -99,7 +99,7 @@ flowchart TD
 When Navigate returns `subagent: null`, show `(direct)` instead:
 
 ```
-#1 Review changes (direct)
+#1 Review changes ✨ (direct)
  → feature-development · verification
  → code_review · in_progress
 
@@ -127,8 +127,23 @@ Flow tasks have metadata with `workflowType`:
   }
 }
 
-// Regular task - no workflow metadata
+// Regular task - no workflow metadata (no emoji)
 {
   "metadata": {}  // or no metadata at all
 }
 ```
+
+### Workflow Emoji Mapping
+
+Append emoji after task subject based on workflowType:
+
+| workflowType           | Emoji  |
+| ---------------------- | ------ |
+| `feature-development`  | ✨     |
+| `bug-fix`              | 🐛     |
+| `agile-task`           | 📋     |
+| `context-optimization` | 🔧     |
+| `quick-task`           | ⚡     |
+| `ui-reconstruction`    | 🎨     |
+| `test-coverage`        | 🧪     |
+| (unknown/missing)      | (none) |

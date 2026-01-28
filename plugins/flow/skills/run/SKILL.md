@@ -161,7 +161,7 @@ Exit when:
 **Success:**
 
 ```
-Completed: #1 Add user auth (@flow:Developer)
+Completed: #1 Add user auth ✨ (@flow:Developer)
  → feature-development · end
  → end_success · completed ✓
 
@@ -171,10 +171,25 @@ Steps: parse_requirements → implement → test → commit → end_success
 **HITL:**
 
 ```
-⚠ HITL: #1 Add user auth (direct)
+⚠ HITL: #1 Add user auth ✨ (direct)
  → feature-development · verification
  → hitl_test · pending
 
 Reason: Max retries exceeded at test step
 Action: Fix manually, then `/flow:task-advance 1 passed`
 ```
+
+### Workflow Emoji Mapping
+
+Append emoji after task subject based on workflowType:
+
+| workflowType           | Emoji  |
+| ---------------------- | ------ |
+| `feature-development`  | ✨     |
+| `bug-fix`              | 🐛     |
+| `agile-task`           | 📋     |
+| `context-optimization` | 🔧     |
+| `quick-task`           | ⚡     |
+| `ui-reconstruction`    | 🎨     |
+| `test-coverage`        | 🧪     |
+| (unknown/missing)      | (none) |

@@ -94,7 +94,7 @@ For terminal steps, set appropriate status:
 **Normal advancement:**
 
 ```
-Advanced: #1 Task title (@flow:Reviewer)
+Advanced: #1 Task title ✨ (@flow:Reviewer)
  → feature-development · verification
  → code_review · in_progress
 
@@ -105,7 +105,7 @@ Next: Delegate to @flow:Reviewer, then advance again
 **Terminal - Success:**
 
 ```
-Completed: #1 Task title
+Completed: #1 Task title ✨
  → feature-development · end
  → end_success · completed ✓
 ```
@@ -113,7 +113,7 @@ Completed: #1 Task title
 **Terminal - HITL:**
 
 ```
-⚠ HITL: #1 Task title (direct)
+⚠ HITL: #1 Task title ✨ (direct)
  → feature-development · verification
  → hitl_review · pending
 
@@ -128,3 +128,18 @@ Action: Review and fix manually, then `/flow:task-advance 1 passed`
 | -        | in_progress   | Work continues   |
 | success  | completed     | Task done        |
 | hitl     | pending       | Needs human help |
+
+### Workflow Emoji Mapping
+
+Append emoji after task subject based on workflowType:
+
+| workflowType           | Emoji  |
+| ---------------------- | ------ |
+| `feature-development`  | ✨     |
+| `bug-fix`              | 🐛     |
+| `agile-task`           | 📋     |
+| `context-optimization` | 🔧     |
+| `quick-task`           | ⚡     |
+| `ui-reconstruction`    | 🎨     |
+| `test-coverage`        | 🧪     |
+| (unknown/missing)      | (none) |

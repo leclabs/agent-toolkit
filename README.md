@@ -8,9 +8,9 @@ The essential Claude Code plugin marketplace for reliable Agent-led workflow orc
 
 ## What's Included
 
-| Component | Description |
-|-----------|-------------|
-| **[Flow Plugin](plugins/flow/)** | DAG-based workflow orchestration for Claude Code |
+| Component                                               | Description                                                              |
+| ------------------------------------------------------- | ------------------------------------------------------------------------ |
+| **[Flow Plugin](plugins/flow/)**                        | DAG-based workflow orchestration for Claude Code                         |
 | **[Navigator MCP](packages/agent-flow-navigator-mcp/)** | Workflow state machine that navigates agents through DAG-based workflows |
 
 ## Installation
@@ -31,13 +31,13 @@ claude plugin install flow@agent-toolkit
 
 Use prefix commands to create and execute workflow-tracked tasks:
 
-| Prefix | Workflow | Description |
-|--------|----------|-------------|
-| `feat:` | feature-development | Full lifecycle: requirements, planning, implementation, testing |
-| `bug:` | bug-fix | Bug workflow: reproduce, investigate, fix, verify |
-| `fix:` | quick-task | Minimal: understand, execute, verify |
-| `test:` | test-coverage | Analyze coverage gaps and write tests |
-| `ctx:` | context-optimization | Optimize agent context and instructions |
+| Prefix  | Workflow             | Description                                                     |
+| ------- | -------------------- | --------------------------------------------------------------- |
+| `feat:` | feature-development  | Full lifecycle: requirements, planning, implementation, testing |
+| `bug:`  | bug-fix              | Bug workflow: reproduce, investigate, fix, verify               |
+| `fix:`  | quick-task           | Minimal: understand, execute, verify                            |
+| `test:` | test-coverage        | Analyze coverage gaps and write tests                           |
+| `ctx:`  | context-optimization | Optimize agent context and instructions                         |
 
 **Examples:**
 
@@ -76,28 +76,28 @@ Orchestrator (Claude Code)
 
 ## Available Workflows
 
-| Workflow | Steps | Use Case |
-|----------|-------|----------|
-| **feature-development** | requirements → planning → implementation → testing → review | New features with full lifecycle |
-| **bug-fix** | reproduce → investigate → fix → verify | Bug fixes with root cause analysis |
-| **agile-task** | understand → implement → verify | Standard development tasks |
-| **quick-task** | understand → execute → verify | Fast, minimal overhead tasks |
-| **test-coverage** | analyze → write-tests → verify | Improving test coverage |
-| **context-optimization** | audit → optimize → validate | Improving agent context |
-| **ui-reconstruction** | analyze → reconstruct → verify | UI/component rebuilding |
+| Workflow                 | Steps                                                       | Use Case                           |
+| ------------------------ | ----------------------------------------------------------- | ---------------------------------- |
+| **feature-development**  | requirements → planning → implementation → testing → review | New features with full lifecycle   |
+| **bug-fix**              | reproduce → investigate → fix → verify                      | Bug fixes with root cause analysis |
+| **agile-task**           | understand → implement → verify                             | Standard development tasks         |
+| **quick-task**           | understand → execute → verify                               | Fast, minimal overhead tasks       |
+| **test-coverage**        | analyze → write-tests → verify                              | Improving test coverage            |
+| **context-optimization** | audit → optimize → validate                                 | Improving agent context            |
+| **ui-reconstruction**    | analyze → reconstruct → verify                              | UI/component rebuilding            |
 
 ## Skills Reference
 
-| Skill | Description |
-|-------|-------------|
-| `/flow:prime` | Load orchestrator context (invoke at session start) |
-| `/flow:task-create` | Create a new workflow task |
-| `/flow:run` | Execute tasks autonomously with subagent delegation |
-| `/flow:task-list` | List all tasks with status |
-| `/flow:task-get` | Get task details with workflow diagram |
-| `/flow:task-advance` | Manually advance a task to next step |
-| `/flow:init` | Copy workflows to project `.flow/workflows/` |
-| `/flow:diagram` | Generate mermaid diagram for a workflow |
+| Skill                | Description                                         |
+| -------------------- | --------------------------------------------------- |
+| `/flow:prime`        | Load orchestrator context (invoke at session start) |
+| `/flow:task-create`  | Create a new workflow task                          |
+| `/flow:run`          | Execute tasks autonomously with subagent delegation |
+| `/flow:task-list`    | List all tasks with status                          |
+| `/flow:task-get`     | Get task details with workflow diagram              |
+| `/flow:task-advance` | Manually advance a task to next step                |
+| `/flow:init`         | Copy workflows to project `.flow/workflows/`        |
+| `/flow:diagram`      | Generate mermaid diagram for a workflow             |
 
 ## Feature Highlights
 
