@@ -48,23 +48,25 @@ To get `subagent`, call `Navigator.Navigate` with `taskFilePath`.
 For each flow task, use this format:
 
 ```
-#<id> <subject> (<subagent>)
+#<id> <subject> <emoji> (<subagent>)
  → <workflowType> · <stage>
  → <currentStep> · <status> [· <blockers>]
+
+Where `<emoji>` is determined by workflowType (see Workflow Emoji Mapping below).
 ```
 
 **Example output:**
 
 ```
-#2 Add lint gate to workflows (@flow:Planner)
+#2 Add lint gate to workflows ✨ (@flow:Planner)
  → feature-development · planning
  → parse_requirements · pending
 
-#3 Add format gate to workflows (@flow:Planner)
+#3 Add format gate to workflows ✨ (@flow:Planner)
  → feature-development · planning
  → parse_requirements · pending · blocked by #2
 
-#4 Add test gate to workflows (@flow:Planner)
+#4 Add test gate to workflows ✨ (@flow:Planner)
  → feature-development · planning
  → parse_requirements · pending · blocked by #3
 ```
@@ -97,16 +99,33 @@ Flow tasks have `workflowType` in metadata:
 ```javascript
 // Flow task
 {
-  "subject": "Add lint gate",
+  "subject": "Add lint gate ✨",
   "metadata": {
     "workflowType": "feature-development",
     "currentStep": "parse_requirements"
   }
 }
 
-// Regular task
+// Regular task (no emoji - no workflowType)
 {
   "subject": "Add lint gate",
   "metadata": {}
 }
 ```
+
+### Workflow Emoji Mapping
+
+Append emoji after task subject based on workflowType:
+
+| workflowType           | Emoji  |
+| ---------------------- | ------ |
+| `feature-development`  | ✨     |
+| `bug-fix`              | 🐛     |
+| `agile-task`           | 📋     |
+| `context-optimization` | 🔧     |
+| `quick-task`           | ⚡     |
+| `ui-reconstruction`    | 🎨     |
+| `test-coverage`        | 🧪     |
+| (unknown/missing)      | (none) |
+
+**Note:** Non-flow tasks (no `workflowType` in metadata) have no emoji suffix.

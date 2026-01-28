@@ -50,7 +50,7 @@ Call `TaskCreate` with:
 
 ```json
 {
-  "subject": "Add user authentication",
+  "subject": "Add user authentication ✨",
   "description": "{response.orchestratorInstructions}",
   "metadata": {
     "userDescription": "Add user authentication",
@@ -63,9 +63,24 @@ Call `TaskCreate` with:
 
 **Key points:**
 
-- Subject is just the task title (no suffix)
+- Subject includes workflow emoji suffix (see mapping below)
 - All workflow state is stored in metadata
 - Include `userDescription` in metadata for context preservation
+
+### Workflow Emoji Mapping
+
+Append emoji after task subject based on workflowType:
+
+| workflowType           | Emoji  |
+| ---------------------- | ------ |
+| `feature-development`  | ✨     |
+| `bug-fix`              | 🐛     |
+| `agile-task`           | 📋     |
+| `context-optimization` | 🔧     |
+| `quick-task`           | ⚡     |
+| `ui-reconstruction`    | 🎨     |
+| `test-coverage`        | 🧪     |
+| (unknown/missing)      | (none) |
 
 ## 3. Auto-Execute (if --run flag)
 
