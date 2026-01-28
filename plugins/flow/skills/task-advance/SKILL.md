@@ -24,6 +24,14 @@ Example:
 /flow:task-advance 1 passed "Implementation complete"
 ```
 
+## Task Directory
+
+Use `$CLAUDE_CODE_TASK_LIST_ID` if set, otherwise fall back to session ID:
+
+```
+~/.claude/tasks/${CLAUDE_CODE_TASK_LIST_ID:-${CLAUDE_SESSION_ID}}/
+```
+
 ## What To Do
 
 ### 1. Construct Task File Path
@@ -31,7 +39,8 @@ Example:
 Build the task file path from taskId:
 
 ```javascript
-const taskFilePath = `.claude/todos/${taskId}.json`;
+const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
+const taskFilePath = `~/.claude/tasks/${taskDir}/${taskId}.json`;
 ```
 
 ### 2. Advance with Navigate
@@ -40,24 +49,24 @@ Call `Navigator.Navigate` with taskFilePath and result:
 
 ```json
 {
-  "taskFilePath": ".claude/todos/1.json",
+  "taskFilePath": "~/.claude/tasks/${taskDir}/1.json",
   "result": "passed"
 }
 ```
 
 Navigate reads the task file, extracts workflow state from metadata, and returns:
 
-| Field | Purpose |
-|-------|---------|
-| `currentStep` | The new step after advancement |
-| `stage` | Workflow stage (e.g., `"planning"`, `"development"`) |
-| `subagent` | Who executes this step (e.g., `@flow:Developer`) |
-| `stepInstructions` | `{name, description, guidance}` for delegation |
-| `terminal` | `"success"` or `"hitl"` if workflow ended |
-| `orchestratorInstructions` | Updated task description |
-| `metadata` | `{ workflowType, currentStep, retryCount }` for task update |
-| `action` | `"advance"`, `"retry"`, or `"escalate"` |
-| `retriesIncremented` | `true` if this was a retry |
+| Field                      | Purpose                                                     |
+| -------------------------- | ----------------------------------------------------------- |
+| `currentStep`              | The new step after advancement                              |
+| `stage`                    | Workflow stage (e.g., `"planning"`, `"development"`)        |
+| `subagent`                 | Who executes this step (e.g., `@flow:Developer`)            |
+| `stepInstructions`         | `{name, description, guidance}` for delegation              |
+| `terminal`                 | `"success"` or `"hitl"` if workflow ended                   |
+| `orchestratorInstructions` | Updated task description                                    |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }` for task update |
+| `action`                   | `"advance"`, `"retry"`, or `"escalate"`                     |
+| `retriesIncremented`       | `true` if this was a retry                                  |
 
 ### 3. Update Task
 
@@ -76,6 +85,7 @@ Call `TaskUpdate` with new metadata:
 ```
 
 For terminal steps, set appropriate status:
+
 - `terminal: "success"` → `status: "completed"`
 - `terminal: "hitl"` → `status: "pending"`
 

@@ -12,6 +12,14 @@ Show detailed status for a specific flow task.
 /flow:task-get <taskId>
 ```
 
+## Task Directory
+
+Use `$CLAUDE_CODE_TASK_LIST_ID` if set, otherwise fall back to session ID:
+
+```
+~/.claude/tasks/${CLAUDE_CODE_TASK_LIST_ID:-${CLAUDE_SESSION_ID}}/
+```
+
 ## What To Do
 
 ### 1. Read Task File
@@ -19,11 +27,13 @@ Show detailed status for a specific flow task.
 Read the task file directly to get all metadata:
 
 ```javascript
-const taskFilePath = `.claude/todos/${taskId}.json`;
+const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
+const taskFilePath = `~/.claude/tasks/${taskDir}/${taskId}.json`;
 const task = readFile(taskFilePath);
 ```
 
 Task structure:
+
 ```json
 {
   "id": "1",
@@ -45,7 +55,7 @@ Call `Navigator.Navigate` with taskFilePath (no result = get current state):
 
 ```json
 {
-  "taskFilePath": ".claude/todos/1.json"
+  "taskFilePath": "~/.claude/tasks/${taskDir}/1.json"
 }
 ```
 
@@ -68,8 +78,8 @@ Use standard flow task format with diagram:
 
 ````markdown
 #1 Implement feature X (@flow:Developer)
- → feature-development · development
- → implement · in_progress
+→ feature-development · development
+→ implement · in_progress
 
 ```mermaid
 flowchart TD

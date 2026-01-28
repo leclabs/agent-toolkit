@@ -6,14 +6,23 @@ description: List flow tasks and their workflow progress. Use to find pending wo
 
 Display all tasks that have flow workflow tracking.
 
+## Task Directory
+
+Use `$CLAUDE_CODE_TASK_LIST_ID` if set, otherwise fall back to session ID:
+
+```
+~/.claude/tasks/${CLAUDE_CODE_TASK_LIST_ID:-${CLAUDE_SESSION_ID}}/
+```
+
 ## Instructions
 
 ### 1. List All Task Files
 
-Read all task files from `.claude/todos/` directory:
+Read all task files from the task directory:
 
 ```javascript
-const taskFiles = glob(".claude/todos/*.json");
+const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
+const taskFiles = glob(`~/.claude/tasks/${taskDir}/*.json`);
 ```
 
 ### 2. Identify Flow Tasks by Metadata
@@ -64,13 +73,13 @@ For each flow task, use this format:
 
 Use these status labels:
 
-| Status | Display |
-|--------|---------|
-| pending | `pending` |
-| in_progress | `in progress` |
-| completed | `completed` |
-| HITL terminal | `⚠ HITL` |
-| Has retries | `retry {n}/3` |
+| Status        | Display       |
+| ------------- | ------------- |
+| pending       | `pending`     |
+| in_progress   | `in progress` |
+| completed     | `completed`   |
+| HITL terminal | `⚠ HITL`      |
+| Has retries   | `retry {n}/3` |
 
 ### 5. Non-Flow Tasks
 

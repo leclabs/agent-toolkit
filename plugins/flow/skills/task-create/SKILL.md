@@ -40,6 +40,7 @@ Call `Navigator.Navigate` with `workflowType` and `description`:
 ```
 
 Response includes:
+
 - `orchestratorInstructions`: Task description content
 - `metadata`: `{ workflowType, currentStep, retryCount }`
 
@@ -61,6 +62,7 @@ Call `TaskCreate` with:
 ```
 
 **Key points:**
+
 - Subject is just the task title (no suffix)
 - All workflow state is stored in metadata
 - Include `userDescription` in metadata for context preservation

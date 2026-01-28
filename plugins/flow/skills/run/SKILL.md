@@ -13,18 +13,30 @@ Execute flow tasks autonomously, delegating to subagents based on Navigate respo
 /flow:run [taskId]     # Execute specific task
 ```
 
+## Task Directory
+
+Use `$CLAUDE_CODE_TASK_LIST_ID` if set, otherwise fall back to session ID:
+
+```
+~/.claude/tasks/${CLAUDE_CODE_TASK_LIST_ID:-${CLAUDE_SESSION_ID}}/
+```
+
+```javascript
+const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
+```
+
 ## What To Do
 
 ### 1. Get Task to Execute
 
 **If taskId provided:**
 
-- Construct task file path: `.claude/todos/{taskId}.json`
+- Construct task file path: `~/.claude/tasks/${taskDir}/{taskId}.json`
 - Read task file to get metadata
 
 **If no taskId:**
 
-- List all task files in `.claude/todos/`
+- List all task files in `~/.claude/tasks/${taskDir}/`
 - Filter for flow tasks (those with `metadata.workflowType`)
 - Get highest priority pending task
 
@@ -45,7 +57,7 @@ Call `Navigator.Navigate` with taskFilePath:
 
 ```json
 {
-  "taskFilePath": ".claude/todos/1.json"
+  "taskFilePath": "~/.claude/tasks/${taskDir}/1.json"
 }
 ```
 
@@ -95,24 +107,24 @@ Parse subagent response:
 
 ```json
 {
-  "taskFilePath": ".claude/todos/1.json",
+  "taskFilePath": "~/.claude/tasks/${taskDir}/1.json",
   "result": "passed"
 }
 ```
 
 Navigate returns:
 
-| Field | Purpose |
-|-------|---------|
-| `currentStep` | The new step |
-| `stage` | Workflow stage (e.g., `"planning"`) |
-| `subagent` | Who executes next step |
-| `stepInstructions` | `{name, description, guidance}` |
-| `terminal` | `"success"` or `"hitl"` if done |
-| `orchestratorInstructions` | Updated task description |
-| `metadata` | `{ workflowType, currentStep, retryCount }` |
-| `action` | `"advance"`, `"retry"`, or `"escalate"` |
-| `retriesIncremented` | `true` if retry count increased |
+| Field                      | Purpose                                     |
+| -------------------------- | ------------------------------------------- |
+| `currentStep`              | The new step                                |
+| `stage`                    | Workflow stage (e.g., `"planning"`)         |
+| `subagent`                 | Who executes next step                      |
+| `stepInstructions`         | `{name, description, guidance}`             |
+| `terminal`                 | `"success"` or `"hitl"` if done             |
+| `orchestratorInstructions` | Updated task description                    |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }` |
+| `action`                   | `"advance"`, `"retry"`, or `"escalate"`     |
+| `retriesIncremented`       | `true` if retry count increased             |
 
 Then call TaskUpdate with new metadata:
 
