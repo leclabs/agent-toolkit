@@ -48,7 +48,12 @@
       "properties": {
         "type": { "const": "start" },
         "name": { "type": "string" },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value data for workflow tooling and extensions"
+        }
       }
     },
     "endNode": {
@@ -68,7 +73,12 @@
           "description": "What action follows this end state"
         },
         "name": { "type": "string" },
-        "description": { "type": "string" }
+        "description": { "type": "string" },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value data for workflow tooling and extensions"
+        }
       }
     },
     "taskNode": {
@@ -82,8 +92,7 @@
         "agent": { "type": "string", "description": "Agent type to perform this task" },
         "stage": {
           "type": "string",
-          "enum": ["planning", "development", "verification", "delivery"],
-          "description": "Workflow phase this task belongs to"
+          "description": "Workflow phase this task belongs to (e.g. planning, development, verification, delivery, analysis, investigation, design)"
         },
         "outputs": {
           "type": "array",
@@ -101,6 +110,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Task-specific configuration"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value data for workflow tooling and extensions"
         }
       }
     },
@@ -116,7 +130,7 @@
         "agent": { "type": "string" },
         "stage": {
           "type": "string",
-          "enum": ["planning", "development", "verification", "delivery"]
+          "description": "Workflow phase this node belongs to (e.g. planning, development, verification, delivery, analysis, investigation, design)"
         },
         "outputs": {
           "type": "array",
@@ -131,6 +145,11 @@
         "config": {
           "type": "object",
           "additionalProperties": true
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value data for workflow tooling and extensions"
         }
       }
     },
@@ -148,6 +167,11 @@
           "type": "object",
           "additionalProperties": { "type": "string" },
           "description": "Input mappings to pass to subflow"
+        },
+        "metadata": {
+          "type": "object",
+          "additionalProperties": true,
+          "description": "Arbitrary key-value data for workflow tooling and extensions"
         }
       }
     },
@@ -162,7 +186,11 @@
           "type": "string",
           "description": "Output value that triggers this edge (from node's outputs)"
         },
-        "label": { "type": "string", "description": "Edge description for display" }
+        "label": { "type": "string", "description": "Edge description for display" },
+        "condition": {
+          "type": "string",
+          "description": "Expression evaluated to determine if this edge should be taken (future use, currently informational)"
+        }
       }
     }
   }

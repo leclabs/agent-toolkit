@@ -729,6 +729,72 @@ describe("WorkflowEngine", () => {
       assert.ok(result.orchestratorInstructions.includes("{task description}"));
     });
 
+    it("should navigate workflow with node metadata without errors", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start", metadata: { version: "2.0" } },
+          analyze: {
+            type: "task",
+            name: "Analyze",
+            stage: "analysis",
+            metadata: { phase: "discovery", qualityBar: 80 },
+          },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "analyze" },
+          { from: "analyze", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("meta-wf", def);
+
+      const result = engine.navigate({ workflowType: "meta-wf" });
+
+      assert.strictEqual(result.currentStep, "analyze");
+      assert.strictEqual(result.stage, "analysis");
+      assert.strictEqual(result.action, "start");
+    });
+
+    it("should navigate workflow with edge conditions without errors", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "end", on: "passed", condition: "confidence >= 80" },
+        ],
+      };
+      store.loadDefinition("cond-wf", def);
+
+      const result = engine.navigate({ workflowType: "cond-wf" });
+      assert.strictEqual(result.currentStep, "task");
+      assert.strictEqual(result.action, "start");
+
+      // Advance with passed - edge with condition should work like normal conditional edge
+      const taskDir = join(tmpdir(), "flow-cond-test-" + Date.now());
+      mkdirSync(taskDir, { recursive: true });
+      const taskFile = join(taskDir, "task.json");
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: { workflowType: "cond-wf", currentStep: "task", retryCount: 0 },
+        })
+      );
+
+      try {
+        const advance = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+        assert.strictEqual(advance.currentStep, "end");
+        assert.strictEqual(advance.terminal, "success");
+      } finally {
+        rmSync(taskDir, { recursive: true });
+      }
+    });
+
     it("should read userDescription from task file when available", () => {
       const def = {
         nodes: {
@@ -1171,6 +1237,18 @@ describe("Helper functions", () => {
     it("should return null for falsy input", () => {
       assert.strictEqual(toSubagentRef(null), null);
       assert.strictEqual(toSubagentRef(""), null);
+    });
+
+    it("should handle namespaced agent IDs with @ prefix", () => {
+      assert.strictEqual(toSubagentRef("myorg:developer"), "@myorg:developer");
+    });
+
+    it("should pass through already-prefixed namespaced IDs", () => {
+      assert.strictEqual(toSubagentRef("@custom:agent"), "@custom:agent");
+    });
+
+    it("should still prefix simple IDs with @flow:", () => {
+      assert.strictEqual(toSubagentRef("Developer"), "@flow:Developer");
     });
   });
 

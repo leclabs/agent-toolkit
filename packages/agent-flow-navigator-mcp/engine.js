@@ -58,6 +58,9 @@ export function getTerminalType(node) {
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
   if (agentId.startsWith("@")) return agentId;
+  // Namespaced: "org:developer" -> "@org:developer"
+  if (agentId.includes(":")) return `@${agentId}`;
+  // Simple: "developer" -> "@flow:developer"
   return `@flow:${agentId}`;
 }
 
