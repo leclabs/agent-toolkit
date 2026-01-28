@@ -15,7 +15,7 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test engine.test.js diagram.test.js store.test.js dialog.test.js copier.test.js catalog.test.js"
+    "test": "node --test engine.test.js diagram.test.js store.test.js dialog.test.js copier.test.js catalog.test.js refactor-workflow.test.js"
   },
   "keywords": [
     "mcp",
