@@ -1,6 +1,6 @@
 {
   "name": "@leclabs/agent-flow-navigator-mcp",
-  "version": "1.1.0",
+  "version": "1.2.0",
   "description": "MCP server that navigates agents through DAG-based workflows",
   "license": "MIT",
   "author": "leclabs",
