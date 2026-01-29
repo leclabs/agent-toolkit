@@ -13,7 +13,7 @@
  * - Edge to end node = escalation (taken if retries exhausted)
  */
 
-import { existsSync, readFileSync } from "fs";
+import { existsSync, readFileSync, writeFileSync } from "fs";
 
 /**
  * Read and parse a task file
@@ -58,6 +58,9 @@ export function getTerminalType(node) {
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
   if (agentId.startsWith("@")) return agentId;
+  // Namespaced: "org:developer" -> "@org:developer"
+  if (agentId.includes(":")) return `@${agentId}`;
+  // Simple: "developer" -> "@flow:developer"
   return `@flow:${agentId}`;
 }
 
@@ -454,7 +457,7 @@ export class WorkflowEngine {
       action = "advance";
     }
 
-    return buildNavigateResponse(
+    const response = buildNavigateResponse(
       workflowType,
       evaluation.nextStep,
       nextStepDef,
@@ -463,5 +466,16 @@ export class WorkflowEngine {
       retryCount,
       description
     );
+
+    // Write-through: persist state transition to task file
+    if (taskFilePath) {
+      const task = readTaskFile(taskFilePath);
+      if (task) {
+        task.metadata = { ...task.metadata, ...response.metadata };
+        writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
+      }
+    }
+
+    return response;
   }
 }

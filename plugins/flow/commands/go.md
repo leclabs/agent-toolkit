@@ -1,14 +1,16 @@
 ---
 description: Execute all pending flow tasks autonomously
-argument-hint: [--from taskId]
+argument-hint: [task]
 ---
 
 Execute all pending flow tasks in the queue autonomously.
 
+- `{task}`: Start from a specific task
+
 ## Options
 
-- No args: Run all pending tasks in ID order
-- `--from <taskId>`: Start from a specific task ID
+- No args: Run all pending tasks in order
+- `{task}`: Start from a specific task
 
 ## Instructions
 
@@ -17,7 +19,5 @@ Execute all pending flow tasks in the queue autonomously.
 3. Sort by ID (lowest first)
 4. For each task: execute `/flow:run {taskId}`
 5. Continue until queue empty or task fails/needs HITL
-
-If `--from` specified, skip tasks with ID less than the given taskId.
 
 Report progress after each task completes.

@@ -250,6 +250,7 @@ class TestMCPClient {
     this.messageId = 0;
     this.pendingRequests = new Map();
     this.buffer = "";
+    this.stderrBuffer = "";
   }
 
   async connect() {
@@ -264,11 +265,22 @@ class TestMCPClient {
         this.processBuffer();
       });
 
-      this.process.stderr.on("data", () => {
-        // MCP servers log to stderr, ignore for tests
+      this.process.stderr.on("data", (data) => {
+        this.stderrBuffer += data.toString();
       });
 
       this.process.on("error", reject);
+
+      // Reject all pending requests if the process exits unexpectedly
+      this.process.on("close", (code) => {
+        if (code !== 0 && code !== null) {
+          const err = new Error(`MCP server exited with code ${code}: ${this.stderrBuffer.slice(0, 500)}`);
+          for (const { reject: rej } of this.pendingRequests.values()) {
+            rej(err);
+          }
+          this.pendingRequests.clear();
+        }
+      });
 
       // Send initialize request
       setTimeout(async () => {
@@ -327,7 +339,8 @@ class TestMCPClient {
       setTimeout(() => {
         if (this.pendingRequests.has(id)) {
           this.pendingRequests.delete(id);
-          reject(new Error(`Request ${method} timed out`));
+          const stderr = this.stderrBuffer ? `\nServer stderr: ${this.stderrBuffer.slice(0, 500)}` : "";
+          reject(new Error(`Request ${method} timed out${stderr}`));
         }
       }, 5000);
     });

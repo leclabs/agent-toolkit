@@ -1,0 +1,236 @@
+{
+  "id": "refactor",
+  "name": "Refactor",
+  "description": "Transform outdated codebases into modern equivalents using Functional Core / Imperative Shell architecture. Separates pure business logic from side effects.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Refactoring workflow begins"
+    },
+    "analyze_structure": {
+      "type": "task",
+      "name": "Analyze Structure",
+      "description": "Map current architecture: modules, dependencies, entry points. Identify coupling and cohesion issues.",
+      "agent": "Planner",
+      "stage": "analysis"
+    },
+    "identify_debt": {
+      "type": "task",
+      "name": "Identify Technical Debt",
+      "description": "Find code smells, anti-patterns, outdated practices. Document violations of SOLID, DRY, and separation of concerns.",
+      "agent": "Planner",
+      "stage": "analysis"
+    },
+    "classify_components": {
+      "type": "task",
+      "name": "Classify Components",
+      "description": "Categorize code into Functional Core (pure logic, no side effects) vs Imperative Shell (I/O, state, external calls).",
+      "agent": "Planner",
+      "stage": "analysis"
+    },
+    "design_refactor": {
+      "type": "task",
+      "name": "Design Refactor Plan",
+      "description": "Create transformation plan: define functional core boundaries, shell interfaces, and migration sequence.",
+      "agent": "Planner",
+      "stage": "planning"
+    },
+    "plan_review": {
+      "type": "gate",
+      "name": "Review Plan",
+      "description": "Verify refactor plan maintains behavioral equivalence while achieving architectural goals.",
+      "agent": "Reviewer",
+      "stage": "planning",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 3
+      }
+    },
+    "extract_core": {
+      "type": "task",
+      "name": "Extract Functional Core",
+      "description": "Refactor pure business logic into functional core: no side effects, deterministic, testable in isolation.",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "isolate_shell": {
+      "type": "task",
+      "name": "Isolate Imperative Shell",
+      "description": "Wrap side effects (I/O, state, external services) in thin imperative shell that coordinates functional core.",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "write_tests": {
+      "type": "task",
+      "name": "Write Tests",
+      "description": "Add tests verifying behavioral equivalence. Unit tests for functional core, integration tests for shell.",
+      "agent": "Tester",
+      "stage": "development"
+    },
+    "run_tests": {
+      "type": "gate",
+      "name": "Run Tests",
+      "description": "Execute test suite. Verify refactored code produces identical behavior to original.",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 3
+    },
+    "code_review": {
+      "type": "gate",
+      "name": "Code Review",
+      "description": "Review architecture: clean functional/shell separation, no hidden side effects in core, shell is minimal.",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 2,
+      "config": {
+        "scrutinyLevel": 3
+      }
+    },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit all changes with a descriptive message summarizing the refactoring",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "Refactoring completed successfully"
+    },
+    "hitl_analysis_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Analysis Blocked",
+      "description": "Analysis or planning needs human guidance"
+    },
+    "hitl_dev_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Development Blocked",
+      "description": "Development or verification needs human intervention"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "analyze_structure"
+    },
+    {
+      "from": "analyze_structure",
+      "to": "identify_debt"
+    },
+    {
+      "from": "identify_debt",
+      "to": "classify_components"
+    },
+    {
+      "from": "classify_components",
+      "to": "design_refactor"
+    },
+    {
+      "from": "design_refactor",
+      "to": "plan_review"
+    },
+    {
+      "from": "plan_review",
+      "to": "design_refactor",
+      "on": "failed",
+      "label": "Revise plan based on feedback"
+    },
+    {
+      "from": "plan_review",
+      "to": "hitl_analysis_failed",
+      "on": "failed",
+      "label": "Planning exhausted retries"
+    },
+    {
+      "from": "plan_review",
+      "to": "extract_core",
+      "on": "passed",
+      "label": "Plan approved, begin refactoring"
+    },
+    {
+      "from": "extract_core",
+      "to": "isolate_shell"
+    },
+    {
+      "from": "isolate_shell",
+      "to": "write_tests"
+    },
+    {
+      "from": "write_tests",
+      "to": "run_tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "extract_core",
+      "on": "failed",
+      "label": "Fix failing tests"
+    },
+    {
+      "from": "run_tests",
+      "to": "hitl_dev_failed",
+      "on": "failed",
+      "label": "Tests keep failing"
+    },
+    {
+      "from": "run_tests",
+      "to": "code_review",
+      "on": "passed",
+      "label": "Tests pass, ready for review"
+    },
+    {
+      "from": "code_review",
+      "to": "extract_core",
+      "on": "failed",
+      "label": "Address review feedback"
+    },
+    {
+      "from": "code_review",
+      "to": "hitl_dev_failed",
+      "on": "failed",
+      "label": "Review issues persist"
+    },
+    {
+      "from": "code_review",
+      "to": "lint_format",
+      "on": "passed",
+      "label": "Code approved, run lint checks"
+    },
+    {
+      "from": "lint_format",
+      "to": "commit",
+      "on": "passed",
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "extract_core",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_dev_failed",
+      "on": "failed",
+      "label": "Lint issues persist"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    }
+  ]
+}
