@@ -795,6 +795,109 @@ describe("WorkflowEngine", () => {
       }
     });
 
+    it("should write-through state transitions to task file on advance", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          lint: {
+            type: "gate",
+            name: "Lint",
+            agent: "Developer",
+            stage: "delivery",
+            maxRetries: 3,
+          },
+          commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+          end: { type: "end", result: "success" },
+          hitl: { type: "end", result: "blocked", escalation: "hitl" },
+        },
+        edges: [
+          { from: "start", to: "lint" },
+          { from: "lint", to: "commit", on: "passed" },
+          { from: "lint", to: "lint", on: "failed" },
+          { from: "lint", to: "hitl", on: "failed" },
+          { from: "commit", to: "end" },
+        ],
+      };
+      store.loadDefinition("wt-wf", def);
+
+      const taskDir = join(tmpdir(), "flow-writethrough-" + Date.now());
+      mkdirSync(taskDir, { recursive: true });
+      const taskFile = join(taskDir, "task.json");
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test write-through",
+          metadata: { workflowType: "wt-wf", currentStep: "lint", retryCount: 0 },
+        })
+      );
+
+      try {
+        // Advance lint with passed - should write-through to task file
+        const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+        assert.strictEqual(result.currentStep, "commit");
+        assert.strictEqual(result.action, "advance");
+
+        // Read task file back - should have updated metadata
+        const updated = readTaskFile(taskFile);
+        assert.strictEqual(updated.metadata.currentStep, "commit");
+        assert.strictEqual(updated.metadata.workflowType, "wt-wf");
+
+        // Navigate again with no result - should read "commit" from file, not stale "lint"
+        const current = engine.navigate({ taskFilePath: taskFile });
+        assert.strictEqual(current.currentStep, "commit");
+        assert.strictEqual(current.action, "current");
+      } finally {
+        rmSync(taskDir, { recursive: true });
+      }
+    });
+
+    it("should write-through retry state to task file", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          gate: { type: "gate", name: "Gate", maxRetries: 2 },
+          work: { type: "task", name: "Work" },
+          end: { type: "end", result: "success" },
+          hitl: { type: "end", result: "blocked", escalation: "hitl" },
+        },
+        edges: [
+          { from: "start", to: "gate" },
+          { from: "gate", to: "end", on: "passed" },
+          { from: "gate", to: "work", on: "failed" },
+          { from: "gate", to: "hitl", on: "failed" },
+          { from: "work", to: "gate" },
+        ],
+      };
+      store.loadDefinition("wt-retry", def);
+
+      const taskDir = join(tmpdir(), "flow-wt-retry-" + Date.now());
+      mkdirSync(taskDir, { recursive: true });
+      const taskFile = join(taskDir, "task.json");
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test retry write-through",
+          metadata: { workflowType: "wt-retry", currentStep: "gate", retryCount: 0 },
+        })
+      );
+
+      try {
+        // Fail gate - should retry to work and write-through
+        const retry = engine.navigate({ taskFilePath: taskFile, result: "failed" });
+        assert.strictEqual(retry.currentStep, "work");
+        assert.strictEqual(retry.action, "retry");
+
+        // Read task file - should have incremented retryCount and updated currentStep
+        const updated = readTaskFile(taskFile);
+        assert.strictEqual(updated.metadata.currentStep, "work");
+        assert.strictEqual(updated.metadata.retryCount, 1);
+      } finally {
+        rmSync(taskDir, { recursive: true });
+      }
+    });
+
     it("should read userDescription from task file when available", () => {
       const def = {
         nodes: {
