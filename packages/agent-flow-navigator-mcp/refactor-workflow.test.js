@@ -449,3 +449,77 @@ describe("refactor workflow full walkthrough", () => {
     assert.strictEqual(escalate.action, "escalate");
   });
 });
+
+// =============================================================================
+// Refactor workflow - HITL resume behavior
+// =============================================================================
+
+describe("refactor workflow HITL resume", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("refactor", loadRefactorWorkflow());
+  });
+
+  it("should have recovery edges from both HITL nodes", () => {
+    const workflow = loadRefactorWorkflow();
+
+    const analysisRecovery = workflow.edges.find(
+      (e) => e.from === "hitl_analysis_failed" && e.on === "passed"
+    );
+    assert.ok(analysisRecovery, "hitl_analysis_failed should have a recovery edge");
+    assert.strictEqual(analysisRecovery.to, "design_refactor");
+
+    const devRecovery = workflow.edges.find(
+      (e) => e.from === "hitl_dev_failed" && e.on === "passed"
+    );
+    assert.ok(devRecovery, "hitl_dev_failed should have a recovery edge");
+    assert.strictEqual(devRecovery.to, "extract_core");
+  });
+
+  it("should advance from hitl_analysis_failed to design_refactor on passed", () => {
+    const result = engine.evaluateEdge("refactor", "hitl_analysis_failed", "passed", 0);
+    assert.strictEqual(result.nextStep, "design_refactor");
+  });
+
+  it("should advance from hitl_dev_failed to extract_core on passed", () => {
+    const result = engine.evaluateEdge("refactor", "hitl_dev_failed", "passed", 0);
+    assert.strictEqual(result.nextStep, "extract_core");
+  });
+
+  it("should resume workflow end-to-end after analysis HITL recovery", () => {
+    // Escalate to hitl_analysis_failed
+    const escalate = engine.evaluateEdge("refactor", "plan_review", "failed", 2);
+    assert.strictEqual(escalate.nextStep, "hitl_analysis_failed");
+    assert.strictEqual(escalate.action, "escalate");
+
+    // Human resolves → resume at design_refactor
+    const resume = engine.evaluateEdge("refactor", "hitl_analysis_failed", "passed", 0);
+    assert.strictEqual(resume.nextStep, "design_refactor");
+
+    // Continue: design_refactor -> plan_review -> extract_core ...
+    const planReview = engine.evaluateEdge("refactor", "design_refactor", "passed", 0);
+    assert.strictEqual(planReview.nextStep, "plan_review");
+
+    const extract = engine.evaluateEdge("refactor", "plan_review", "passed", 0);
+    assert.strictEqual(extract.nextStep, "extract_core");
+  });
+
+  it("should resume workflow end-to-end after dev HITL recovery", () => {
+    // Escalate to hitl_dev_failed
+    const escalate = engine.evaluateEdge("refactor", "run_tests", "failed", 3);
+    assert.strictEqual(escalate.nextStep, "hitl_dev_failed");
+    assert.strictEqual(escalate.action, "escalate");
+
+    // Human resolves → resume at extract_core
+    const resume = engine.evaluateEdge("refactor", "hitl_dev_failed", "passed", 0);
+    assert.strictEqual(resume.nextStep, "extract_core");
+
+    // Continue happy path from extract_core
+    const isolate = engine.evaluateEdge("refactor", "extract_core", "passed", 0);
+    assert.strictEqual(isolate.nextStep, "isolate_shell");
+  });
+});

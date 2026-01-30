@@ -52,7 +52,7 @@ flowchart TD
     class end_success successStep
     class hitl_plan_failed,hitl_impl_failed hitlStep
     class plan_review,code_review,lint_format gateStep
-    class plan_review currentStep
+    class hitl_impl_failed currentStep
 ```
 
 ### Step Instructions

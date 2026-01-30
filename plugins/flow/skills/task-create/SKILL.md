@@ -17,7 +17,7 @@ Create a new flow task from issues, requirements, or descriptions.
 **Signiture:** `/flow:task-create <description> [<workflowType>] [--run]`
 
 | Command                                                       | Description                                                 |
-| ------------------------------------------------------------- | ----------------------------------------------------------- |
+| ------------------------------------------------------------- | -------z---------------------------------------------------- |
 | /flow:task-create                                             | Interactive multi-panel workflowType selection              |
 | /flow:task-create "Make a cup of coffee"                      | Infer workflowType → create task                            |
 | /flow:task-create "Make a cup of coffee" --run                | Infer workflowType → create task → execute                  |
@@ -94,6 +94,7 @@ Two-line format — title with task number on line 1, workflow position on line 
 ```
 
 Examples:
+
 ```
 #1 Add user auth ✨
 → feature-development · parse_requirements (@flow:Planner)

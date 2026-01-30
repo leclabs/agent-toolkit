@@ -61,12 +61,19 @@
       "name": "Complete",
       "description": "Context optimization complete"
     },
-    "hitl_failed": {
+    "hitl_design_failed": {
       "type": "end",
       "result": "blocked",
       "escalation": "hitl",
-      "name": "Needs Help",
-      "description": "Optimization needs human guidance"
+      "name": "Design Needs Help",
+      "description": "Design optimization needs human guidance"
+    },
+    "hitl_verify_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Verification Needs Help",
+      "description": "Verification needs human intervention"
     }
   },
   "edges": [
@@ -94,7 +101,7 @@
     },
     {
       "from": "review_design",
-      "to": "hitl_failed",
+      "to": "hitl_design_failed",
       "on": "failed",
       "label": "Design needs human input"
     },
@@ -116,7 +123,7 @@
     },
     {
       "from": "verify",
-      "to": "hitl_failed",
+      "to": "hitl_verify_failed",
       "on": "failed",
       "label": "Verification failed"
     },
@@ -125,6 +132,18 @@
       "to": "end_success",
       "on": "passed",
       "label": "Optimization verified"
+    },
+    {
+      "from": "hitl_design_failed",
+      "to": "design_improvements",
+      "on": "passed",
+      "label": "Human resolved design issue, resume"
+    },
+    {
+      "from": "hitl_verify_failed",
+      "to": "implement",
+      "on": "passed",
+      "label": "Human resolved verification issue, resume"
     }
   ]
 }

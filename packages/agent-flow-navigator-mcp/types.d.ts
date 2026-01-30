@@ -51,8 +51,7 @@ export interface TaskNode {
   outputs?: string[];
   maxRetries?: number;
   config?: Record<string, unknown>;
-  requiredSkills?: string[];
-  contextSkills?: string[];
+  context_files?: string[];
 }
 
 /**
@@ -68,8 +67,7 @@ export interface GateNode {
   outputs?: string[];
   maxRetries?: number;
   config?: Record<string, unknown>;
-  requiredSkills?: string[];
-  contextSkills?: string[];
+  context_files?: string[];
 }
 
 /**
@@ -112,32 +110,6 @@ export interface Workflow {
   description?: string;
   nodes: Record<string, Node>;
   edges: Edge[];
-  required_skills?: string[];
-  context_skills?: string[];
-  context_files?: string[];
-}
-
-// =============================================================================
-// Context Metadata Types
-// =============================================================================
-
-/**
- * Workflow-level context metadata.
- * Included on each workflow summary in SelectWorkflow and ListWorkflows responses.
- */
-export interface WorkflowContext {
-  required_skills: string[];
-  context_skills: string[];
-  context_files: string[];
-}
-
-/**
- * Step-level context metadata.
- * Included on every Navigate response.
- */
-export interface StepContext {
-  requiredSkills: string[];
-  contextSkills: string[];
 }
 
 // =============================================================================

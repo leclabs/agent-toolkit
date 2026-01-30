@@ -236,6 +236,24 @@
     {
       "from": "commit",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_ir_failed",
+      "to": "ir_component_tree",
+      "on": "passed",
+      "label": "Human resolved IR issue, resume"
+    },
+    {
+      "from": "hitl_build_failed",
+      "to": "uiRebuild_build",
+      "on": "passed",
+      "label": "Human resolved build issue, resume"
+    },
+    {
+      "from": "hitl_final_failed",
+      "to": "uiRebuild_build",
+      "on": "passed",
+      "label": "Human resolved final review issue, resume"
     }
   ]
 }

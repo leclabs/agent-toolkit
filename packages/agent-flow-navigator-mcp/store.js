@@ -70,11 +70,6 @@ export class WorkflowStore {
         description: wf.description || "",
         stepCount: Object.keys(wf.nodes || {}).length,
         source,
-        context: {
-          required_skills: wf.required_skills || [],
-          context_skills: wf.context_skills || [],
-          context_files: wf.context_files || [],
-        },
       });
     }
     return results;

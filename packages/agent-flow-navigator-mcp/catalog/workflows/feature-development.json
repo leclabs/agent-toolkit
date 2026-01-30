@@ -220,6 +220,18 @@
     {
       "from": "create_pr",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_plan_failed",
+      "to": "create_plan",
+      "on": "passed",
+      "label": "Human resolved planning issue, resume"
+    },
+    {
+      "from": "hitl_impl_failed",
+      "to": "implement",
+      "on": "passed",
+      "label": "Human resolved implementation issue, resume"
     }
   ]
 }

@@ -109,60 +109,6 @@ describe("WorkflowStore", () => {
       assert.strictEqual(list[0].description, "");
     });
 
-    describe("context metadata in listWorkflows", () => {
-      it("should include context metadata when workflow declares context fields (AC-1)", () => {
-        store.loadDefinition("ctx-wf", {
-          name: "Context Workflow",
-          description: "Has context",
-          nodes: { a: {} },
-          edges: [],
-          required_skills: ["/commit", "/review-pr"],
-          context_skills: ["/flow:prime"],
-          context_files: ["ARCHITECTURE.md"],
-        });
-
-        const list = store.listWorkflows();
-        const wf = list.find((w) => w.id === "ctx-wf");
-
-        assert.ok(wf.context);
-        assert.deepStrictEqual(wf.context.required_skills, ["/commit", "/review-pr"]);
-        assert.deepStrictEqual(wf.context.context_skills, ["/flow:prime"]);
-        assert.deepStrictEqual(wf.context.context_files, ["ARCHITECTURE.md"]);
-      });
-
-      it("should return empty arrays for workflow without context fields (AC-2)", () => {
-        store.loadDefinition("plain-wf", {
-          name: "Plain Workflow",
-          nodes: { a: {} },
-          edges: [],
-        });
-
-        const list = store.listWorkflows();
-        const wf = list.find((w) => w.id === "plain-wf");
-
-        assert.ok(wf.context);
-        assert.deepStrictEqual(wf.context.required_skills, []);
-        assert.deepStrictEqual(wf.context.context_skills, []);
-        assert.deepStrictEqual(wf.context.context_files, []);
-      });
-
-      it("should default missing context fields to empty arrays", () => {
-        store.loadDefinition("partial-wf", {
-          name: "Partial Context",
-          nodes: { a: {} },
-          edges: [],
-          required_skills: ["/commit"],
-          // context_skills and context_files not declared
-        });
-
-        const list = store.listWorkflows();
-        const wf = list.find((w) => w.id === "partial-wf");
-
-        assert.deepStrictEqual(wf.context.required_skills, ["/commit"]);
-        assert.deepStrictEqual(wf.context.context_skills, []);
-        assert.deepStrictEqual(wf.context.context_files, []);
-      });
-    });
   });
 
   describe("has", () => {

@@ -641,3 +641,81 @@ describe("build-review variant differentiation", () => {
     assert.deepStrictEqual(mbEdges, quickEdges);
   });
 });
+
+// =============================================================================
+// Build-Review - HITL resume behavior
+// =============================================================================
+
+describe("build-review-murder-board HITL resume", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("build-review-murder-board", loadMurderBoardWorkflow());
+  });
+
+  it("should have a recovery edge from hitl_blocked to build", () => {
+    const workflow = loadMurderBoardWorkflow();
+    const recoveryEdge = workflow.edges.find(
+      (e) => e.from === "hitl_blocked" && e.on === "passed"
+    );
+    assert.ok(recoveryEdge, "hitl_blocked should have a recovery edge");
+    assert.strictEqual(recoveryEdge.to, "build");
+  });
+
+  it("should advance from hitl_blocked to build on passed", () => {
+    const result = engine.evaluateEdge("build-review-murder-board", "hitl_blocked", "passed", 0);
+    assert.strictEqual(result.nextStep, "build");
+  });
+
+  it("should resume workflow end-to-end after HITL recovery", () => {
+    // Simulate: escalate to hitl_blocked, then human fixes, resume to build
+    const escalate = engine.evaluateEdge("build-review-murder-board", "review", "failed", 3);
+    assert.strictEqual(escalate.nextStep, "hitl_blocked");
+    assert.strictEqual(escalate.action, "escalate");
+
+    // Human resolves → passed from hitl_blocked
+    const resume = engine.evaluateEdge("build-review-murder-board", "hitl_blocked", "passed", 0);
+    assert.strictEqual(resume.nextStep, "build");
+
+    // Continue happy path: build -> review -> lint_format -> commit -> end
+    const review = engine.evaluateEdge("build-review-murder-board", "build", "passed", 0);
+    assert.strictEqual(review.nextStep, "review");
+
+    const lint = engine.evaluateEdge("build-review-murder-board", "review", "passed", 0);
+    assert.strictEqual(lint.nextStep, "lint_format");
+
+    const commit = engine.evaluateEdge("build-review-murder-board", "lint_format", "passed", 0);
+    assert.strictEqual(commit.nextStep, "commit");
+
+    const end = engine.evaluateEdge("build-review-murder-board", "commit", "passed", 0);
+    assert.strictEqual(end.nextStep, "end_success");
+  });
+});
+
+describe("build-review-quick HITL resume", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("build-review-quick", loadQuickWorkflow());
+  });
+
+  it("should have a recovery edge from hitl_blocked to build", () => {
+    const workflow = loadQuickWorkflow();
+    const recoveryEdge = workflow.edges.find(
+      (e) => e.from === "hitl_blocked" && e.on === "passed"
+    );
+    assert.ok(recoveryEdge, "hitl_blocked should have a recovery edge");
+    assert.strictEqual(recoveryEdge.to, "build");
+  });
+
+  it("should advance from hitl_blocked to build on passed", () => {
+    const result = engine.evaluateEdge("build-review-quick", "hitl_blocked", "passed", 0);
+    assert.strictEqual(result.nextStep, "build");
+  });
+});

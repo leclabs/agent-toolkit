@@ -233,6 +233,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           workflowType: args.workflowType,
           result: args.result,
           description: args.description,
+          projectRoot: PROJECT_ROOT,
         });
         return jsonResponse(result);
       }

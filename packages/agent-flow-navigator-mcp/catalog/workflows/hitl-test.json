@@ -1,0 +1,46 @@
+{
+  "id": "hitl-test",
+  "name": "HITL Test",
+  "description": "Minimal workflow for testing HITL recovery: work, gate, escalate, human resumes.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start"
+    },
+    "work": {
+      "type": "task",
+      "name": "Do Work",
+      "description": "Do the thing",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "check": {
+      "type": "gate",
+      "name": "Check",
+      "description": "Pass or fail",
+      "agent": "Reviewer",
+      "stage": "verification",
+      "maxRetries": 1
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Done"
+    },
+    "hitl_blocked": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Blocked",
+      "description": "Needs human help"
+    }
+  },
+  "edges": [
+    { "from": "start", "to": "work" },
+    { "from": "work", "to": "check" },
+    { "from": "check", "to": "end_success", "on": "passed" },
+    { "from": "check", "to": "work", "on": "failed", "label": "Retry" },
+    { "from": "check", "to": "hitl_blocked", "on": "failed", "label": "Escalate" },
+    { "from": "hitl_blocked", "to": "work", "on": "passed", "label": "Human fixed it, resume" }
+  ]
+}

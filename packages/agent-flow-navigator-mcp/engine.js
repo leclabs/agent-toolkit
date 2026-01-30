@@ -14,6 +14,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 
 /**
  * Read and parse a task file
@@ -52,16 +53,12 @@ export function getTerminalType(node) {
 }
 
 /**
- * Convert agent ID to subagent reference
- * e.g., "developer" -> "@flow:developer"
+ * Return agent ID as-is from workflow definition.
+ * Prefixing (e.g., @flow:) is the caller's responsibility.
  */
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
-  if (agentId.startsWith("@")) return agentId;
-  // Namespaced: "org:developer" -> "@org:developer"
-  if (agentId.includes(":")) return `@${agentId}`;
-  // Simple: "developer" -> "@flow:developer"
-  return `@flow:${agentId}`;
+  return agentId;
 }
 
 /**
@@ -177,17 +174,29 @@ export function getBaselineInstructions(stepId, stepName) {
 }
 
 /**
+ * Build context loading instructions from step-level context_files.
+ * Returns a markdown section or null if no context declared.
+ */
+export function buildContextInstructions({ contextFiles, projectRoot }) {
+  if (!contextFiles?.length || !projectRoot) return null;
+  const lines = contextFiles.map((file) => `- Read file: ${join(projectRoot, file)}`);
+  return `## Context\n\nBefore beginning, load the following:\n${lines.join("\n")}`;
+}
+
+/**
  * Build orchestrator instructions for task creation/update
  * Returns null for terminal nodes (no further work)
  */
-function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description) {
+function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description, contextBlock) {
   if (!stepInstructions) return null; // Terminal nodes have no instructions
 
   const delegationPrefix = subagent ? `Invoke ${subagent} to complete the following task: ` : "";
 
-  return `${delegationPrefix}${stepInstructions.guidance}
+  let result = `${delegationPrefix}${stepInstructions.guidance}
 
 ${description || "{task description}"}`;
+  if (contextBlock) result += `\n\n${contextBlock}`;
+  return result;
 }
 
 /**
@@ -201,7 +210,9 @@ function buildNavigateResponse(
   action,
   retriesIncremented = false,
   retryCount = 0,
-  description = null
+  description = null,
+  resetRetryCount = false,
+  projectRoot = null
 ) {
   const stage = stepDef.stage || null;
   const subagent = stepDef.agent ? toSubagentRef(stepDef.agent) : null;
@@ -216,19 +227,25 @@ function buildNavigateResponse(
         guidance: stepDef.instructions || getBaselineInstructions(stepId, stepDef.name),
       };
 
+  // Build context block from step-level context_files
+  const contextBlock = isTerminal
+    ? null
+    : buildContextInstructions({ contextFiles: stepDef.context_files, projectRoot });
+
   // Build orchestrator instructions for all non-terminal actions
   const orchestratorInstructions = isTerminal
     ? null
-    : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description);
+    : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description, contextBlock);
 
   // Build metadata for task storage
-  // Reset retryCount on advance/start (new step), increment on retry, preserve on current/escalate
+  // Increment on retry, reset on start or explicit forward progress (conditional advance),
+  // preserve on unconditional advances within retry loops and escalations
   const metadata = {
     workflowType,
     currentStep: stepId,
     retryCount: retriesIncremented
       ? retryCount + 1
-      : action === "start" || action === "advance"
+      : action === "start" || resetRetryCount
         ? 0
         : retryCount,
   };
@@ -244,10 +261,6 @@ function buildNavigateResponse(
     maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
-    stepContext: {
-      requiredSkills: stepDef.requiredSkills || [],
-      contextSkills: stepDef.contextSkills || [],
-    },
   };
 }
 
@@ -416,7 +429,7 @@ export class WorkflowEngine {
    * @param {string} [options.description] - User's task description
    * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, metadata, etc.
    */
-  navigate({ taskFilePath, workflowType, result, description } = {}) {
+  navigate({ taskFilePath, workflowType, result, description, projectRoot } = {}) {
     let currentStep = null;
     let retryCount = 0;
 
@@ -476,7 +489,7 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
-      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description);
+      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description, false, projectRoot);
     }
 
     // Case 2: currentStep but no result - return current state
@@ -486,7 +499,7 @@ export class WorkflowEngine {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
       }
 
-      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description);
+      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description, false, projectRoot);
     }
 
     // Case 3: currentStep and result - advance to next step
@@ -506,15 +519,23 @@ export class WorkflowEngine {
     }
 
     // Determine action and whether retries incremented
+    const currentStepDef = nodes[currentStep];
+    const isHitlResume = getTerminalType(currentStepDef) === "hitl";
     const isRetry = evaluation.action === "retry";
     let action;
-    if (isRetry) {
+    if (isHitlResume) {
+      action = "advance"; // Human fixed it → fresh advance, retryCount resets
+    } else if (isRetry) {
       action = "retry";
     } else if (getTerminalType(nextStepDef) === "hitl") {
       action = "escalate";
     } else {
       action = "advance";
     }
+
+    // Only reset retryCount on genuine forward progress (conditional edge like on:"passed")
+    // Unconditional advances within retry loops (e.g., work → gate) preserve the count
+    const resetRetryCount = action === "advance" && evaluation.action === "conditional";
 
     const response = buildNavigateResponse(
       workflowType,
@@ -523,7 +544,9 @@ export class WorkflowEngine {
       action,
       isRetry,
       retryCount,
-      description
+      description,
+      resetRetryCount,
+      projectRoot
     );
 
     // Write-through: persist state transition and presentation to task file
