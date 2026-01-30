@@ -68,18 +68,13 @@ Navigate reads the task file, extracts workflow state from metadata, and returns
 | `action`                   | `"advance"`, `"retry"`, or `"escalate"`                     |
 | `retriesIncremented`       | `true` if this was a retry                                  |
 
-### 3. Update Task
+### 3. Update Task Status
 
-Call `TaskUpdate` with new metadata:
+Navigator's write-through has already updated the task file with `subject`, `activeForm`, `description`, and `metadata`. The skill only needs to sync the task status via `TaskUpdate`:
 
 ```json
 {
   "taskId": "1",
-  "description": "{response.orchestratorInstructions}",
-  "metadata": {
-    "currentStep": "{response.metadata.currentStep}",
-    "retryCount": "{response.metadata.retryCount}"
-  },
   "status": "in_progress"
 }
 ```
@@ -91,7 +86,7 @@ For terminal steps, set appropriate status:
 
 ### 4. Show Result
 
-**Normal advancement:**
+**Normal advancement** (task node, no retries display):
 
 ```
 Advanced: #1 Task title ✨ (@flow:Reviewer)
@@ -100,6 +95,28 @@ Advanced: #1 Task title ✨ (@flow:Reviewer)
 
 Previous: implement → code_review
 Next: Delegate to @flow:Reviewer, then advance again
+```
+
+**Advancement to gate** (show retry budget when `maxRetries > 0`):
+
+```
+Advanced: #1 Task title ✨ (@flow:Reviewer)
+ → feature-development · verification
+ → code_review · in_progress · retries: 0/2
+
+Previous: implement → code_review
+Next: Delegate to @flow:Reviewer, then advance again
+```
+
+**Retry** (retryCount incremented):
+
+```
+Retrying: #1 Task title ✨ (@flow:Developer)
+ → feature-development · development
+ → implement · in_progress · retries: 2/3
+
+Previous: code_review (failed) → implement
+Next: Delegate to @flow:Developer, then advance again
 ```
 
 **Terminal - Success:**
@@ -118,7 +135,7 @@ Completed: #1 Task title ✨
  → hitl_review · pending
 
 Reason: Max retries exceeded
-Action: Review and fix manually, then `/flow:task-advance 1 passed`
+Action: Review and fix manually, then `/flow:task-advance {taskId} passed`
 ```
 
 ## Status Mapping
@@ -129,17 +146,3 @@ Action: Review and fix manually, then `/flow:task-advance 1 passed`
 | success  | completed     | Task done        |
 | hitl     | pending       | Needs human help |
 
-### Workflow Emoji Mapping
-
-Append emoji after task subject based on workflowType:
-
-| workflowType           | Emoji  |
-| ---------------------- | ------ |
-| `feature-development`  | ✨     |
-| `bug-fix`              | 🐛     |
-| `agile-task`           | 📋     |
-| `context-optimization` | 🔧     |
-| `quick-task`           | ⚡     |
-| `ui-reconstruction`    | 🎨     |
-| `test-coverage`        | 🧪     |
-| (unknown/missing)      | (none) |

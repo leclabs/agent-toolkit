@@ -7,6 +7,7 @@ import {
   toSubagentRef,
   getBaselineInstructions,
   readTaskFile,
+  buildContextInstructions,
 } from "./engine.js";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
@@ -264,7 +265,7 @@ describe("WorkflowEngine", () => {
       assert.strictEqual(result.currentStep, "analyze");
       assert.strictEqual(result.action, "start");
       assert.strictEqual(result.stage, "planning");
-      assert.strictEqual(result.subagent, "@flow:planner");
+      assert.strictEqual(result.subagent, "planner");
       assert.strictEqual(result.terminal, null);
       assert.ok(result.stepInstructions);
       assert.strictEqual(result.stepInstructions.name, "Analyze");
@@ -559,7 +560,7 @@ describe("WorkflowEngine", () => {
 
       assert.strictEqual(result.action, "start");
       assert.ok(result.orchestratorInstructions);
-      assert.ok(result.orchestratorInstructions.includes("@flow:planner"));
+      assert.ok(result.orchestratorInstructions.includes("planner"));
     });
 
     it("should include description in orchestratorInstructions when provided", () => {
@@ -939,6 +940,154 @@ describe("WorkflowEngine", () => {
         rmSync(taskDir, { recursive: true });
       }
     });
+
+    describe("context in orchestratorInstructions", () => {
+      it("should return null from buildContextInstructions when contextFiles empty", () => {
+        const result = buildContextInstructions({
+          contextFiles: [],
+          projectRoot: "/project",
+        });
+        assert.strictEqual(result, null);
+      });
+
+      it("should include Read file lines with absolute paths when contextFiles + projectRoot provided", () => {
+        const result = buildContextInstructions({
+          contextFiles: ["ARCHITECTURE.md", "docs/setup.md"],
+          projectRoot: "/my/project",
+        });
+        assert.ok(result);
+        assert.ok(result.includes("Read file: /my/project/ARCHITECTURE.md"));
+        assert.ok(result.includes("Read file: /my/project/docs/setup.md"));
+      });
+
+      it("should return null when projectRoot is null", () => {
+        const result = buildContextInstructions({
+          contextFiles: ["ARCHITECTURE.md"],
+          projectRoot: null,
+        });
+        assert.strictEqual(result, null);
+      });
+
+      it("should include context section in orchestratorInstructions when step has context_files", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            implement: {
+              type: "task",
+              name: "Implement",
+              context_files: ["ARCHITECTURE.md", "docs/setup.md"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "implement" },
+            { from: "implement", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("ctx-wf", def);
+
+        const result = engine.navigate({
+          workflowType: "ctx-wf",
+          projectRoot: "/my/project",
+        });
+
+        assert.ok(result.orchestratorInstructions);
+        assert.ok(result.orchestratorInstructions.includes("## Context"));
+        assert.ok(result.orchestratorInstructions.includes("Read file: /my/project/ARCHITECTURE.md"));
+        assert.ok(result.orchestratorInstructions.includes("Read file: /my/project/docs/setup.md"));
+      });
+
+      it("should have no context section when no context_files declared", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: { type: "task", name: "Task" },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("plain-wf", def);
+
+        const result = engine.navigate({ workflowType: "plain-wf" });
+
+        assert.ok(result.orchestratorInstructions);
+        assert.ok(!result.orchestratorInstructions.includes("## Context"));
+      });
+
+      it("should return null orchestratorInstructions for terminal nodes", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: {
+              type: "task",
+              name: "Task",
+              context_files: ["ARCHITECTURE.md"],
+            },
+            done: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "done", on: "passed" },
+          ],
+        };
+        store.loadDefinition("term-ctx-wf", def);
+
+        const taskDir = join(tmpdir(), "flow-ctx-term-" + Date.now());
+        mkdirSync(taskDir, { recursive: true });
+        const taskFile = join(taskDir, "task.json");
+        writeFileSync(
+          taskFile,
+          JSON.stringify({
+            id: "1",
+            subject: "Test task",
+            metadata: {
+              workflowType: "term-ctx-wf",
+              currentStep: "task",
+              retryCount: 0,
+            },
+          })
+        );
+
+        try {
+          const result = engine.navigate({
+            taskFilePath: taskFile,
+            result: "passed",
+            projectRoot: "/project",
+          });
+
+          assert.strictEqual(result.terminal, "success");
+          assert.strictEqual(result.orchestratorInstructions, null);
+        } finally {
+          rmSync(taskDir, { recursive: true });
+        }
+      });
+
+      it("should not include stepContext in Navigate response", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            implement: {
+              type: "task",
+              name: "Implement",
+              context_files: ["README.md"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "implement" },
+            { from: "implement", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("no-ctx-field-wf", def);
+
+        const result = engine.navigate({ workflowType: "no-ctx-field-wf" });
+
+        assert.strictEqual(result.stepContext, undefined);
+      });
+    });
   });
 });
 
@@ -1245,8 +1394,8 @@ describe("lint_format gate behavior", () => {
         assert.strictEqual(result.currentStep, "commit");
         assert.strictEqual(result.action, "advance");
         assert.strictEqual(result.retriesIncremented, false);
-        // retryCount should stay at 1 (not increment)
-        assert.strictEqual(result.metadata.retryCount, 1);
+        // retryCount resets to 0 on advance (new step gets fresh retries)
+        assert.strictEqual(result.metadata.retryCount, 0);
       } finally {
         rmSync(taskDir, { recursive: true });
       }
@@ -1329,11 +1478,11 @@ describe("Helper functions", () => {
   });
 
   describe("toSubagentRef", () => {
-    it("should prefix with @flow:", () => {
-      assert.strictEqual(toSubagentRef("developer"), "@flow:developer");
+    it("should pass through agent ID as-is", () => {
+      assert.strictEqual(toSubagentRef("Developer"), "Developer");
     });
 
-    it("should not double-prefix", () => {
+    it("should pass through prefixed IDs as-is", () => {
       assert.strictEqual(toSubagentRef("@flow:developer"), "@flow:developer");
     });
 
@@ -1342,16 +1491,8 @@ describe("Helper functions", () => {
       assert.strictEqual(toSubagentRef(""), null);
     });
 
-    it("should handle namespaced agent IDs with @ prefix", () => {
-      assert.strictEqual(toSubagentRef("myorg:developer"), "@myorg:developer");
-    });
-
-    it("should pass through already-prefixed namespaced IDs", () => {
-      assert.strictEqual(toSubagentRef("@custom:agent"), "@custom:agent");
-    });
-
-    it("should still prefix simple IDs with @flow:", () => {
-      assert.strictEqual(toSubagentRef("Developer"), "@flow:Developer");
+    it("should pass through namespaced IDs as-is", () => {
+      assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
     });
   });
 
@@ -1375,5 +1516,335 @@ describe("Helper functions", () => {
       const result = getBaselineInstructions("unknown_step", "");
       assert.ok(result.includes("Complete"));
     });
+  });
+});
+
+describe("HITL resume behavior", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+  });
+
+  /**
+   * Helper: workflow with a HITL node that has a recovery edge back to a work step
+   */
+  function createHitlResumeWorkflow() {
+    return {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        implement: { type: "task", name: "Implement", agent: "Developer", stage: "development" },
+        review: { type: "gate", name: "Review", agent: "Reviewer", stage: "verification", maxRetries: 2 },
+        lint_format: { type: "gate", name: "Lint & Format", agent: "Developer", stage: "delivery", maxRetries: 3 },
+        commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+        end_success: { type: "end", result: "success", name: "Complete" },
+        hitl_failed: {
+          type: "end",
+          result: "blocked",
+          escalation: "hitl",
+          name: "Needs Help",
+          description: "Needs human intervention",
+        },
+      },
+      edges: [
+        { from: "start", to: "implement" },
+        { from: "implement", to: "review" },
+        { from: "review", to: "implement", on: "failed" },
+        { from: "review", to: "hitl_failed", on: "failed" },
+        { from: "review", to: "lint_format", on: "passed" },
+        { from: "lint_format", to: "commit", on: "passed" },
+        { from: "lint_format", to: "implement", on: "failed" },
+        { from: "lint_format", to: "hitl_failed", on: "failed" },
+        { from: "commit", to: "end_success" },
+        // Recovery edge: HITL -> implement
+        { from: "hitl_failed", to: "implement", on: "passed", label: "Human resolved issue, resume" },
+      ],
+    };
+  }
+
+  it("should advance from HITL node on passed (action = advance)", () => {
+    const def = createHitlResumeWorkflow();
+    store.loadDefinition("hitl-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-hitl-resume-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test HITL resume",
+        metadata: {
+          workflowType: "hitl-wf",
+          currentStep: "hitl_failed",
+          retryCount: 3,
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.action, "advance");
+      assert.strictEqual(result.terminal, null);
+      assert.ok(result.stepInstructions);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should reset retryCount to 0 on HITL resume", () => {
+    const def = createHitlResumeWorkflow();
+    store.loadDefinition("hitl-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-hitl-retry-reset-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test HITL retry reset",
+        metadata: {
+          workflowType: "hitl-wf",
+          currentStep: "hitl_failed",
+          retryCount: 5,
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.action, "advance");
+      assert.strictEqual(result.metadata.retryCount, 0);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should still show terminal hitl when HITL node has no result provided", () => {
+    const def = createHitlResumeWorkflow();
+    store.loadDefinition("hitl-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-hitl-current-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test HITL current",
+        metadata: {
+          workflowType: "hitl-wf",
+          currentStep: "hitl_failed",
+          retryCount: 3,
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile });
+
+      assert.strictEqual(result.currentStep, "hitl_failed");
+      assert.strictEqual(result.terminal, "hitl");
+      assert.strictEqual(result.action, "current");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should write-through state transition to task file on HITL resume", () => {
+    const def = createHitlResumeWorkflow();
+    store.loadDefinition("hitl-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-hitl-writethrough-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test HITL write-through",
+        metadata: {
+          workflowType: "hitl-wf",
+          currentStep: "hitl_failed",
+          retryCount: 3,
+          userDescription: "Fix the auth bug",
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.action, "advance");
+
+      // Read task file back - should have updated metadata
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.currentStep, "implement");
+      assert.strictEqual(updated.metadata.retryCount, 0);
+      assert.strictEqual(updated.metadata.workflowType, "hitl-wf");
+
+      // Navigate again - should read from updated file
+      const current = engine.navigate({ taskFilePath: taskFile });
+      assert.strictEqual(current.currentStep, "implement");
+      assert.strictEqual(current.action, "current");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should preserve retryCount through unconditional edges in retry loops", () => {
+    // Minimal workflow: work → gate (unconditional), gate → work (retry on failed)
+    // After gate fails and retries to work, work → gate should NOT reset retryCount
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 1 },
+        end_success: { type: "end", result: "success", name: "Done" },
+        hitl: { type: "end", result: "blocked", escalation: "hitl", name: "Blocked" },
+      },
+      edges: [
+        { from: "start", to: "work" },
+        { from: "work", to: "gate" },
+        { from: "gate", to: "end_success", on: "passed" },
+        { from: "gate", to: "work", on: "failed" },
+        { from: "gate", to: "hitl", on: "failed" },
+        { from: "hitl", to: "work", on: "passed" },
+      ],
+    };
+    store.loadDefinition("retry-loop", def);
+
+    const taskDir = join(tmpdir(), "flow-retry-preserve-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test retry preserve",
+        metadata: {
+          workflowType: "retry-loop",
+          currentStep: "gate",
+          retryCount: 0,
+        },
+      })
+    );
+
+    try {
+      // Step 1: gate fails → retries to work (retryCount: 0 → 1, since 0 < maxRetries:1)
+      const r1 = engine.navigate({ taskFilePath: taskFile, result: "failed" });
+      assert.strictEqual(r1.currentStep, "work");
+      assert.strictEqual(r1.action, "retry");
+      assert.strictEqual(r1.metadata.retryCount, 1);
+
+      // Step 2: work passes → unconditional advance to gate
+      // BUG FIX: retryCount must stay at 1, not reset to 0
+      const r2 = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+      assert.strictEqual(r2.currentStep, "gate");
+      assert.strictEqual(r2.action, "advance");
+      assert.strictEqual(r2.metadata.retryCount, 1, "retryCount should be preserved through unconditional advance");
+
+      // Step 3: gate fails again → escalates to HITL (retryCount 1 >= maxRetries 1)
+      const r3 = engine.navigate({ taskFilePath: taskFile, result: "failed" });
+      assert.strictEqual(r3.currentStep, "hitl");
+      assert.strictEqual(r3.action, "escalate");
+      assert.strictEqual(r3.terminal, "hitl");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should reset retryCount on conditional advance (passed through gate)", () => {
+    // When a gate passes (conditional on:"passed" edge), retryCount should reset
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 2 },
+        end_success: { type: "end", result: "success", name: "Done" },
+      },
+      edges: [
+        { from: "start", to: "work" },
+        { from: "work", to: "gate" },
+        { from: "gate", to: "end_success", on: "passed" },
+        { from: "gate", to: "work", on: "failed" },
+      ],
+    };
+    store.loadDefinition("conditional-reset", def);
+
+    const taskDir = join(tmpdir(), "flow-conditional-reset-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test conditional reset",
+        metadata: {
+          workflowType: "conditional-reset",
+          currentStep: "gate",
+          retryCount: 1,
+        },
+      })
+    );
+
+    try {
+      // Gate passes → conditional advance to end_success → retryCount should reset to 0
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+      assert.strictEqual(result.currentStep, "end_success");
+      assert.strictEqual(result.action, "advance");
+      assert.strictEqual(result.metadata.retryCount, 0, "retryCount should reset on conditional advance");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should return error when HITL node has no recovery edge and result is passed", () => {
+    // Workflow without recovery edge
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        task: { type: "task", name: "Task" },
+        hitl: { type: "end", result: "blocked", escalation: "hitl", name: "HITL" },
+      },
+      edges: [
+        { from: "start", to: "task" },
+        { from: "task", to: "hitl", on: "failed" },
+      ],
+    };
+    store.loadDefinition("no-recovery", def);
+
+    const taskDir = join(tmpdir(), "flow-hitl-no-recovery-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test no recovery",
+        metadata: {
+          workflowType: "no-recovery",
+          currentStep: "hitl",
+          retryCount: 0,
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      // Should return error since no outgoing edge from hitl with on: "passed"
+      assert.ok(result.error);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
   });
 });

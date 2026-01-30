@@ -108,6 +108,7 @@ describe("WorkflowStore", () => {
       const list = store.listWorkflows();
       assert.strictEqual(list[0].description, "");
     });
+
   });
 
   describe("has", () => {

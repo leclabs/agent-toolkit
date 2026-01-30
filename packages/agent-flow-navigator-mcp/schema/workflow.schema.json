@@ -115,6 +115,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Arbitrary key-value data for workflow tooling and extensions"
+        },
+        "context_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files to load into the agent's working context for this step"
         }
       }
     },
@@ -150,6 +155,11 @@
           "type": "object",
           "additionalProperties": true,
           "description": "Arbitrary key-value data for workflow tooling and extensions"
+        },
+        "context_files": {
+          "type": "array",
+          "items": { "type": "string" },
+          "description": "Files to load into the agent's working context for this step"
         }
       }
     },

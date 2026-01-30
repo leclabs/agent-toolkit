@@ -231,6 +231,18 @@
     {
       "from": "commit",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_analysis_failed",
+      "to": "design_refactor",
+      "on": "passed",
+      "label": "Human resolved analysis issue, resume"
+    },
+    {
+      "from": "hitl_dev_failed",
+      "to": "extract_core",
+      "on": "passed",
+      "label": "Human resolved development issue, resume"
     }
   ]
 }

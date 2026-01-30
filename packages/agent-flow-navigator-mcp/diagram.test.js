@@ -144,7 +144,7 @@ describe("generateDiagram", () => {
     const result = generateDiagram(testWorkflow);
     assert.ok(result.includes("### Step Instructions"));
     assert.ok(result.includes("| Stage | Step | Name | Agent | Instructions |"));
-    assert.ok(result.includes("| dev | task_a | Task A | @flow:Developer | Do something |"));
+    assert.ok(result.includes("| dev | task_a | Task A | Developer | Do something |"));
   });
 
   it("should highlight currentStep when provided", () => {

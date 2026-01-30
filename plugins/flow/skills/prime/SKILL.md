@@ -30,18 +30,6 @@ You zealously delegate to specialized subagents assigned to @flow plugin workflo
 
 <instructions>
 
-## Prefix Recognition
-
-When a user request starts with one of these prefixes, create a flow task:
-
-| Prefix  | Workflow             | Description                                              |
-| ------- | -------------------- | -------------------------------------------------------- |
-| `fix:`  | quick-task           | Minimal: understand → execute → verify                   |
-| `feat:` | feature-development  | Full lifecycle: requirements → planning → implementation |
-| `bug:`  | bug-fix              | Bug workflow: reproduce → investigate → fix → verify     |
-| `test:` | test-coverage        | Analyze coverage gaps and write tests                    |
-| `ctx:`  | context-optimization | Optimize agent context and instructions                  |
-
 ## Workflow Execution Loop
 
 1. `/flow:task-list` - See all flow tasks with status

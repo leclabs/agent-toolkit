@@ -23,7 +23,7 @@ flowchart TD
     reproduce -->|failed| hitl_cannot_reproduce
     investigate --> write_fix
     write_fix --> add_regression_test
-    add_regression_test --> verify_fix
+    add_regression_test --> verify_fixloadProjectWorkflows
     verify_fix -->|failed| write_fix
     verify_fix -->|failed| hitl_fix_failed
     verify_fix -->|passed| lint_format
@@ -41,16 +41,17 @@ flowchart TD
     class end_success successStep
     class hitl_cannot_reproduce,hitl_fix_failed hitlStep
     class lint_format gateStep
+    class end_success currentStep
 ```
 
 ### Step Instructions
 
-| Stage         | Step                | Name                | Agent              | Instructions                                                  |
-| ------------- | ------------------- | ------------------- | ------------------ | ------------------------------------------------------------- |
-| investigation | reproduce           | Reproduce Bug       | @flow:Investigator | Understand the bug and create a reliable reproduction case    |
-| investigation | investigate         | Investigate         | @flow:Investigator | Find root cause by tracing code paths and debugging           |
-| development   | write_fix           | Write Fix           | @flow:Developer    | Implement the fix with minimal changes                        |
-| development   | add_regression_test | Add Regression Test | @flow:Tester       | Write a test that would have caught this bug                  |
-| verification  | verify_fix          | Verify Fix          | @flow:Tester       | Run all tests and verify the bug is fixed                     |
-| delivery      | lint_format         | Lint & Format       | @flow:Developer    | Run lint and format checks. Auto-fix issues where possible.   |
-| delivery      | commit              | Commit Changes      | @flow:Developer    | Commit the fix and regression test with a descriptive message |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| investigation | reproduce | Reproduce Bug | @flow:Investigator | Understand the bug and create a reliable reproduction case |
+| investigation | investigate | Investigate | @flow:Investigator | Find root cause by tracing code paths and debugging |
+| development | write_fix | Write Fix | @flow:Developer | Implement the fix with minimal changes |
+| development | add_regression_test | Add Regression Test | @flow:Tester | Write a test that would have caught this bug |
+| verification | verify_fix | Verify Fix | @flow:Tester | Run all tests and verify the bug is fixed |
+| delivery | lint_format | Lint & Format | @flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | @flow:Developer | Commit the fix and regression test with a descriptive message |

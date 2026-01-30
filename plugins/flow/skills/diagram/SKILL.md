@@ -43,9 +43,13 @@ Use `Navigator.Diagram`:
 ```json
 {
   "workflowType": "<workflowId>",
-  "currentStep": "<currentStep>" // optional
+  "currentStep": "<currentStep>",
+  "filePath": "<absolutePath>"
 }
 ```
+
+- `currentStep` (optional): Highlight a specific step
+- `filePath` (optional): Absolute path to save the diagram. Defaults to `.flow/diagrams/{workflowType}.md`. Useful for saving per-step snapshots to alternate locations (e.g., `.cruft/`).
 
 ### 4. Display Results
 

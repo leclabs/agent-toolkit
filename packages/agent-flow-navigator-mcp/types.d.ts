@@ -51,6 +51,7 @@ export interface TaskNode {
   outputs?: string[];
   maxRetries?: number;
   config?: Record<string, unknown>;
+  context_files?: string[];
 }
 
 /**
@@ -66,6 +67,7 @@ export interface GateNode {
   outputs?: string[];
   maxRetries?: number;
   config?: Record<string, unknown>;
+  context_files?: string[];
 }
 
 /**

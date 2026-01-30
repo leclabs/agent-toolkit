@@ -90,4 +90,5 @@ describe("buildWorkflowSelectionDialog", () => {
     // Docs panel should still have options
     assert.strictEqual(result.dialog[2].options.length, 2);
   });
+
 });

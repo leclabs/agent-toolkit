@@ -148,6 +148,12 @@
     {
       "from": "commit",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_failed",
+      "to": "write_tests",
+      "on": "passed",
+      "label": "Human resolved issue, resume"
     }
   ]
 }

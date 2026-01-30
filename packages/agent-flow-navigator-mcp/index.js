@@ -186,6 +186,10 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             workflowType: { type: "string", description: "Workflow ID to visualize" },
             currentStep: { type: "string", description: "Optional: highlight this step" },
+            filePath: {
+              type: "string",
+              description: "Optional: absolute path to save the diagram. Defaults to .flow/diagrams/{workflowType}.md",
+            },
           },
           required: ["workflowType"],
         },
@@ -229,6 +233,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           workflowType: args.workflowType,
           result: args.result,
           description: args.description,
+          projectRoot: PROJECT_ROOT,
         });
         return jsonResponse(result);
       }
@@ -264,11 +269,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const source = store.getSource(args.workflowType);
         const markdown = generateDiagram(wfDef, args.currentStep);
 
-        // Save diagram to file
-        if (!existsSync(DIAGRAMS_PATH)) {
-          mkdirSync(DIAGRAMS_PATH, { recursive: true });
+        // Save diagram to file (use provided path or default)
+        const filePath = args.filePath || join(DIAGRAMS_PATH, `${args.workflowType}.md`);
+        const fileDir = dirname(filePath);
+        if (!existsSync(fileDir)) {
+          mkdirSync(fileDir, { recursive: true });
         }
-        const filePath = join(DIAGRAMS_PATH, `${args.workflowType}.md`);
         writeFileSync(filePath, markdown);
 
         return jsonResponse({ savedTo: filePath, source });

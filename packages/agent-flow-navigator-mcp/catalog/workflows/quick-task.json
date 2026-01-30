@@ -110,6 +110,12 @@
     {
       "from": "commit",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_blocked",
+      "to": "execute",
+      "on": "passed",
+      "label": "Human resolved issue, resume"
     }
   ]
 }

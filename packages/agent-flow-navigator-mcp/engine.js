@@ -14,6 +14,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
+import { join } from "path";
 
 /**
  * Read and parse a task file
@@ -52,16 +53,56 @@ export function getTerminalType(node) {
 }
 
 /**
- * Convert agent ID to subagent reference
- * e.g., "developer" -> "@flow:developer"
+ * Return agent ID as-is from workflow definition.
+ * Prefixing (e.g., @flow:) is the caller's responsibility.
  */
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
-  if (agentId.startsWith("@")) return agentId;
-  // Namespaced: "org:developer" -> "@org:developer"
-  if (agentId.includes(":")) return `@${agentId}`;
-  // Simple: "developer" -> "@flow:developer"
-  return `@flow:${agentId}`;
+  return agentId;
+}
+
+/**
+ * Workflow emoji mapping for task subjects
+ */
+const WORKFLOW_EMOJIS = {
+  "feature-development": "✨",
+  "bug-fix": "🐛",
+  "agile-task": "📋",
+  "context-optimization": "🔧",
+  "quick-task": "⚡",
+  "ui-reconstruction": "🎨",
+  "test-coverage": "🧪",
+};
+
+/**
+ * Build formatted task subject for write-through
+ */
+export function buildTaskSubject(taskId, userDescription, workflowType, stepId, subagent, terminal, maxRetries, retryCount) {
+  const emoji = WORKFLOW_EMOJIS[workflowType] || "";
+  const line1 = `#${taskId} ${userDescription}${emoji ? ` ${emoji}` : ""}`;
+
+  let line2;
+  if (terminal === "success") {
+    line2 = `→ ${workflowType} · completed ✓`;
+  } else if (terminal === "hitl" || terminal === "failure") {
+    line2 = `→ ${workflowType} · ${stepId} · HITL`;
+  } else {
+    const agent = subagent ? `(${subagent})` : "(direct)";
+    const retries = maxRetries > 0 ? ` · retries: ${retryCount}/${maxRetries}` : "";
+    line2 = `→ ${workflowType} · ${stepId} ${agent}${retries}`;
+  }
+
+  return `${line1}\n${line2}`;
+}
+
+/**
+ * Build activeForm for task spinner display
+ */
+export function buildTaskActiveForm(stepName, subagent, terminal) {
+  if (terminal === "success") return "Completed";
+  if (terminal === "hitl" || terminal === "failure") return "HITL - Needs human help";
+  const agent = subagent ? ` (${subagent})` : "";
+  return `${stepName}${agent}`;
 }
 
 /**
@@ -71,8 +112,13 @@ export function getBaselineInstructions(stepId, stepName) {
   const id = stepId.toLowerCase();
   const name = (stepName || "").toLowerCase();
 
-  // Analysis/Planning steps
-  if (id.includes("analyze") || id.includes("analysis") || name.includes("analyze")) {
+  // Review steps (checked early — "plan_review" is a review, not a plan)
+  if (id.includes("review")) {
+    return "Check for correctness, code quality, and adherence to project standards. Verify the implementation meets requirements.";
+  }
+
+  // Analysis/Requirements steps
+  if (id.includes("analyze") || id.includes("analysis") || id.includes("parse") || id.includes("requirements") || name.includes("analyze")) {
     return "Review the task requirements carefully. Identify key constraints, dependencies, and acceptance criteria. Create a clear plan before proceeding.";
   }
   if (id.includes("plan") || id.includes("design") || name.includes("plan")) {
@@ -90,14 +136,14 @@ export function getBaselineInstructions(stepId, stepName) {
     return "Improve code structure without changing behavior. Ensure all tests pass before and after changes.";
   }
 
+  // Lint/format steps
+  if (id.includes("lint") || id.includes("format")) {
+    return "Run linting and formatting checks. Auto-fix issues where possible. Flag any issues that require manual attention.";
+  }
+
   // Testing steps
   if (id.includes("test") || id.includes("verify") || id.includes("validate")) {
     return "Verify the implementation works correctly. Test happy paths, edge cases, and error conditions. Document any issues found.";
-  }
-
-  // Review steps
-  if (id.includes("review")) {
-    return "Check for correctness, code quality, and adherence to project standards. Verify the implementation meets requirements.";
   }
 
   // Documentation steps
@@ -128,17 +174,29 @@ export function getBaselineInstructions(stepId, stepName) {
 }
 
 /**
+ * Build context loading instructions from step-level context_files.
+ * Returns a markdown section or null if no context declared.
+ */
+export function buildContextInstructions({ contextFiles, projectRoot }) {
+  if (!contextFiles?.length || !projectRoot) return null;
+  const lines = contextFiles.map((file) => `- Read file: ${join(projectRoot, file)}`);
+  return `## Context\n\nBefore beginning, load the following:\n${lines.join("\n")}`;
+}
+
+/**
  * Build orchestrator instructions for task creation/update
  * Returns null for terminal nodes (no further work)
  */
-function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description) {
+function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description, contextBlock) {
   if (!stepInstructions) return null; // Terminal nodes have no instructions
 
   const delegationPrefix = subagent ? `Invoke ${subagent} to complete the following task: ` : "";
 
-  return `${delegationPrefix}${stepInstructions.guidance}
+  let result = `${delegationPrefix}${stepInstructions.guidance}
 
 ${description || "{task description}"}`;
+  if (contextBlock) result += `\n\n${contextBlock}`;
+  return result;
 }
 
 /**
@@ -152,7 +210,9 @@ function buildNavigateResponse(
   action,
   retriesIncremented = false,
   retryCount = 0,
-  description = null
+  description = null,
+  resetRetryCount = false,
+  projectRoot = null
 ) {
   const stage = stepDef.stage || null;
   const subagent = stepDef.agent ? toSubagentRef(stepDef.agent) : null;
@@ -167,16 +227,27 @@ function buildNavigateResponse(
         guidance: stepDef.instructions || getBaselineInstructions(stepId, stepDef.name),
       };
 
+  // Build context block from step-level context_files
+  const contextBlock = isTerminal
+    ? null
+    : buildContextInstructions({ contextFiles: stepDef.context_files, projectRoot });
+
   // Build orchestrator instructions for all non-terminal actions
   const orchestratorInstructions = isTerminal
     ? null
-    : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description);
+    : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description, contextBlock);
 
   // Build metadata for task storage
+  // Increment on retry, reset on start or explicit forward progress (conditional advance),
+  // preserve on unconditional advances within retry loops and escalations
   const metadata = {
     workflowType,
     currentStep: stepId,
-    retryCount: retriesIncremented ? retryCount + 1 : retryCount,
+    retryCount: retriesIncremented
+      ? retryCount + 1
+      : action === "start" || resetRetryCount
+        ? 0
+        : retryCount,
   };
 
   return {
@@ -187,6 +258,7 @@ function buildNavigateResponse(
     terminal: getTerminalType(stepDef),
     action,
     retriesIncremented,
+    maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
   };
@@ -357,7 +429,7 @@ export class WorkflowEngine {
    * @param {string} [options.description] - User's task description
    * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, metadata, etc.
    */
-  navigate({ taskFilePath, workflowType, result, description } = {}) {
+  navigate({ taskFilePath, workflowType, result, description, projectRoot } = {}) {
     let currentStep = null;
     let retryCount = 0;
 
@@ -417,7 +489,7 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
-      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description);
+      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description, false, projectRoot);
     }
 
     // Case 2: currentStep but no result - return current state
@@ -427,7 +499,7 @@ export class WorkflowEngine {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
       }
 
-      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description);
+      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description, false, projectRoot);
     }
 
     // Case 3: currentStep and result - advance to next step
@@ -447,15 +519,23 @@ export class WorkflowEngine {
     }
 
     // Determine action and whether retries incremented
+    const currentStepDef = nodes[currentStep];
+    const isHitlResume = getTerminalType(currentStepDef) === "hitl";
     const isRetry = evaluation.action === "retry";
     let action;
-    if (isRetry) {
+    if (isHitlResume) {
+      action = "advance"; // Human fixed it → fresh advance, retryCount resets
+    } else if (isRetry) {
       action = "retry";
     } else if (getTerminalType(nextStepDef) === "hitl") {
       action = "escalate";
     } else {
       action = "advance";
     }
+
+    // Only reset retryCount on genuine forward progress (conditional edge like on:"passed")
+    // Unconditional advances within retry loops (e.g., work → gate) preserve the count
+    const resetRetryCount = action === "advance" && evaluation.action === "conditional";
 
     const response = buildNavigateResponse(
       workflowType,
@@ -464,14 +544,29 @@ export class WorkflowEngine {
       action,
       isRetry,
       retryCount,
-      description
+      description,
+      resetRetryCount,
+      projectRoot
     );
 
-    // Write-through: persist state transition to task file
+    // Write-through: persist state transition and presentation to task file
     if (taskFilePath) {
       const task = readTaskFile(taskFilePath);
       if (task) {
+        const userDesc = task.metadata?.userDescription || "";
         task.metadata = { ...task.metadata, ...response.metadata };
+        task.subject = buildTaskSubject(
+          task.id, userDesc, response.metadata.workflowType,
+          response.currentStep, response.subagent, response.terminal,
+          response.maxRetries, response.metadata.retryCount
+        );
+        task.activeForm = buildTaskActiveForm(
+          response.stepInstructions?.name || response.currentStep,
+          response.subagent, response.terminal
+        );
+        if (response.orchestratorInstructions) {
+          task.description = response.orchestratorInstructions;
+        }
         writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
       }
     }

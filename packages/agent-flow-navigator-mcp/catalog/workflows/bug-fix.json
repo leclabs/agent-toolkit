@@ -148,6 +148,18 @@
     {
       "from": "commit",
       "to": "end_success"
+    },
+    {
+      "from": "hitl_cannot_reproduce",
+      "to": "reproduce",
+      "on": "passed",
+      "label": "Human provided reproduction info, resume"
+    },
+    {
+      "from": "hitl_fix_failed",
+      "to": "write_fix",
+      "on": "passed",
+      "label": "Human resolved fix issue, resume"
     }
   ]
 }

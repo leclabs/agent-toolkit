@@ -42,14 +42,95 @@ const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
 
 ### 2. The Execution Loop
 
-WHILE task not at terminal, HITL, blocked, or interrupted step:
+Initialize an `iterationCount` at `0`. Track a `stepTrace` array of `{ step, result, action }` entries.
 
-1. **NAVIGATE**: Call Navigate with taskFilePath to get current step state
-2. **DELEGATE**: If subagent set, use Task tool
-3. **EXECUTE**: If no subagent, handle directly
-4. **ADVANCE**: Call Navigate with taskFilePath and result
-5. **UPDATE**: TaskUpdate with new metadata from Navigate response
-6. **REPEAT**: Continue until terminal or HITL
+WHILE task not at terminal, blocked, or interrupted step:
+
+1. **GUARD**: Check iteration count (see Loop Guards below)
+2. **NAVIGATE**: Call Navigate with taskFilePath to get current step state
+3. **HITL CHECK**: If terminal is `"hitl"`, handle interactively (see HITL Handling below)
+4. **DELEGATE**: If subagent set, use Task tool
+5. **EXECUTE**: If no subagent, handle directly
+6. **ADVANCE**: Call Navigate with taskFilePath and result
+7. **UPDATE**: TaskUpdate with new metadata from Navigate response
+8. **RECORD**: Append `{ step, result, action }` to `stepTrace`, increment `iterationCount`
+9. **REPEAT**: Continue until terminal success or user exits
+
+### Loop Guards
+
+Two thresholds protect against runaway loops:
+
+**Soft guard — 25 iterations (warning):**
+
+When `iterationCount` reaches 25, **pause execution** and present the situation to the user via `AskUserQuestion`:
+
+```
+⚠ Loop warning: 25 iterations reached for task #{taskId}
+
+Recent steps: ... → step_a → step_b → step_a → step_b (showing last 8 from stepTrace)
+Current step: {currentStep} (retryCount: {retryCount})
+```
+
+Offer these options:
+
+| Option | Action |
+|--------|--------|
+| Continue (+25) | Reset the iteration counter and resume. Warns again at 25 more. |
+| Abort | Stop the loop. Report current state as incomplete (see Final Report). |
+| Investigate | Show the full `stepTrace`, then abort. Helps diagnose the cycle. |
+
+If the user selects **Continue**, reset `iterationCount` to `0` and resume the loop.
+If the user selects **Investigate**, display the full step trace table, then abort.
+
+**Hard guard — 50 iterations (absolute stop):**
+
+If `iterationCount` reaches 50 (i.e., the user continued past a warning and it hit 50 again, or the soft guard was somehow bypassed), **stop unconditionally**:
+
+```
+⛔ Hard loop guard: 50 iterations reached. Aborting.
+
+Task #{taskId} may have a workflow cycle. Review the step trace:
+```
+
+Display the last 10 entries from `stepTrace` and exit the loop. Do NOT delete the task — leave it in `in_progress` so the user can investigate with `/flow:task-get` and resume with `/flow:task-advance`.
+
+### HITL Handling
+
+When Navigate returns `terminal: "hitl"`, the workflow has escalated to human-in-the-loop. Instead of exiting the loop silently, **pause and engage the user** via `AskUserQuestion`:
+
+```
+⚠ HITL: Task #{taskId} needs human intervention
+
+Step: {stepId} ({stepName})
+Reason: {escalation context — e.g., "Max retries exceeded at code_review"}
+Steps so far: parse_requirements → implement → code_review (failed x3) → hitl_review
+```
+
+Offer these options:
+
+| Option | Description |
+|--------|-------------|
+| I've fixed it — continue (passed) | User has resolved the issue. Advance with `passed` and resume the loop. |
+| Still failing — continue (failed) | User wants to re-escalate or try a different path. Advance with `failed`. |
+| Leave pending | Exit the loop. Task stays `pending` for later via `/flow:task-advance`. |
+
+**If the user selects "I've fixed it":**
+
+1. Call `Navigator.Navigate` with `taskFilePath` and `result: "passed"`
+2. Update task status to `in_progress`
+3. Resume the execution loop from the new step
+
+**If the user selects "Still failing":**
+
+1. Call `Navigator.Navigate` with `taskFilePath` and `result: "failed"`
+2. If this leads to another terminal, handle accordingly (may re-trigger HITL or reach success)
+3. Otherwise resume the loop
+
+**If the user selects "Leave pending":**
+
+1. Set task status to `pending` via `TaskUpdate`
+2. Exit the loop
+3. Show the HITL final report with resume instructions
 
 ### 3. Getting Current Step
 
@@ -126,16 +207,12 @@ Navigate returns:
 | `action`                   | `"advance"`, `"retry"`, or `"escalate"`     |
 | `retriesIncremented`       | `true` if retry count increased             |
 
-Then call TaskUpdate with new metadata:
+Then call TaskUpdate to sync status (Navigator's write-through has already updated subject, activeForm, description, and metadata in the task file):
 
 ```json
 {
   "taskId": "1",
-  "description": "{response.orchestratorInstructions}",
-  "metadata": {
-    "currentStep": "{response.metadata.currentStep}",
-    "retryCount": "{response.metadata.retryCount}"
-  }
+  "status": "in_progress"
 }
 ```
 
@@ -153,8 +230,13 @@ After each step, show brief progress:
 
 Exit when:
 
-- Task reaches terminal step (success or hitl)
+- Task reaches terminal success
+- HITL triggered and user selects "Leave pending"
 - User interrupts
+- Soft guard triggered (25 iterations) and user selects Abort or Investigate
+- Hard guard triggered (50 iterations)
+
+Note: HITL does **not** automatically exit the loop. The user is given the choice to fix and continue or leave pending.
 
 ### 8. Final Report
 
@@ -168,7 +250,7 @@ Completed: #1 Add user auth ✨ (@flow:Developer)
 Steps: parse_requirements → implement → test → commit → end_success
 ```
 
-**HITL:**
+**HITL (user selected "Leave pending"):**
 
 ```
 ⚠ HITL: #1 Add user auth ✨ (direct)
@@ -176,20 +258,18 @@ Steps: parse_requirements → implement → test → commit → end_success
  → hitl_test · pending
 
 Reason: Max retries exceeded at test step
-Action: Fix manually, then `/flow:task-advance 1 passed`
+Action: Fix manually, then `/flow:task-advance {taskId} passed` to resume
 ```
 
-### Workflow Emoji Mapping
+**Loop guard (aborted):**
 
-Append emoji after task subject based on workflowType:
+```
+⛔ Aborted: #1 Add user auth ✨
+ → feature-development · development
+ → implement · in_progress (iteration 25)
 
-| workflowType           | Emoji  |
-| ---------------------- | ------ |
-| `feature-development`  | ✨     |
-| `bug-fix`              | 🐛     |
-| `agile-task`           | 📋     |
-| `context-optimization` | 🔧     |
-| `quick-task`           | ⚡     |
-| `ui-reconstruction`    | 🎨     |
-| `test-coverage`        | 🧪     |
-| (unknown/missing)      | (none) |
+Reason: Loop guard triggered after 25 iterations
+Last steps: ... → implement → lint_format → implement → lint_format
+Action: Investigate with `/flow:task-get {taskId}`, resume with `/flow:task-advance {taskId} <passed|failed>`
+```
+
