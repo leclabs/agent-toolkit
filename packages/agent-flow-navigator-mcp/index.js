@@ -137,16 +137,10 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
 function loadWorkflows() {
   const catalogPath = join(CATALOG_PATH, "workflows");
   const catalogLoaded = loadCatalogWorkflows(catalogPath);
-  const projectLoaded = existsSync(WORKFLOWS_PATH) ? loadProjectWorkflows(WORKFLOWS_PATH) : [];
-
-  const allLoaded = [...new Set([...catalogLoaded, ...projectLoaded])];
-  const fromProject = projectLoaded;
-  const fromCatalog = catalogLoaded.filter((id) => !projectLoaded.includes(id));
 
   return {
-    catalog: fromCatalog,
-    project: fromProject,
-    loaded: allLoaded,
+    catalog: catalogLoaded,
+    loaded: catalogLoaded,
   };
 }
 
@@ -446,31 +440,13 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-/**
- * Ensure .flow/README.md exists (created on MCP server connect)
- */
-function ensureFlowReadme() {
-  const readmePath = join(FLOW_PATH, "README.md");
-  if (!existsSync(readmePath)) {
-    mkdirSync(FLOW_PATH, { recursive: true });
-    writeFileSync(readmePath, generateFlowReadme());
-    console.error(`  Created: ${readmePath}`);
-  }
-}
-
-// Load workflows and start server
+// Load catalog workflows and start server
 const workflowInfo = loadWorkflows();
-ensureFlowReadme();
 
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
 console.error(`Navigator MCP Server v2 running (stateless)`);
 console.error(`  Project: ${PROJECT_ROOT}`);
-console.error(`  Workflows: ${workflowInfo.loaded.length} total`);
-if (workflowInfo.catalog.length > 0) {
-  console.error(`    Catalog: ${workflowInfo.catalog.join(", ")}`);
-}
-if (workflowInfo.project.length > 0) {
-  console.error(`    Project: ${workflowInfo.project.join(", ")}`);
-}
+console.error(`  Catalog: ${workflowInfo.catalog.length} workflows`);
+console.error(`  Project/external workflows: load via LoadWorkflows tool`);
