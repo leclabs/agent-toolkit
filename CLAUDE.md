@@ -39,12 +39,34 @@ plugins/flow/                          .flow/
 
 Use **changesets** for versioning. Never manually edit package.json versions or CHANGELOG.md.
 
+### Full release process
+
 ```bash
-npx changeset          # Create a changeset describing the change
-npm run version        # Consume changesets → bump versions + update CHANGELOG + sync-versions.js
+# 1. Create changeset (describes what changed and semver bump type)
+npx changeset
+
+# 2. Consume changesets → bump versions + update CHANGELOG + sync across packages
+npm run version
+
+# 3. Commit the version bump (changeset consumption + version sync output)
+git add -A && git commit -m "chore: bump version to X.Y.Z"
+
+# 4. Push and create/update PR
+git push
+gh pr create  # or update existing PR
+
+# 5. After PR merge to main, publish to npm
+npm run publish:all
 ```
 
-The `npm run version` script runs `changeset version && node scripts/sync-versions.js`, which syncs the version to `marketplace.json`, `plugin.json`, and `packages/agent-flow-navigator-mcp/package.json`.
+### How it works
+
+- `npx changeset` — creates a `.changeset/<name>.md` file with the bump type (`patch`, `minor`, `major`) and description. Only reference `@leclabs/agent-toolkit` (root package) — the MCP package is not a workspace.
+- `npm run version` — runs `changeset version && node scripts/sync-versions.js`. Consumes changeset files, bumps `package.json`, writes `CHANGELOG.md`, then `sync-versions.js` propagates the version to:
+  - `.claude-plugin/marketplace.json` (metadata.version + plugins[].version)
+  - `plugins/flow/.claude-plugin/plugin.json`
+  - `packages/agent-flow-navigator-mcp/package.json`
+- `npm run publish:all` — publishes both `@leclabs/agent-toolkit` and `@leclabs/agent-flow-navigator-mcp` to npm.
 
 ## Naming Hierarchy
 
