@@ -390,7 +390,7 @@ describe("Diagram Tool", () => {
     client = new TestMCPClient(TEST_PROJECT_ROOT);
     await client.connect();
     // Project workflows are no longer auto-loaded; load explicitly
-    await client.callTool("LoadWorkflows");
+    await client.callTool("LoadWorkflows", { workflowIds: ["test-workflow"] });
   });
 
   afterEach(async () => {
@@ -465,7 +465,7 @@ describe("Diagram Tool", () => {
       await client.disconnect();
       client = new TestMCPClient(TEST_PROJECT_ROOT);
       await client.connect();
-      await client.callTool("LoadWorkflows");
+      await client.callTool("LoadWorkflows", { workflowIds: ["test-workflow"] });
 
       // Second call
       const result = await client.callTool("Diagram", { workflowType: "test-workflow" });

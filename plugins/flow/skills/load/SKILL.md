@@ -30,15 +30,23 @@ Load workflows into Navigator. Reloads project workflows by default, or loads ex
 
 ### 1. Call LoadWorkflows
 
-**Project reload** (no arguments):
+**Project workflows** (no path):
 
-Call `Navigator.LoadWorkflows` with no arguments. This reloads from `.flow/workflows/`.
+First, call `Navigator.LoadWorkflows` with no arguments to discover available workflows in `.flow/workflows/`.
 
-If `.flow/workflows/` does not exist:
+If `.flow/workflows/` does not exist or has no workflows:
 
 ```
 No workflows found in .flow/workflows/
-Run /flow:init to set up workflows for this project.
+Run /flow:init to set up workflows, or /flow:scaffold to create a custom one.
+```
+
+If workflows are available, present them to the user via `AskUserQuestion` and let them choose which to load. Then call `Navigator.LoadWorkflows` with the selected IDs:
+
+```json
+{
+  "workflowIds": ["feature-development", "bug-fix"]
+}
 ```
 
 **External plugin** (path provided):

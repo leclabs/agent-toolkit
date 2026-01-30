@@ -46,37 +46,6 @@ const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
 
 /**
- * Load workflows from project directory structure: {id}/workflow.json
- */
-function loadProjectWorkflows(dirPath) {
-  if (!existsSync(dirPath)) return [];
-
-  const loaded = [];
-  const entries = readdirSync(dirPath, { withFileTypes: true });
-
-  for (const entry of entries) {
-    if (!entry.isDirectory()) continue;
-
-    const id = entry.name;
-    const workflowFile = join(dirPath, id, "workflow.json");
-
-    if (!existsSync(workflowFile)) continue;
-
-    try {
-      const content = JSON.parse(readFileSync(workflowFile, "utf-8"));
-      if (validateWorkflow(id, content)) {
-        store.loadDefinition(id, content, "project");
-        loaded.push(id);
-      }
-    } catch (e) {
-      console.error(`Error loading workflow ${id}: ${e.message}`);
-    }
-  }
-
-  return loaded;
-}
-
-/**
  * Load workflows from catalog: flat {id}.json files
  */
 function loadCatalogWorkflows(dirPath) {
@@ -235,19 +204,25 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       {
         name: "LoadWorkflows",
         description:
-          "Load workflows from a directory at runtime. External plugins pass their root path; omit path to reload project workflows.",
+          "Load workflows at runtime. External plugins pass path + sourceRoot. For project workflows, pass workflowIds to load specific workflows from .flow/workflows/.",
         inputSchema: {
           type: "object",
           properties: {
             path: {
               type: "string",
               description:
-                "Directory containing {id}.json workflow files. Omit to reload project workflows from .flow/workflows/.",
+                "Directory containing {id}.json workflow files. For external plugins only.",
             },
             sourceRoot: {
               type: "string",
               description:
-                "Root path for resolving ./ context_files entries. Defaults to path (or project root when path omitted).",
+                "Root path for resolving ./ context_files entries. Defaults to path. For external plugins only.",
+            },
+            workflowIds: {
+              type: "array",
+              items: { type: "string" },
+              description:
+                "Specific workflow IDs to load from .flow/workflows/. Required when loading project workflows (no path). Omit to list available workflows without loading.",
             },
           },
         },
@@ -382,7 +357,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
       case "LoadWorkflows": {
         if (args.path) {
-          // External plugin: load from provided path
+          // External plugin: load all from provided path
           const dirPath = resolve(args.path);
           const root = args.sourceRoot ? resolve(args.sourceRoot) : dirPath;
           const loaded = loadExternalWorkflows(dirPath, root);
@@ -393,17 +368,66 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             sourceRoot: root,
             path: dirPath,
           });
-        } else {
-          // Project: reload from .flow/workflows/
-          const loaded = existsSync(WORKFLOWS_PATH) ? loadProjectWorkflows(WORKFLOWS_PATH) : [];
+        }
+
+        // Project: require explicit workflowIds or list available
+        if (!existsSync(WORKFLOWS_PATH)) {
           return jsonResponse({
             schemaVersion: 2,
-            loaded,
+            available: [],
+            loaded: [],
             source: "project",
-            sourceRoot: PROJECT_ROOT,
             path: WORKFLOWS_PATH,
+            hint: "No .flow/workflows/ directory found. Use /flow:init to set up workflows.",
           });
         }
+
+        const available = readdirSync(WORKFLOWS_PATH, { withFileTypes: true })
+          .filter((e) => e.isDirectory() && existsSync(join(WORKFLOWS_PATH, e.name, "workflow.json")))
+          .map((e) => e.name);
+
+        if (!args.workflowIds || args.workflowIds.length === 0) {
+          // List only — don't load
+          return jsonResponse({
+            schemaVersion: 2,
+            available,
+            loaded: [],
+            source: "project",
+            path: WORKFLOWS_PATH,
+            hint: "Pass workflowIds to load specific workflows.",
+          });
+        }
+
+        // Load only the requested workflows
+        const loaded = [];
+        const errors = [];
+        for (const id of args.workflowIds) {
+          if (!available.includes(id)) {
+            errors.push({ id, error: "not found in .flow/workflows/" });
+            continue;
+          }
+          const wfFile = join(WORKFLOWS_PATH, id, "workflow.json");
+          try {
+            const content = JSON.parse(readFileSync(wfFile, "utf-8"));
+            if (validateWorkflow(id, content)) {
+              store.loadDefinition(id, content, "project");
+              loaded.push(id);
+            } else {
+              errors.push({ id, error: "invalid schema" });
+            }
+          } catch (e) {
+            errors.push({ id, error: e.message });
+          }
+        }
+
+        return jsonResponse({
+          schemaVersion: 2,
+          available,
+          loaded,
+          errors: errors.length > 0 ? errors : undefined,
+          source: "project",
+          path: WORKFLOWS_PATH,
+        });
       }
 
       case "ListCatalog": {
