@@ -1,5 +1,11 @@
 # @leclabs/agent-toolkit
 
+## 1.5.1
+
+### Patch Changes
+
+- Enable autonomy mode by default in /flow:go
+
 ## 1.5.0
 
 ### Minor Changes
