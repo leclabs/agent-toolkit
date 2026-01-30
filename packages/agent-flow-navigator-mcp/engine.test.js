@@ -939,6 +939,179 @@ describe("WorkflowEngine", () => {
         rmSync(taskDir, { recursive: true });
       }
     });
+
+    describe("stepContext in Navigate response", () => {
+      it("should include requiredSkills in stepContext when declared on node (AC-3)", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            implement: {
+              type: "task",
+              name: "Implement",
+              requiredSkills: ["/commit", "/review-pr"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "implement" },
+            { from: "implement", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("ctx-wf", def);
+
+        const result = engine.navigate({ workflowType: "ctx-wf" });
+
+        assert.ok(result.stepContext);
+        assert.deepStrictEqual(result.stepContext.requiredSkills, ["/commit", "/review-pr"]);
+      });
+
+      it("should include contextSkills in stepContext when declared on node (AC-4)", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            plan: {
+              type: "task",
+              name: "Create Plan",
+              contextSkills: ["/flow:prime", "/architect"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "plan" },
+            { from: "plan", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("ctx-wf", def);
+
+        const result = engine.navigate({ workflowType: "ctx-wf" });
+
+        assert.ok(result.stepContext);
+        assert.deepStrictEqual(result.stepContext.contextSkills, ["/flow:prime", "/architect"]);
+      });
+
+      it("should return empty arrays in stepContext when node has no context metadata (AC-5)", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: { type: "task", name: "Task" },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("plain-wf", def);
+
+        const result = engine.navigate({ workflowType: "plain-wf" });
+
+        assert.ok(result.stepContext);
+        assert.deepStrictEqual(result.stepContext.requiredSkills, []);
+        assert.deepStrictEqual(result.stepContext.contextSkills, []);
+      });
+
+      it("should return empty arrays in stepContext for terminal nodes (AC-5)", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: { type: "task", name: "Task" },
+            done: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "done", on: "passed" },
+          ],
+        };
+        store.loadDefinition("term-wf", def);
+
+        // Create a temp task file to advance to terminal
+        const taskDir = join(tmpdir(), "flow-ctx-test-" + Date.now());
+        mkdirSync(taskDir, { recursive: true });
+        const taskFile = join(taskDir, "task.json");
+        writeFileSync(
+          taskFile,
+          JSON.stringify({
+            id: "1",
+            subject: "Test task",
+            metadata: {
+              workflowType: "term-wf",
+              currentStep: "task",
+              retryCount: 0,
+            },
+          })
+        );
+
+        try {
+          const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+          assert.strictEqual(result.terminal, "success");
+          assert.ok(result.stepContext);
+          assert.deepStrictEqual(result.stepContext.requiredSkills, []);
+          assert.deepStrictEqual(result.stepContext.contextSkills, []);
+        } finally {
+          rmSync(taskDir, { recursive: true });
+        }
+      });
+
+      it("should include both requiredSkills and contextSkills when both declared", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            review: {
+              type: "gate",
+              name: "Review",
+              requiredSkills: ["/review-pr"],
+              contextSkills: ["/flow:prime"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "review" },
+            { from: "review", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("both-wf", def);
+
+        const result = engine.navigate({ workflowType: "both-wf" });
+
+        assert.deepStrictEqual(result.stepContext.requiredSkills, ["/review-pr"]);
+        assert.deepStrictEqual(result.stepContext.contextSkills, ["/flow:prime"]);
+      });
+
+      it("should not change existing Navigate response fields when stepContext is added (AC-6, AC-7)", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            analyze: {
+              type: "task",
+              name: "Analyze",
+              stage: "planning",
+              agent: "planner",
+              requiredSkills: ["/commit"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "analyze" },
+            { from: "analyze", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("compat-wf", def);
+
+        const result = engine.navigate({ workflowType: "compat-wf" });
+
+        // Existing fields unchanged (AC-6)
+        assert.strictEqual(result.currentStep, "analyze");
+        assert.strictEqual(result.action, "start");
+        assert.strictEqual(result.stage, "planning");
+        assert.strictEqual(result.subagent, "@flow:planner");
+        assert.strictEqual(result.terminal, null);
+        assert.ok(result.stepInstructions);
+        assert.ok(result.metadata);
+        // New field also present
+        assert.ok(result.stepContext);
+      });
+    });
   });
 });
 

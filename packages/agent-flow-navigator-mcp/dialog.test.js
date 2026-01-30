@@ -90,4 +90,39 @@ describe("buildWorkflowSelectionDialog", () => {
     // Docs panel should still have options
     assert.strictEqual(result.dialog[2].options.length, 2);
   });
+
+  it("should preserve context metadata on workflow summaries (AC-1)", () => {
+    const workflows = [
+      {
+        id: "feature-development",
+        name: "Feature Development",
+        description: "Build new features",
+        stepCount: 10,
+        context: {
+          required_skills: ["/commit"],
+          context_skills: ["/flow:prime"],
+          context_files: ["ARCHITECTURE.md"],
+        },
+      },
+      {
+        id: "bug-fix",
+        name: "Bug Fix",
+        description: "Fix bugs",
+        stepCount: 8,
+        context: {
+          required_skills: [],
+          context_skills: [],
+          context_files: [],
+        },
+      },
+    ];
+
+    const result = buildWorkflowSelectionDialog(workflows);
+
+    // workflows array should preserve context
+    assert.deepStrictEqual(result.workflows[0].context.required_skills, ["/commit"]);
+    assert.deepStrictEqual(result.workflows[0].context.context_skills, ["/flow:prime"]);
+    assert.deepStrictEqual(result.workflows[0].context.context_files, ["ARCHITECTURE.md"]);
+    assert.deepStrictEqual(result.workflows[1].context.required_skills, []);
+  });
 });

@@ -244,6 +244,10 @@ function buildNavigateResponse(
     maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
+    stepContext: {
+      requiredSkills: stepDef.requiredSkills || [],
+      contextSkills: stepDef.contextSkills || [],
+    },
   };
 }
 
