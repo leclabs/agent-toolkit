@@ -310,6 +310,7 @@ function buildNavigateResponse(
     terminal: getTerminalType(stepDef),
     action,
     retriesIncremented,
+    autonomyContinued: false,
     maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
@@ -482,7 +483,7 @@ export class WorkflowEngine {
    * @param {string} [options.description] - User's task description
    * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, metadata, etc.
    */
-  navigate({ taskFilePath, workflowType, result, description, projectRoot } = {}) {
+  navigate({ taskFilePath, workflowType, result, description, projectRoot, autonomy } = {}) {
     let currentStep = null;
     let retryCount = 0;
 
@@ -501,11 +502,16 @@ export class WorkflowEngine {
         workflowType: metaWorkflow,
         currentStep: metaStep,
         retryCount: metaRetry = 0,
+        autonomy: metaAutonomy,
       } = task.metadata;
       workflowType = metaWorkflow;
       currentStep = metaStep;
       retryCount = metaRetry;
       description = description || userDescription;
+      // Explicit parameter takes precedence over stored value
+      if (autonomy === undefined || autonomy === null) {
+        autonomy = metaAutonomy;
+      }
     }
 
     // Validate workflowType
@@ -615,7 +621,7 @@ export class WorkflowEngine {
     // Unconditional advances within retry loops (e.g., work → gate) preserve the count
     const resetRetryCount = action === "advance" && evaluation.action === "conditional";
 
-    const response = buildNavigateResponse(
+    let response = buildNavigateResponse(
       workflowType,
       evaluation.nextStep,
       nextStepDef,
@@ -628,14 +634,49 @@ export class WorkflowEngine {
       sourceRoot
     );
 
+    // Autonomy mode: auto-continue through stage boundary end nodes
+    // Stage boundary = end node with on:"passed" outgoing edge to a non-terminal node
+    // Never auto-continue HITL nodes (they exist because the agent needs human help)
+    if (autonomy && response.terminal === "success") {
+      const graph = this.buildEdgeGraph(workflowType);
+      const outgoing = graph.edges.get(response.currentStep) || [];
+      const passedEdge = outgoing.find((e) => e.on === "passed");
+      if (passedEdge) {
+        const continuedDef = nodes[passedEdge.to];
+        if (continuedDef && !isTerminalNode(continuedDef)) {
+          response = buildNavigateResponse(
+            workflowType,
+            passedEdge.to,
+            continuedDef,
+            "advance",
+            false,
+            0, // fresh retryCount for the new stage
+            description,
+            true, // resetRetryCount
+            projectRoot,
+            sourceRoot
+          );
+          response.autonomyContinued = true;
+        }
+      }
+    }
+
+    // Persist autonomy in metadata
+    if (autonomy) {
+      response.metadata.autonomy = true;
+    }
+
     // Write-through: persist state transition and presentation to task file
+    // IMPORTANT: preserve task.id — Claude Code's task system requires filename
+    // and id field to match ({id}.json must contain "id": "{id}")
     if (taskFilePath) {
       const task = readTaskFile(taskFilePath);
       if (task) {
+        const originalId = task.id;
         const userDesc = task.metadata?.userDescription || "";
         task.metadata = { ...task.metadata, ...response.metadata };
         task.subject = buildTaskSubject(
-          task.id,
+          originalId,
           userDesc,
           response.metadata.workflowType,
           response.currentStep,
@@ -652,6 +693,7 @@ export class WorkflowEngine {
         if (response.orchestratorInstructions) {
           task.description = response.orchestratorInstructions;
         }
+        task.id = originalId;
         writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
       }
     }

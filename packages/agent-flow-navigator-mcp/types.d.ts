@@ -144,6 +144,27 @@ export interface NavigateOptions {
   result?: "passed" | "failed";
   description?: string;
   projectRoot?: string;
+  autonomy?: boolean;
+}
+
+export interface NavigateResponse {
+  currentStep: string;
+  stage: Stage | null;
+  subagent: string | null;
+  stepInstructions: { name: string; description: string | null; guidance: string } | null;
+  terminal: "start" | "success" | "hitl" | "failure" | null;
+  action: string;
+  retriesIncremented: boolean;
+  autonomyContinued: boolean;
+  maxRetries: number;
+  orchestratorInstructions: string | null;
+  metadata: {
+    workflowType: string;
+    currentStep: string;
+    retryCount: number;
+    autonomy?: boolean;
+  };
+  sourceRoot: string | null;
 }
 
 // =============================================================================

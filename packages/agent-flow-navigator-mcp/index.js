@@ -164,6 +164,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Step result (for advance). Omit to just get current state.",
             },
             description: { type: "string", description: "User's task description (for start)" },
+            autonomy: {
+              type: "boolean",
+              description:
+                "When true, auto-continue through stage boundary end nodes (non-HITL end nodes with outgoing edges).",
+            },
           },
         },
       },
@@ -271,6 +276,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           result: args.result,
           description: args.description,
           projectRoot: PROJECT_ROOT,
+          autonomy: args.autonomy,
         });
         return jsonResponse(result);
       }

@@ -812,6 +812,42 @@ describe("WorkflowEngine", () => {
       }
     });
 
+    it("should preserve task id in write-through (filename-to-id invariant)", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("id-wf", def);
+
+      const taskDir = join(tmpdir(), "flow-id-preserve-" + Date.now());
+      mkdirSync(taskDir, { recursive: true });
+      const taskFile = join(taskDir, "1.json");
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "1",
+          subject: "Test task",
+          metadata: { workflowType: "id-wf", currentStep: "task", retryCount: 0 },
+        })
+      );
+
+      try {
+        engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+        const updated = readTaskFile(taskFile);
+        assert.strictEqual(updated.id, "1", "task id must be preserved after write-through");
+      } finally {
+        rmSync(taskDir, { recursive: true });
+      }
+    });
+
     it("should write-through state transitions to task file on advance", () => {
       const def = {
         nodes: {
@@ -1612,6 +1648,306 @@ describe("lint_format gate behavior", () => {
         rmSync(taskDir, { recursive: true });
       }
     });
+  });
+});
+
+describe("autonomy mode", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+  });
+
+  /**
+   * Multi-stage workflow:
+   * start → plan → end_planning --passed--> implement → end_dev --passed--> test → end_success
+   *
+   * end_planning and end_dev are "stage boundary" end nodes (have outgoing on:"passed" edges).
+   * end_success is truly terminal (no outgoing edges).
+   */
+  function createMultiStageWorkflow() {
+    return {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        plan: { type: "task", name: "Plan", stage: "planning", agent: "Planner" },
+        end_planning: { type: "end", result: "success", name: "Planning Complete" },
+        implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
+        end_dev: { type: "end", result: "success", name: "Development Complete" },
+        test: { type: "task", name: "Test", stage: "verification", agent: "Tester" },
+        end_success: { type: "end", result: "success", name: "All Done" },
+      },
+      edges: [
+        { from: "start", to: "plan" },
+        { from: "plan", to: "end_planning", on: "passed" },
+        { from: "end_planning", to: "implement", on: "passed" },
+        { from: "implement", to: "end_dev", on: "passed" },
+        { from: "end_dev", to: "test", on: "passed" },
+        { from: "test", to: "end_success", on: "passed" },
+      ],
+    };
+  }
+
+  it("should auto-continue through stage boundary end node", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy",
+        metadata: { workflowType: "multi-stage", currentStep: "plan", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      // Should skip end_planning and land on implement
+      assert.strictEqual(result.currentStep, "implement");
+      assert.strictEqual(result.terminal, null);
+      assert.strictEqual(result.autonomyContinued, true);
+      assert.ok(result.stepInstructions);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should stop at truly terminal end node (no outgoing edges)", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-terminal-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy terminal",
+        metadata: { workflowType: "multi-stage", currentStep: "test", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      // end_success has no outgoing edges → should stop
+      assert.strictEqual(result.currentStep, "end_success");
+      assert.strictEqual(result.terminal, "success");
+      assert.strictEqual(result.autonomyContinued, false);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should never auto-continue through HITL nodes", () => {
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        task: { type: "task", name: "Task", maxRetries: 0 },
+        hitl: { type: "end", result: "blocked", escalation: "hitl", name: "Needs Help" },
+        recover: { type: "task", name: "Recover" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "task" },
+        { from: "task", to: "hitl", on: "failed" },
+        { from: "hitl", to: "recover", on: "passed" },
+        { from: "recover", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("hitl-auto", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-hitl-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy hitl",
+        metadata: { workflowType: "hitl-auto", currentStep: "task", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "failed", autonomy: true });
+
+      // HITL nodes always stop, regardless of autonomy
+      assert.strictEqual(result.currentStep, "hitl");
+      assert.strictEqual(result.terminal, "hitl");
+      assert.strictEqual(result.autonomyContinued, false);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should stop at stage boundary in normal mode (autonomy off)", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-no-autonomy-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test no autonomy",
+        metadata: { workflowType: "multi-stage", currentStep: "plan", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      // Without autonomy, should stop at end_planning
+      assert.strictEqual(result.currentStep, "end_planning");
+      assert.strictEqual(result.terminal, "success");
+      assert.strictEqual(result.autonomyContinued, false);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should persist autonomy in task metadata", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-persist-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy persist",
+        metadata: { workflowType: "multi-stage", currentStep: "plan", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      // Check metadata has autonomy
+      assert.strictEqual(result.metadata.autonomy, true);
+
+      // Check task file was updated with autonomy
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.autonomy, true);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should read autonomy from task metadata when not passed explicitly", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-read-meta-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy from meta",
+        metadata: {
+          workflowType: "multi-stage",
+          currentStep: "implement",
+          retryCount: 0,
+          autonomy: true,
+        },
+      })
+    );
+
+    try {
+      // No explicit autonomy param — should read from metadata
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      // Should auto-continue through end_dev to test
+      assert.strictEqual(result.currentStep, "test");
+      assert.strictEqual(result.autonomyContinued, true);
+      assert.strictEqual(result.terminal, null);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should auto-continue through multiple stage boundaries", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-multi-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test multi-stage autonomy",
+        metadata: { workflowType: "multi-stage", currentStep: "plan", retryCount: 0 },
+      })
+    );
+
+    try {
+      // First advance: plan → end_planning → implement (auto-continued)
+      const r1 = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+      assert.strictEqual(r1.currentStep, "implement");
+      assert.strictEqual(r1.autonomyContinued, true);
+
+      // Second advance: implement → end_dev → test (auto-continued)
+      const r2 = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+      assert.strictEqual(r2.currentStep, "test");
+      assert.strictEqual(r2.autonomyContinued, true);
+
+      // Third advance: test → end_success (truly terminal, stops)
+      const r3 = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+      assert.strictEqual(r3.currentStep, "end_success");
+      assert.strictEqual(r3.terminal, "success");
+      assert.strictEqual(r3.autonomyContinued, false);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should write-through to continued step, not the boundary end node", () => {
+    const def = createMultiStageWorkflow();
+    store.loadDefinition("multi-stage", def);
+
+    const taskDir = join(tmpdir(), "flow-autonomy-writethrough-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test autonomy write-through",
+        metadata: {
+          workflowType: "multi-stage",
+          currentStep: "plan",
+          retryCount: 0,
+          userDescription: "Build auth",
+        },
+      })
+    );
+
+    try {
+      engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      // Task file should point to implement (the continued step), not end_planning
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.currentStep, "implement");
+      assert.strictEqual(updated.metadata.autonomy, true);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
   });
 });
 
