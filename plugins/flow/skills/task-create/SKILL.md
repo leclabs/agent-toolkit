@@ -1,5 +1,5 @@
 ---
-description: Route user task/work requests to flow workflows. Use for feature requests (feat:), bug fixes (bug:), multi-step tasks (task:), context optimization (ctx:), or any work prefixed with flow:. Default entry point for trackable work.
+description: Create a flow task from a description. Infers or accepts a workflow type, creates a tracked task, and optionally auto-executes.
 ---
 
 # /flow:task-create
