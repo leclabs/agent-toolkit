@@ -59,7 +59,7 @@ Call `Navigator.Navigate` with taskFilePath (no result = get current state):
 }
 ```
 
-Returns: `currentStep`, `stage`, `subagent`, `stepInstructions`, `terminal`, `orchestratorInstructions`, `metadata`.
+Returns: `currentStep`, `stage`, `subagent`, `stepInstructions`, `terminal`, `maxRetries`, `orchestratorInstructions`, `metadata`.
 
 ### 3. Generate Diagram
 
@@ -74,12 +74,15 @@ Call `Navigator.Diagram` with current position highlighted:
 
 ### 4. Display Results
 
-Use standard flow task format with diagram:
+Use standard flow task format with diagram.
+
+When the current step has `maxRetries > 0` (gate node), show retry budget: `retries: {retryCount}/{maxRetries}`.
+When `maxRetries` is 0 (task node), omit the retries display.
 
 ````markdown
 #1 Implement feature X ✨ (@flow:Developer)
-→ feature-development · development
-→ implement · in_progress
+ → feature-development · development
+ → implement · in_progress
 
 ```mermaid
 flowchart TD
@@ -91,7 +94,23 @@ flowchart TD
 
 **Description:** Add user authentication with OAuth
 
-**Next:** Delegate to @flow:Developer, then `/flow:task-advance 1 <passed|failed>`
+**Next:** Delegate to @flow:Developer, then `/flow:task-advance {taskId} <passed|failed>`
+````
+
+**Gate step with retries** (when `maxRetries > 0`):
+
+````markdown
+#1 Implement feature X ✨ (@flow:Reviewer)
+ → feature-development · verification
+ → code_review · in_progress · retries: 1/2
+
+```mermaid
+...
+```
+
+**Description:** Add user authentication with OAuth
+
+**Next:** Delegate to @flow:Reviewer, then `/flow:task-advance {taskId} <passed|failed>`
 ````
 
 ## If No Subagent
@@ -101,9 +120,9 @@ When Navigate returns `subagent: null`, show `(direct)` instead:
 ```
 #1 Review changes ✨ (direct)
  → feature-development · verification
- → code_review · in_progress
+ → code_review · in_progress · retries: 0/2
 
-**Next:** Handle step directly, then `/flow:task-advance 1 <passed|failed>`
+**Next:** Handle step directly, then `/flow:task-advance {taskId} <passed|failed>`
 ```
 
 ## Task Not Found
@@ -133,17 +152,3 @@ Flow tasks have metadata with `workflowType`:
 }
 ```
 
-### Workflow Emoji Mapping
-
-Append emoji after task subject based on workflowType:
-
-| workflowType           | Emoji  |
-| ---------------------- | ------ |
-| `feature-development`  | ✨     |
-| `bug-fix`              | 🐛     |
-| `agile-task`           | 📋     |
-| `context-optimization` | 🔧     |
-| `quick-task`           | ⚡     |
-| `ui-reconstruction`    | 🎨     |
-| `test-coverage`        | 🧪     |
-| (unknown/missing)      | (none) |

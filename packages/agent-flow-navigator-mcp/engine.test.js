@@ -1245,8 +1245,8 @@ describe("lint_format gate behavior", () => {
         assert.strictEqual(result.currentStep, "commit");
         assert.strictEqual(result.action, "advance");
         assert.strictEqual(result.retriesIncremented, false);
-        // retryCount should stay at 1 (not increment)
-        assert.strictEqual(result.metadata.retryCount, 1);
+        // retryCount resets to 0 on advance (new step gets fresh retries)
+        assert.strictEqual(result.metadata.retryCount, 0);
       } finally {
         rmSync(taskDir, { recursive: true });
       }

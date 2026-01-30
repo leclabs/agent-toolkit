@@ -65,14 +65,63 @@ export function toSubagentRef(agentId) {
 }
 
 /**
+ * Workflow emoji mapping for task subjects
+ */
+const WORKFLOW_EMOJIS = {
+  "feature-development": "✨",
+  "bug-fix": "🐛",
+  "agile-task": "📋",
+  "context-optimization": "🔧",
+  "quick-task": "⚡",
+  "ui-reconstruction": "🎨",
+  "test-coverage": "🧪",
+};
+
+/**
+ * Build formatted task subject for write-through
+ */
+export function buildTaskSubject(taskId, userDescription, workflowType, stepId, subagent, terminal, maxRetries, retryCount) {
+  const emoji = WORKFLOW_EMOJIS[workflowType] || "";
+  const line1 = `#${taskId} ${userDescription}${emoji ? ` ${emoji}` : ""}`;
+
+  let line2;
+  if (terminal === "success") {
+    line2 = `→ ${workflowType} · completed ✓`;
+  } else if (terminal === "hitl" || terminal === "failure") {
+    line2 = `→ ${workflowType} · ${stepId} · HITL`;
+  } else {
+    const agent = subagent ? `(${subagent})` : "(direct)";
+    const retries = maxRetries > 0 ? ` · retries: ${retryCount}/${maxRetries}` : "";
+    line2 = `→ ${workflowType} · ${stepId} ${agent}${retries}`;
+  }
+
+  return `${line1}\n${line2}`;
+}
+
+/**
+ * Build activeForm for task spinner display
+ */
+export function buildTaskActiveForm(stepName, subagent, terminal) {
+  if (terminal === "success") return "Completed";
+  if (terminal === "hitl" || terminal === "failure") return "HITL - Needs human help";
+  const agent = subagent ? ` (${subagent})` : "";
+  return `${stepName}${agent}`;
+}
+
+/**
  * Generate baseline instructions based on step type
  */
 export function getBaselineInstructions(stepId, stepName) {
   const id = stepId.toLowerCase();
   const name = (stepName || "").toLowerCase();
 
-  // Analysis/Planning steps
-  if (id.includes("analyze") || id.includes("analysis") || name.includes("analyze")) {
+  // Review steps (checked early — "plan_review" is a review, not a plan)
+  if (id.includes("review")) {
+    return "Check for correctness, code quality, and adherence to project standards. Verify the implementation meets requirements.";
+  }
+
+  // Analysis/Requirements steps
+  if (id.includes("analyze") || id.includes("analysis") || id.includes("parse") || id.includes("requirements") || name.includes("analyze")) {
     return "Review the task requirements carefully. Identify key constraints, dependencies, and acceptance criteria. Create a clear plan before proceeding.";
   }
   if (id.includes("plan") || id.includes("design") || name.includes("plan")) {
@@ -90,14 +139,14 @@ export function getBaselineInstructions(stepId, stepName) {
     return "Improve code structure without changing behavior. Ensure all tests pass before and after changes.";
   }
 
+  // Lint/format steps
+  if (id.includes("lint") || id.includes("format")) {
+    return "Run linting and formatting checks. Auto-fix issues where possible. Flag any issues that require manual attention.";
+  }
+
   // Testing steps
   if (id.includes("test") || id.includes("verify") || id.includes("validate")) {
     return "Verify the implementation works correctly. Test happy paths, edge cases, and error conditions. Document any issues found.";
-  }
-
-  // Review steps
-  if (id.includes("review")) {
-    return "Check for correctness, code quality, and adherence to project standards. Verify the implementation meets requirements.";
   }
 
   // Documentation steps
@@ -173,10 +222,15 @@ function buildNavigateResponse(
     : buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description);
 
   // Build metadata for task storage
+  // Reset retryCount on advance/start (new step), increment on retry, preserve on current/escalate
   const metadata = {
     workflowType,
     currentStep: stepId,
-    retryCount: retriesIncremented ? retryCount + 1 : retryCount,
+    retryCount: retriesIncremented
+      ? retryCount + 1
+      : action === "start" || action === "advance"
+        ? 0
+        : retryCount,
   };
 
   return {
@@ -187,6 +241,7 @@ function buildNavigateResponse(
     terminal: getTerminalType(stepDef),
     action,
     retriesIncremented,
+    maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
   };
@@ -467,11 +522,24 @@ export class WorkflowEngine {
       description
     );
 
-    // Write-through: persist state transition to task file
+    // Write-through: persist state transition and presentation to task file
     if (taskFilePath) {
       const task = readTaskFile(taskFilePath);
       if (task) {
+        const userDesc = task.metadata?.userDescription || "";
         task.metadata = { ...task.metadata, ...response.metadata };
+        task.subject = buildTaskSubject(
+          task.id, userDesc, response.metadata.workflowType,
+          response.currentStep, response.subagent, response.terminal,
+          response.maxRetries, response.metadata.retryCount
+        );
+        task.activeForm = buildTaskActiveForm(
+          response.stepInstructions?.name || response.currentStep,
+          response.subagent, response.terminal
+        );
+        if (response.orchestratorInstructions) {
+          task.description = response.orchestratorInstructions;
+        }
         writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
       }
     }
