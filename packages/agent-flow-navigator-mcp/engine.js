@@ -174,12 +174,43 @@ export function getBaselineInstructions(stepId, stepName) {
 }
 
 /**
+ * Resolve a context_files entry to an absolute path.
+ *
+ * Convention (follows Claude Code plugin path rules):
+ * - "./path" → relative to the workflow's source root (plugin root, project root, etc.)
+ * - "path"   → relative to projectRoot
+ *
+ * @param {string} file - Context file entry
+ * @param {string} projectRoot - Project root directory
+ * @param {string|null} sourceRoot - Root directory of the workflow's source
+ * @returns {string} Absolute file path
+ */
+export function resolveContextFile(file, projectRoot, sourceRoot) {
+  if (file.startsWith("./") && sourceRoot) {
+    return join(sourceRoot, file);
+  }
+  return join(projectRoot, file);
+}
+
+/**
+ * Resolve ./ prefixed paths in prose text against sourceRoot.
+ * Leaves text unchanged when sourceRoot is null or text has no ./ references.
+ * @param {string|null} text - Prose text that may contain ./ paths
+ * @param {string|null} sourceRoot - Root directory for ./ resolution
+ * @returns {string|null} Text with ./ paths resolved to absolute paths
+ */
+export function resolveProseRefs(text, sourceRoot) {
+  if (!text || !sourceRoot) return text;
+  return text.replace(/\.\/[\w\-\.\/]+/g, (match) => join(sourceRoot, match));
+}
+
+/**
  * Build context loading instructions from step-level context_files.
  * Returns a markdown section or null if no context declared.
  */
-export function buildContextInstructions({ contextFiles, projectRoot }) {
+export function buildContextInstructions({ contextFiles, projectRoot, sourceRoot }) {
   if (!contextFiles?.length || !projectRoot) return null;
-  const lines = contextFiles.map((file) => `- Read file: ${join(projectRoot, file)}`);
+  const lines = contextFiles.map((file) => `- Read file: ${resolveContextFile(file, projectRoot, sourceRoot)}`);
   return `## Context\n\nBefore beginning, load the following:\n${lines.join("\n")}`;
 }
 
@@ -212,25 +243,27 @@ function buildNavigateResponse(
   retryCount = 0,
   description = null,
   resetRetryCount = false,
-  projectRoot = null
+  projectRoot = null,
+  sourceRoot = null
 ) {
   const stage = stepDef.stage || null;
   const subagent = stepDef.agent ? toSubagentRef(stepDef.agent) : null;
 
   // Build step instructions from workflow definition + baseline
+  // Resolve ./ paths in prose fields against sourceRoot (same convention as context_files)
   const isTerminal = isTerminalNode(stepDef);
   const stepInstructions = isTerminal
     ? null
     : {
         name: stepDef.name || stepId,
-        description: stepDef.description || null,
-        guidance: stepDef.instructions || getBaselineInstructions(stepId, stepDef.name),
+        description: resolveProseRefs(stepDef.description, sourceRoot) || null,
+        guidance: resolveProseRefs(stepDef.instructions, sourceRoot) || getBaselineInstructions(stepId, stepDef.name),
       };
 
   // Build context block from step-level context_files
   const contextBlock = isTerminal
     ? null
-    : buildContextInstructions({ contextFiles: stepDef.context_files, projectRoot });
+    : buildContextInstructions({ contextFiles: stepDef.context_files, projectRoot, sourceRoot });
 
   // Build orchestrator instructions for all non-terminal actions
   const orchestratorInstructions = isTerminal
@@ -469,6 +502,9 @@ export class WorkflowEngine {
       throw new Error(`Workflow '${workflowType}' must have nodes`);
     }
 
+    // Resolve source root for context_files with ./ prefix
+    const sourceRoot = this.store.getSourceRoot?.(workflowType) || null;
+
     const { nodes } = wfDef;
 
     // Case 1: No currentStep - start at first work step
@@ -489,7 +525,7 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
-      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description, false, projectRoot);
+      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description, false, projectRoot, sourceRoot);
     }
 
     // Case 2: currentStep but no result - return current state
@@ -499,7 +535,7 @@ export class WorkflowEngine {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
       }
 
-      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description, false, projectRoot);
+      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description, false, projectRoot, sourceRoot);
     }
 
     // Case 3: currentStep and result - advance to next step
@@ -546,7 +582,8 @@ export class WorkflowEngine {
       retryCount,
       description,
       resetRetryCount,
-      projectRoot
+      projectRoot,
+      sourceRoot
     );
 
     // Write-through: persist state transition and presentation to task file

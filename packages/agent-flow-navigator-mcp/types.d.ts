@@ -133,3 +133,47 @@ export type EdgeAction =
   | "escalate" // Failed and exceeded retry limit
   | "no_outgoing_edges" // Terminal node (no edges)
   | "no_matching_edge"; // No edge matched the output
+
+// =============================================================================
+// Navigate Options
+// =============================================================================
+
+export interface NavigateOptions {
+  taskFilePath?: string;
+  workflowType?: string;
+  result?: "passed" | "failed";
+  description?: string;
+  projectRoot?: string;
+}
+
+// =============================================================================
+// Context Resolution
+// =============================================================================
+
+/**
+ * Resolve a context_files entry to an absolute path.
+ * - "./path" → relative to sourceRoot (the workflow's source directory)
+ * - "path"   → relative to projectRoot
+ */
+export function resolveContextFile(
+  file: string,
+  projectRoot: string,
+  sourceRoot?: string | null
+): string;
+
+export function resolveProseRefs(
+  text: string | null,
+  sourceRoot: string | null
+): string | null;
+
+export function buildContextInstructions(options: {
+  contextFiles?: string[];
+  projectRoot?: string | null;
+  sourceRoot?: string | null;
+}): string | null;
+
+// =============================================================================
+// Store Types
+// =============================================================================
+
+export type WorkflowSource = "catalog" | "project" | "external";
