@@ -82,18 +82,38 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
   if (!existsSync(dirPath)) return [];
 
   const loaded = [];
-  const files = readdirSync(dirPath).filter((f) => f.endsWith(".json"));
+  const entries = readdirSync(dirPath, { withFileTypes: true });
 
-  for (const file of files) {
-    const id = file.replace(".json", "");
-    try {
-      const content = JSON.parse(readFileSync(join(dirPath, file), "utf-8"));
-      if (validateWorkflow(id, content)) {
-        store.loadDefinition(id, content, "external", sourceRoot);
-        loaded.push(id);
+  for (const entry of entries) {
+    // Flat format: {id}.json
+    if (entry.isFile() && entry.name.endsWith(".json")) {
+      const id = entry.name.replace(".json", "");
+      try {
+        const content = JSON.parse(readFileSync(join(dirPath, entry.name), "utf-8"));
+        if (validateWorkflow(id, content)) {
+          store.loadDefinition(id, content, "external", sourceRoot);
+          loaded.push(id);
+        }
+      } catch (e) {
+        console.error(`Error loading external workflow ${id}: ${e.message}`);
       }
-    } catch (e) {
-      console.error(`Error loading external workflow ${id}: ${e.message}`);
+      continue;
+    }
+
+    // Directory format: {id}/workflow.json
+    if (entry.isDirectory()) {
+      const wfFile = join(dirPath, entry.name, "workflow.json");
+      if (!existsSync(wfFile)) continue;
+      const id = entry.name;
+      try {
+        const content = JSON.parse(readFileSync(wfFile, "utf-8"));
+        if (validateWorkflow(id, content)) {
+          store.loadDefinition(id, content, "external", sourceRoot);
+          loaded.push(id);
+        }
+      } catch (e) {
+        console.error(`Error loading external workflow ${id}: ${e.message}`);
+      }
     }
   }
 
