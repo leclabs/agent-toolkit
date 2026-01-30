@@ -294,6 +294,7 @@ function buildNavigateResponse(
     maxRetries: stepDef.maxRetries || 0,
     orchestratorInstructions,
     metadata,
+    sourceRoot,
   };
 }
 
