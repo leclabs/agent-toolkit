@@ -15,7 +15,7 @@
     "format": "prettier --write .",
     "changeset": "changeset",
     "version": "changeset version && node scripts/sync-versions.js",
-    "publish:all": "npm publish --access public && cd packages/agent-flow-navigator-mcp && npm publish --access public",
+    "release": "npm whoami --registry https://registry.npmjs.org/ || (echo '\\nAuth failed. Run: npm config set //registry.npmjs.org/:_authToken=YOUR_TOKEN' && exit 1) && npm publish --access public && cd packages/agent-flow-navigator-mcp && npm publish --access public",
     "dev:setup": "npm run dev:setup:mcp && npm run dev:setup:plugin",
     "dev:setup:mcp": "npm link --prefix packages/agent-flow-navigator-mcp && npm link @leclabs/agent-flow-navigator-mcp",
     "dev:setup:plugin": "(claude plugin uninstall flow@agent-toolkit || true) && (claude plugin marketplace remove agent-toolkit || true) && claude plugin marketplace add $(pwd) && claude plugin install flow@agent-toolkit"

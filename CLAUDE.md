@@ -58,14 +58,13 @@ git push
 gh pr create  # or update existing PR
 ```
 
-**User does steps 5–6 (requires human auth):**
+**User does steps 5–6:**
 
 ```bash
 # 5. Merge PR to main
 
-# 6. Publish to npm (requires 2FA OTP from authenticator app)
-npm publish --access public --otp=CODE
-cd packages/agent-flow-navigator-mcp && npm publish --access public --otp=CODE
+# 6. Publish to npm (gates on auth, then publishes both packages)
+npm run release
 ```
 
 ### How it works
@@ -75,7 +74,7 @@ cd packages/agent-flow-navigator-mcp && npm publish --access public --otp=CODE
   - `.claude-plugin/marketplace.json` (metadata.version + plugins[].version)
   - `plugins/flow/.claude-plugin/plugin.json`
   - `packages/agent-flow-navigator-mcp/package.json`
-- `npm run publish:all` — publishes both `@leclabs/agent-toolkit` and `@leclabs/agent-flow-navigator-mcp` to npm.
+- `npm run release` — runs `npm whoami` to verify auth, then publishes both `@leclabs/agent-toolkit` and `@leclabs/agent-flow-navigator-mcp`. If auth fails, prints instructions to set the npm token.
 
 ## Naming Hierarchy
 
