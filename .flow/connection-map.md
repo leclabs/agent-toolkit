@@ -111,22 +111,12 @@ Advance:  Navigate(taskFilePath, result)      → next step state + metadata
 | `/flow:feat`  | `/flow:task-create "$ARGUMENTS" feature-development`  | feature-development  |
 | `/flow:bug`   | `/flow:task-create "$ARGUMENTS" bug-fix`              | bug-fix              |
 | `/flow:quick` | `/flow:task-create "$ARGUMENTS" quick-task`           | quick-task           |
-| `/flow:task`  | `/flow:task-create "$ARGUMENTS" agile-task`           | agile-task           |
+| `/flow:task`  | `/flow:task-create "$ARGUMENTS"`                      | _AskUserQuestion_    |
 | `/flow:spec`  | `/flow:task-create "$ARGUMENTS" test-coverage`        | test-coverage        |
 | `/flow:ctx`   | `/flow:task-create "$ARGUMENTS" context-optimization` | context-optimization |
 | `/flow:ui`    | `/flow:task-create "$ARGUMENTS" ui-reconstruction`    | ui-reconstruction    |
 | `/flow:go`    | Batch execute all pending tasks                       | (any)                |
 | `/flow:recon` | Project exploration (standalone)                      | (none)               |
-
-### Prefix Recognition (from prime SKILL.md)
-
-| Prefix  | Workflow             |
-| ------- | -------------------- |
-| `feat:` | feature-development  |
-| `bug:`  | bug-fix              |
-| `fix:`  | quick-task           |
-| `test:` | test-coverage        |
-| `ctx:`  | context-optimization |
 
 ## 5. Agents (Subagent Definitions)
 
