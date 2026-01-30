@@ -29,19 +29,24 @@ export function validateWorkflow(id, content) {
 export class WorkflowStore {
   constructor() {
     this.workflows = new Map();
-    this.sources = new Map(); // Track source: "catalog" | "project"
+    this.sources = new Map(); // Track source: "catalog" | "project" | "external"
+    this.sourceRoots = new Map(); // Track source root path per workflow (for ./ resolution)
   }
 
   /**
    * Load a workflow definition into the store
    * @param {string} id - Workflow identifier
    * @param {Object} workflow - Workflow definition
-   * @param {string} source - Source: "catalog" | "project"
+   * @param {string} source - Source: "catalog" | "project" | "external"
+   * @param {string|null} sourceRoot - Root path for resolving ./ context_files
    * @returns {string} The workflow id
    */
-  loadDefinition(id, workflow, source = "catalog") {
+  loadDefinition(id, workflow, source = "catalog", sourceRoot = null) {
     this.workflows.set(id, workflow);
     this.sources.set(id, source);
+    if (sourceRoot) {
+      this.sourceRoots.set(id, sourceRoot);
+    }
     return id;
   }
 
@@ -56,7 +61,7 @@ export class WorkflowStore {
 
   /**
    * List all loaded workflows with metadata
-   * @param {string} filter - Filter by source: "all" | "project" | "catalog"
+   * @param {string} filter - Filter by source: "all" | "project" | "catalog" | "external"
    * @returns {Array} Array of workflow summaries
    */
   listWorkflows(filter = "all") {
@@ -87,12 +92,32 @@ export class WorkflowStore {
   }
 
   /**
+   * Check if any external workflows exist
+   * @returns {boolean}
+   */
+  hasExternalWorkflows() {
+    for (const source of this.sources.values()) {
+      if (source === "external") return true;
+    }
+    return false;
+  }
+
+  /**
    * Get the source of a workflow
    * @param {string} id - Workflow identifier
    * @returns {string|undefined} Source or undefined
    */
   getSource(id) {
     return this.sources.get(id);
+  }
+
+  /**
+   * Get the source root path for a workflow (for ./ context_files resolution)
+   * @param {string} id - Workflow identifier
+   * @returns {string|undefined} Source root path or undefined
+   */
+  getSourceRoot(id) {
+    return this.sourceRoots.get(id);
   }
 
   /**
@@ -110,6 +135,7 @@ export class WorkflowStore {
   clear() {
     this.workflows.clear();
     this.sources.clear();
+    this.sourceRoots.clear();
   }
 
   /**

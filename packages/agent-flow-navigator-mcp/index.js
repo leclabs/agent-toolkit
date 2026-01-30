@@ -10,6 +10,7 @@
  * - ListWorkflows: List available workflows
  * - Diagram: Generate mermaid diagram for workflow
  * - CopyWorkflows: Copy workflows from catalog to project
+ * - LoadWorkflows: Load workflows from a directory at runtime (external plugins or project reload)
  * - ListCatalog: List workflows available in catalog
  */
 
@@ -102,22 +103,50 @@ function loadCatalogWorkflows(dirPath) {
 }
 
 /**
+ * Load external workflows from a directory: flat {id}.json files
+ * Used by the LoadWorkflows tool at runtime.
+ * @param {string} dirPath - Directory containing {id}.json workflow files
+ * @param {string} sourceRoot - Root path for resolving ./ context_files
+ * @returns {string[]} Array of loaded workflow IDs
+ */
+function loadExternalWorkflows(dirPath, sourceRoot) {
+  if (!existsSync(dirPath)) return [];
+
+  const loaded = [];
+  const files = readdirSync(dirPath).filter((f) => f.endsWith(".json"));
+
+  for (const file of files) {
+    const id = file.replace(".json", "");
+    try {
+      const content = JSON.parse(readFileSync(join(dirPath, file), "utf-8"));
+      if (validateWorkflow(id, content)) {
+        store.loadDefinition(id, content, "external", sourceRoot);
+        loaded.push(id);
+      }
+    } catch (e) {
+      console.error(`Error loading external workflow ${id}: ${e.message}`);
+    }
+  }
+
+  return loaded;
+}
+
+/**
  * Load workflows: catalog first, then project overwrites (project takes precedence)
  */
 function loadWorkflows() {
   const catalogPath = join(CATALOG_PATH, "workflows");
   const catalogLoaded = loadCatalogWorkflows(catalogPath);
-
   const projectLoaded = existsSync(WORKFLOWS_PATH) ? loadProjectWorkflows(WORKFLOWS_PATH) : [];
 
-  // Determine which IDs came from where (project overwrites catalog)
-  const fromCatalog = catalogLoaded.filter((id) => !projectLoaded.includes(id));
+  const allLoaded = [...new Set([...catalogLoaded, ...projectLoaded])];
   const fromProject = projectLoaded;
+  const fromCatalog = catalogLoaded.filter((id) => !projectLoaded.includes(id));
 
   return {
     catalog: fromCatalog,
     project: fromProject,
-    loaded: [...new Set([...catalogLoaded, ...projectLoaded])],
+    loaded: allLoaded,
   };
 }
 
@@ -205,6 +234,26 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               type: "array",
               items: { type: "string" },
               description: "Workflow IDs to copy. Empty = all.",
+            },
+          },
+        },
+      },
+      {
+        name: "LoadWorkflows",
+        description:
+          "Load workflows from a directory at runtime. External plugins pass their root path; omit path to reload project workflows.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            path: {
+              type: "string",
+              description:
+                "Directory containing {id}.json workflow files. Omit to reload project workflows from .flow/workflows/.",
+            },
+            sourceRoot: {
+              type: "string",
+              description:
+                "Root path for resolving ./ context_files entries. Defaults to path (or project root when path omitted).",
             },
           },
         },
@@ -335,6 +384,32 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           errors: errors.length > 0 ? errors : undefined,
           path: WORKFLOWS_PATH,
         });
+      }
+
+      case "LoadWorkflows": {
+        if (args.path) {
+          // External plugin: load from provided path
+          const dirPath = resolve(args.path);
+          const root = args.sourceRoot ? resolve(args.sourceRoot) : dirPath;
+          const loaded = loadExternalWorkflows(dirPath, root);
+          return jsonResponse({
+            schemaVersion: 2,
+            loaded,
+            source: "external",
+            sourceRoot: root,
+            path: dirPath,
+          });
+        } else {
+          // Project: reload from .flow/workflows/
+          const loaded = existsSync(WORKFLOWS_PATH) ? loadProjectWorkflows(WORKFLOWS_PATH) : [];
+          return jsonResponse({
+            schemaVersion: 2,
+            loaded,
+            source: "project",
+            sourceRoot: PROJECT_ROOT,
+            path: WORKFLOWS_PATH,
+          });
+        }
       }
 
       case "ListCatalog": {

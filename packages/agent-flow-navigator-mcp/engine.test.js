@@ -8,6 +8,8 @@ import {
   getBaselineInstructions,
   readTaskFile,
   buildContextInstructions,
+  resolveContextFile,
+  resolveProseRefs,
 } from "./engine.js";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
@@ -19,15 +21,29 @@ import { tmpdir } from "os";
 class WorkflowStore {
   constructor() {
     this.workflows = new Map();
+    this.sources = new Map();
+    this.sourceRoots = new Map();
   }
 
-  loadDefinition(id, definition) {
+  loadDefinition(id, definition, source = "catalog", sourceRoot = null) {
     this.workflows.set(id, definition);
+    this.sources.set(id, source);
+    if (sourceRoot) {
+      this.sourceRoots.set(id, sourceRoot);
+    }
     return id;
   }
 
   getDefinition(id) {
     return this.workflows.get(id);
+  }
+
+  getSource(id) {
+    return this.sources.get(id);
+  }
+
+  getSourceRoot(id) {
+    return this.sourceRoots.get(id);
   }
 }
 
@@ -1065,6 +1081,101 @@ describe("WorkflowEngine", () => {
         }
       });
 
+      it("should resolve mixed plain + ./ entries in buildContextInstructions", () => {
+        const result = buildContextInstructions({
+          contextFiles: ["ARCHITECTURE.md", "./skills/debug/SKILL.md"],
+          projectRoot: "/my/project",
+          sourceRoot: "/plugins/fusion",
+        });
+        assert.ok(result);
+        assert.ok(result.includes("Read file: /my/project/ARCHITECTURE.md"));
+        assert.ok(result.includes("Read file: /plugins/fusion/skills/debug/SKILL.md"));
+      });
+
+      it("should resolve ./ paths in step description via store sourceRoot", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: {
+              type: "task",
+              name: "Setup Session",
+              description: "Start Chrome session using ./skills/chrome-debug-session/SKILL.md and authenticate via ./skills/upwork-login/SKILL.md.",
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("prose-ctx-wf", def, "external", "/opt/fusion-studio");
+
+        const result = engine.navigate({
+          workflowType: "prose-ctx-wf",
+          projectRoot: "/my/project",
+        });
+
+        assert.ok(result.stepInstructions);
+        assert.ok(result.stepInstructions.description.includes("/opt/fusion-studio/skills/chrome-debug-session/SKILL.md"));
+        assert.ok(result.stepInstructions.description.includes("/opt/fusion-studio/skills/upwork-login/SKILL.md"));
+        assert.ok(!result.stepInstructions.description.includes("./skills/"));
+      });
+
+      it("should not resolve ./ in description when no sourceRoot", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            task: {
+              type: "task",
+              name: "Task",
+              description: "Read ./skills/foo/SKILL.md for context.",
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "task" },
+            { from: "task", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("no-root-prose-wf", def, "catalog");
+
+        const result = engine.navigate({
+          workflowType: "no-root-prose-wf",
+          projectRoot: "/my/project",
+        });
+
+        assert.ok(result.stepInstructions);
+        assert.strictEqual(result.stepInstructions.description, "Read ./skills/foo/SKILL.md for context.");
+      });
+
+      it("should resolve ./ context_files in Navigate via store sourceRoot", () => {
+        const def = {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            implement: {
+              type: "task",
+              name: "Implement",
+              context_files: ["ARCHITECTURE.md", "./skills/debug/SKILL.md"],
+            },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "implement" },
+            { from: "implement", to: "end", on: "passed" },
+          ],
+        };
+        store.loadDefinition("ext-ctx-wf", def, "external", "/plugins/fusion");
+
+        const result = engine.navigate({
+          workflowType: "ext-ctx-wf",
+          projectRoot: "/my/project",
+        });
+
+        assert.ok(result.orchestratorInstructions);
+        assert.ok(result.orchestratorInstructions.includes("Read file: /my/project/ARCHITECTURE.md"));
+        assert.ok(result.orchestratorInstructions.includes("Read file: /plugins/fusion/skills/debug/SKILL.md"));
+      });
+
       it("should not include stepContext in Navigate response", () => {
         const def = {
           nodes: {
@@ -1088,6 +1199,72 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.stepContext, undefined);
       });
     });
+  });
+});
+
+describe("resolveContextFile", () => {
+  it("should resolve plain path relative to projectRoot", () => {
+    const result = resolveContextFile("ARCHITECTURE.md", "/my/project", null);
+    assert.strictEqual(result, join("/my/project", "ARCHITECTURE.md"));
+  });
+
+  it("should resolve ./ path relative to sourceRoot", () => {
+    const result = resolveContextFile("./skills/chrome-debug/SKILL.md", "/my/project", "/plugins/fusion-studio");
+    assert.strictEqual(result, join("/plugins/fusion-studio", "skills/chrome-debug/SKILL.md"));
+  });
+
+  it("should resolve plain path to projectRoot even when sourceRoot is set", () => {
+    const result = resolveContextFile("ARCHITECTURE.md", "/my/project", "/plugins/fusion-studio");
+    assert.strictEqual(result, join("/my/project", "ARCHITECTURE.md"));
+  });
+
+  it("should fall back to projectRoot for ./ path when sourceRoot is null", () => {
+    const result = resolveContextFile("./skills/SKILL.md", "/my/project", null);
+    assert.strictEqual(result, join("/my/project", "skills/SKILL.md"));
+  });
+
+  it("should handle nested ./ paths", () => {
+    const result = resolveContextFile("./deep/nested/path/file.md", "/project", "/opt/ext-plugin");
+    assert.strictEqual(result, join("/opt/ext-plugin", "deep/nested/path/file.md"));
+  });
+});
+
+describe("resolveProseRefs", () => {
+  it("should resolve ./ paths in prose text", () => {
+    const text = "Invoke ./skills/chrome-debug-session/SKILL.md to start session.";
+    const result = resolveProseRefs(text, "/opt/fusion-studio");
+    assert.strictEqual(result, "Invoke /opt/fusion-studio/skills/chrome-debug-session/SKILL.md to start session.");
+  });
+
+  it("should resolve multiple ./ paths in one string", () => {
+    const text = "Read ./skills/verify-ssh-agent/SKILL.md then ./skills/catalog-sync-app-repo/SKILL.md for details.";
+    const result = resolveProseRefs(text, "/opt/plugin");
+    assert.ok(result.includes("/opt/plugin/skills/verify-ssh-agent/SKILL.md"));
+    assert.ok(result.includes("/opt/plugin/skills/catalog-sync-app-repo/SKILL.md"));
+    assert.ok(!result.includes("./"));
+  });
+
+  it("should leave text unchanged when sourceRoot is null", () => {
+    const text = "Read ./skills/foo/SKILL.md for context.";
+    const result = resolveProseRefs(text, null);
+    assert.strictEqual(result, text);
+  });
+
+  it("should return null for null text", () => {
+    assert.strictEqual(resolveProseRefs(null, "/opt/plugin"), null);
+  });
+
+  it("should leave text without ./ paths unchanged", () => {
+    const text = "Verify catalog artifacts exist at ARCHITECTURE.md";
+    const result = resolveProseRefs(text, "/opt/plugin");
+    assert.strictEqual(result, text);
+  });
+
+  it("should handle ./ paths with hyphens and dots", () => {
+    const text = "Use ./skills/chrome-debug-session/SKILL.md and ./config/app.settings.json";
+    const result = resolveProseRefs(text, "/ext");
+    assert.ok(result.includes("/ext/skills/chrome-debug-session/SKILL.md"));
+    assert.ok(result.includes("/ext/config/app.settings.json"));
   });
 });
 

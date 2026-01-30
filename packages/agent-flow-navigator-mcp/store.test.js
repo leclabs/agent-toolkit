@@ -111,6 +111,114 @@ describe("WorkflowStore", () => {
 
   });
 
+  describe("listWorkflows with external filter", () => {
+    it("should filter to external sources with 'external' filter", () => {
+      store.loadDefinition("cat-wf", { name: "Catalog", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("proj-wf", { name: "Project", nodes: {}, edges: [] }, "project");
+      store.loadDefinition("ext-wf", { name: "External", nodes: {}, edges: [] }, "external", "/plugins/fusion");
+
+      const list = store.listWorkflows("external");
+      assert.strictEqual(list.length, 1);
+      assert.strictEqual(list[0].id, "ext-wf");
+      assert.strictEqual(list[0].source, "external");
+    });
+
+    it("should return multiple external workflows", () => {
+      store.loadDefinition("wf-a", { name: "A", nodes: {}, edges: [] }, "external", "/plugins/a");
+      store.loadDefinition("wf-b", { name: "B", nodes: {}, edges: [] }, "external", "/plugins/b");
+      store.loadDefinition("wf-c", { name: "C", nodes: {}, edges: [] }, "catalog");
+
+      const list = store.listWorkflows("external");
+      assert.strictEqual(list.length, 2);
+      const ids = list.map((w) => w.id);
+      assert.ok(ids.includes("wf-a"));
+      assert.ok(ids.includes("wf-b"));
+    });
+
+    it("should return empty array when no external workflows exist", () => {
+      store.loadDefinition("cat", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("proj", { name: "Proj", nodes: {}, edges: [] }, "project");
+
+      const list = store.listWorkflows("external");
+      assert.deepStrictEqual(list, []);
+    });
+
+    it("should include external workflows in 'all' filter", () => {
+      store.loadDefinition("cat", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("ext", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/ext");
+
+      const list = store.listWorkflows("all");
+      assert.strictEqual(list.length, 2);
+    });
+
+    it("should not include external workflows in 'catalog' filter", () => {
+      store.loadDefinition("cat", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("ext", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/ext");
+
+      const list = store.listWorkflows("catalog");
+      assert.strictEqual(list.length, 1);
+      assert.strictEqual(list[0].id, "cat");
+    });
+
+    it("should store external source correctly", () => {
+      store.loadDefinition("ext-wf", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/fusion");
+
+      assert.strictEqual(store.getSource("ext-wf"), "external");
+    });
+  });
+
+  describe("hasExternalWorkflows", () => {
+    it("should return false when no external workflows exist", () => {
+      store.loadDefinition("cat", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("proj", { name: "Proj", nodes: {}, edges: [] }, "project");
+
+      assert.strictEqual(store.hasExternalWorkflows(), false);
+    });
+
+    it("should return true when external workflows exist", () => {
+      store.loadDefinition("cat", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+      store.loadDefinition("ext", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/fusion");
+
+      assert.strictEqual(store.hasExternalWorkflows(), true);
+    });
+
+    it("should return false for empty store", () => {
+      assert.strictEqual(store.hasExternalWorkflows(), false);
+    });
+  });
+
+  describe("sourceRoot tracking", () => {
+    it("should store and retrieve sourceRoot per workflow", () => {
+      store.loadDefinition("ext-wf", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/fusion");
+
+      assert.strictEqual(store.getSourceRoot("ext-wf"), "/plugins/fusion");
+    });
+
+    it("should return undefined for workflow without sourceRoot", () => {
+      store.loadDefinition("cat-wf", { name: "Cat", nodes: {}, edges: [] }, "catalog");
+
+      assert.strictEqual(store.getSourceRoot("cat-wf"), undefined);
+    });
+
+    it("should return undefined for non-existent workflow", () => {
+      assert.strictEqual(store.getSourceRoot("nonexistent"), undefined);
+    });
+
+    it("should clear sourceRoots on clear()", () => {
+      store.loadDefinition("ext-wf", { name: "Ext", nodes: {}, edges: [] }, "external", "/plugins/fusion");
+      assert.strictEqual(store.getSourceRoot("ext-wf"), "/plugins/fusion");
+
+      store.clear();
+      assert.strictEqual(store.getSourceRoot("ext-wf"), undefined);
+    });
+
+    it("should not set sourceRoot when null", () => {
+      store.loadDefinition("cat-wf", { name: "Cat", nodes: {}, edges: [] }, "catalog", null);
+
+      assert.strictEqual(store.getSourceRoot("cat-wf"), undefined);
+    });
+  });
+
   describe("has", () => {
     it("should return true for existing workflow", () => {
       store.loadDefinition("test", { nodes: {}, edges: [] });

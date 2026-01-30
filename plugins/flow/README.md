@@ -54,7 +54,7 @@ Skills are the internal orchestration interface used by the agent system:
 | `/flow:run`          | Execute tasks autonomously with subagent delegation |
 | `/flow:init`         | Set up workflows for a project (copy from catalog)  |
 | `/flow:list`         | List available workflows                            |
-| `/flow:load`         | Reload workflows from `.flow/workflows/`            |
+| `/flow:load`         | Load workflows (project reload or external plugin)  |
 | `/flow:diagram`      | Generate mermaid diagram for a workflow             |
 | `/flow:analyze`      | Interactive workflow discovery from project         |
 

@@ -1,53 +1,73 @@
 ---
-description: Load workflows from .flow/workflows/ directory into Navigator.
+description: Load workflows into Navigator from project directory or external plugin path.
 ---
 
 # /flow:load
 
-Reload workflows from the project's `.flow/workflows/` directory.
+Load workflows into Navigator. Reloads project workflows by default, or loads external plugin workflows when given a path.
+
+## Usage
+
+```
+/flow:load                                    # Reload project workflows
+/flow:load <path>                             # Load external workflows (sourceRoot = path)
+/flow:load <path> --source-root <sourceRoot>  # Load external workflows with separate sourceRoot
+```
+
+**Arguments:**
+
+- `path` (optional): Directory containing `{id}.json` workflow files. Omit to reload project workflows from `.flow/workflows/`.
+- `--source-root` (optional): Root path for resolving `./` prefixed `context_files` entries. Defaults to `path` when loading external workflows, or the project root when reloading project workflows.
 
 ## When To Use
 
-- After editing workflow JSON files
+- After editing workflow JSON files in `.flow/workflows/`
 - After adding new workflows manually
+- To load workflows from an external plugin at session startup
 - To refresh Navigator's in-memory workflow cache
 
 ## What To Do
 
-### 1. Check for Workflows
+### 1. Call LoadWorkflows
 
-Verify `.flow/workflows/` exists and contains JSON files.
+**Project reload** (no arguments):
 
-If not found:
+Call `Navigator.LoadWorkflows` with no arguments. This reloads from `.flow/workflows/`.
+
+If `.flow/workflows/` does not exist:
 
 ```
 No workflows found in .flow/workflows/
 Run /flow:init to set up workflows for this project.
 ```
 
-### 2. Load Workflows
+**External plugin** (path provided):
 
-Navigator automatically loads workflows on startup from:
+Call `Navigator.LoadWorkflows` with:
 
-1. `.flow/workflows/` (project-specific, preferred)
-2. Catalog (fallback if no project workflows)
+```json
+{
+  "path": "<path argument>",
+  "sourceRoot": "<--source-root argument, or path if omitted>"
+}
+```
 
-To force reload, restart the Navigator MCP server or call `Navigator.ListWorkflows` to verify loaded workflows.
+This loads `{id}.json` files from the directory, tags them as `source: "external"`, and stores the `sourceRoot` for resolving `./` prefixed `context_files` entries against the plugin's root rather than the project root.
 
-### 3. Validate and Report
+### 2. Report Results
 
-Call `Navigator.ListWorkflows` to show loaded workflows:
+Call `Navigator.ListWorkflows` to show all loaded workflows:
 
 ```markdown
 ## Loaded Workflows
 
-| Workflow            | Name                | steps |
-| ------------------- | ------------------- | ----- |
-| feature-development | Feature Development | 14    |
-| bug-fix             | Bug Fix             | 8     |
-| agile-task          | Agile Task          | 5     |
+| Workflow            | Name                | Source   | Steps |
+| ------------------- | ------------------- | -------- | ----- |
+| feature-development | Feature Development | project  | 14    |
+| fusion-cataloging   | Fusion Cataloging   | external | 10    |
+| fusion-specifying   | Fusion Specifying   | external | 15    |
 
-Source: project (.flow/workflows/)
+Sources: project (.flow/workflows/), external (<path>)
 ```
 
 If any workflows failed validation:
@@ -58,6 +78,15 @@ If any workflows failed validation:
 - custom-workflow.json: missing 'edges' array
 ```
 
+## Context File Resolution
+
+Workflow nodes can reference `context_files` — files the agent should read before executing a step.
+
+- **Plain paths** (e.g., `ARCHITECTURE.md`) resolve against the project root
+- **`./` prefixed paths** (e.g., `./skills/debug/SKILL.md`) resolve against the workflow's `sourceRoot`
+
+This allows external plugins to ship workflows that reference their own skill files without knowing the project's directory structure.
+
 ## Schema Requirements
 
 Each workflow must have:
@@ -67,10 +96,11 @@ Each workflow must have:
 
 Each node should have:
 
-- `type`: "start", "work", "gate", or "end"
+- `type`: "start", "task", "gate", or "end"
 - `agent`: (optional) agent ID for this node
-- `stage`, `step`: (optional) categorization
-- `maxRetries`: (optional) retry limit for work nodes
+- `stage`: (optional) categorization
+- `maxRetries`: (optional) retry limit
+- `context_files`: (optional) files to load before executing
 
 Terminal nodes use:
 
