@@ -4,7 +4,7 @@
     "name": "Lance Caraccioli"
   },
   "metadata": {
-    "version": "1.5.1",
+    "version": "1.5.2",
     "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration"
   },
   "plugins": [
@@ -12,7 +12,7 @@
       "name": "flow",
       "source": "./plugins/flow",
       "description": "DAG-based workflow orchestration for Claude Code",
-      "version": "1.5.1",
+      "version": "1.5.2",
       "author": {
         "name": "Lance Caraccioli"
       },

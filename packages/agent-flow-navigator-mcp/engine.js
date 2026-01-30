@@ -14,7 +14,7 @@
  */
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
-import { join } from "path";
+import { basename, join } from "path";
 
 /**
  * Read and parse a task file
@@ -672,11 +672,19 @@ export class WorkflowEngine {
     if (taskFilePath) {
       const task = readTaskFile(taskFilePath);
       if (task) {
-        const originalId = task.id;
+        // Derive canonical ID from filename — this is the source of truth.
+        // Auto-corrects if task.id was corrupted by an external write.
+        const filenameId = basename(taskFilePath, ".json");
+        if (task.id !== filenameId) {
+          console.error(
+            `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
+          );
+        }
+        const canonicalId = filenameId;
         const userDesc = task.metadata?.userDescription || "";
         task.metadata = { ...task.metadata, ...response.metadata };
         task.subject = buildTaskSubject(
-          originalId,
+          canonicalId,
           userDesc,
           response.metadata.workflowType,
           response.currentStep,
@@ -693,7 +701,7 @@ export class WorkflowEngine {
         if (response.orchestratorInstructions) {
           task.description = response.orchestratorInstructions;
         }
-        task.id = originalId;
+        task.id = canonicalId;
         writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
       }
     }

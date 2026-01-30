@@ -55,7 +55,11 @@ When `autonomyContinued` is `true` in the Navigate response, log the stage trans
 ⟩ Stage boundary auto-continued: end_planning → implement
 ```
 
-### 3. The Execution Loop
+### 3. Task File Integrity
+
+**NEVER use the Write tool to create or modify task files under `~/.claude/tasks/`.** Only use `TaskCreate` and `TaskUpdate`. If the in-memory task list clears during a long subagent call, recreate the task with `TaskCreate` — do not manually write JSON to the task directory. Navigator's write-through handles file-level updates; the orchestrator must only use the task API.
+
+### 4. The Execution Loop
 
 Initialize an `iterationCount` at `0`. Track a `stepTrace` array of `{ step, result, action }` entries.
 
@@ -147,7 +151,7 @@ Offer these options:
 2. Exit the loop
 3. Show the HITL final report with resume instructions
 
-### 4. Getting Current Step
+### 5. Getting Current Step
 
 Call `Navigator.Navigate` with taskFilePath:
 
@@ -159,7 +163,7 @@ Call `Navigator.Navigate` with taskFilePath:
 
 Response includes `subagent`, `stepInstructions`, `terminal`, `metadata`, etc.
 
-### 5. Delegation Protocol
+### 6. Delegation Protocol
 
 **If subagent is set (e.g., `@flow:Developer`):**
 
@@ -192,7 +196,7 @@ Task(
 
 - Handle the step directly
 
-### 6. Processing Results
+### 7. Processing Results
 
 Parse subagent response:
 
@@ -232,7 +236,7 @@ Then call TaskUpdate to sync status (Navigator's write-through has already updat
 }
 ```
 
-### 7. Progress Reporting
+### 8. Progress Reporting
 
 After each step, show brief progress:
 
@@ -242,7 +246,7 @@ After each step, show brief progress:
 ⟳ test (@flow:Tester) → in progress...
 ```
 
-### 8. Loop Termination
+### 9. Loop Termination
 
 Exit when:
 
@@ -254,7 +258,7 @@ Exit when:
 
 Note: HITL does **not** automatically exit the loop. The user is given the choice to fix and continue or leave pending.
 
-### 9. Final Report
+### 10. Final Report
 
 **Success:**
 

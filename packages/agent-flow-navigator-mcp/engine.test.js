@@ -848,6 +848,44 @@ describe("WorkflowEngine", () => {
       }
     });
 
+    it("should auto-correct task id from filename when mismatched", () => {
+      const def = {
+        nodes: {
+          start: { type: "start", name: "Start" },
+          task: { type: "task", name: "Task" },
+          end: { type: "end", result: "success" },
+        },
+        edges: [
+          { from: "start", to: "task" },
+          { from: "task", to: "end", on: "passed" },
+        ],
+      };
+      store.loadDefinition("id-fix-wf", def);
+
+      const taskDir = join(tmpdir(), "flow-id-autocorrect-" + Date.now());
+      mkdirSync(taskDir, { recursive: true });
+      // File is named 1.json but contains id "2" — the corruption scenario
+      const taskFile = join(taskDir, "1.json");
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "2",
+          subject: "#2 Corrupted task",
+          metadata: { workflowType: "id-fix-wf", currentStep: "task", retryCount: 0 },
+        })
+      );
+
+      try {
+        engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+        const updated = readTaskFile(taskFile);
+        assert.strictEqual(updated.id, "1", "task id must be auto-corrected to match filename");
+        assert.ok(updated.subject.startsWith("#1 "), "subject must use corrected id");
+      } finally {
+        rmSync(taskDir, { recursive: true });
+      }
+    });
+
     it("should write-through state transitions to task file on advance", () => {
       const def = {
         nodes: {

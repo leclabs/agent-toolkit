@@ -1,6 +1,6 @@
 {
   "name": "flow",
-  "version": "1.5.1",
+  "version": "1.5.2",
   "description": "DAG-based workflow orchestration for Claude Code.",
   "author": {
     "name": "Lance Caraccioli"

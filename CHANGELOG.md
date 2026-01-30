@@ -1,5 +1,13 @@
 # @leclabs/agent-toolkit
 
+## 1.5.2
+
+### Patch Changes
+
+- Auto-correct task ID from filename in write-through and add task file integrity guard to /flow:run
+
+  Navigator now derives the canonical task ID from the filename (e.g., `1.json` → `"1"`) and auto-corrects mismatches, preventing the filename-to-ID corruption that caused Claude Code to lose track of tasks. The /flow:run skill now explicitly prohibits using the Write tool on task files.
+
 ## 1.5.1
 
 ### Patch Changes
