@@ -11,6 +11,8 @@ Execute flow tasks autonomously, delegating to subagents based on Navigate respo
 ```
 /flow:run              # Execute highest priority pending task
 /flow:run [taskId]     # Execute specific task
+/flow:run --autonomy   # Auto-continue through stage boundaries
+/flow:run [taskId] --autonomy
 ```
 
 ## Task Directory
@@ -40,7 +42,20 @@ const taskDir = process.env.CLAUDE_CODE_TASK_LIST_ID || "${CLAUDE_SESSION_ID}";
 - Filter for flow tasks (those with `metadata.workflowType`)
 - Get highest priority pending task
 
-### 2. The Execution Loop
+### 2. Autonomy Mode
+
+When `--autonomy` is passed, set `autonomy: true` on all Navigate calls. This makes the navigator auto-continue through stage boundary end nodes (end nodes with outgoing `on: "passed"` edges to non-terminal nodes) instead of stopping at each one.
+
+- **Normal mode**: Stops at every end node — user reviews each stage before continuing
+- **Autonomy mode**: Flows through stage boundaries, stops only at truly terminal end nodes (no outgoing edges) or HITL nodes
+
+When `autonomyContinued` is `true` in the Navigate response, log the stage transition:
+
+```
+⟩ Stage boundary auto-continued: end_planning → implement
+```
+
+### 3. The Execution Loop
 
 Initialize an `iterationCount` at `0`. Track a `stepTrace` array of `{ step, result, action }` entries.
 
@@ -132,7 +147,7 @@ Offer these options:
 2. Exit the loop
 3. Show the HITL final report with resume instructions
 
-### 3. Getting Current Step
+### 4. Getting Current Step
 
 Call `Navigator.Navigate` with taskFilePath:
 
@@ -144,7 +159,7 @@ Call `Navigator.Navigate` with taskFilePath:
 
 Response includes `subagent`, `stepInstructions`, `terminal`, `metadata`, etc.
 
-### 4. Delegation Protocol
+### 5. Delegation Protocol
 
 **If subagent is set (e.g., `@flow:Developer`):**
 
@@ -177,7 +192,7 @@ Task(
 
 - Handle the step directly
 
-### 5. Processing Results
+### 6. Processing Results
 
 Parse subagent response:
 
@@ -195,17 +210,18 @@ Parse subagent response:
 
 Navigate returns:
 
-| Field                      | Purpose                                     |
-| -------------------------- | ------------------------------------------- |
-| `currentStep`              | The new step                                |
-| `stage`                    | Workflow stage (e.g., `"planning"`)         |
-| `subagent`                 | Who executes next step                      |
-| `stepInstructions`         | `{name, description, guidance}`             |
-| `terminal`                 | `"success"` or `"hitl"` if done             |
-| `orchestratorInstructions` | Updated task description                    |
-| `metadata`                 | `{ workflowType, currentStep, retryCount }` |
-| `action`                   | `"advance"`, `"retry"`, or `"escalate"`     |
-| `retriesIncremented`       | `true` if retry count increased             |
+| Field                      | Purpose                                         |
+| -------------------------- | ----------------------------------------------- |
+| `currentStep`              | The new step                                    |
+| `stage`                    | Workflow stage (e.g., `"planning"`)             |
+| `subagent`                 | Who executes next step                          |
+| `stepInstructions`         | `{name, description, guidance}`                 |
+| `terminal`                 | `"success"` or `"hitl"` if done                 |
+| `orchestratorInstructions` | Updated task description                        |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }`     |
+| `action`                   | `"advance"`, `"retry"`, or `"escalate"`         |
+| `retriesIncremented`       | `true` if retry count increased                 |
+| `autonomyContinued`        | `true` if auto-continued through stage boundary |
 
 Then call TaskUpdate to sync status (Navigator's write-through has already updated subject, activeForm, description, and metadata in the task file):
 
@@ -216,7 +232,7 @@ Then call TaskUpdate to sync status (Navigator's write-through has already updat
 }
 ```
 
-### 6. Progress Reporting
+### 7. Progress Reporting
 
 After each step, show brief progress:
 
@@ -226,7 +242,7 @@ After each step, show brief progress:
 ⟳ test (@flow:Tester) → in progress...
 ```
 
-### 7. Loop Termination
+### 8. Loop Termination
 
 Exit when:
 
@@ -238,7 +254,7 @@ Exit when:
 
 Note: HITL does **not** automatically exit the loop. The user is given the choice to fix and continue or leave pending.
 
-### 8. Final Report
+### 9. Final Report
 
 **Success:**
 

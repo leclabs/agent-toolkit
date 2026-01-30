@@ -1,5 +1,15 @@
 # @leclabs/agent-toolkit
 
+## 1.5.0
+
+### Minor Changes
+
+- Add autonomy mode for Navigator and fix task ID preservation in write-through
+
+  **Autonomy mode**: When `autonomy: true` is passed to Navigate (or stored in task metadata), the engine auto-continues through stage boundary end nodes instead of stopping. Stage boundaries are end nodes with outgoing `on: "passed"` edges to non-terminal nodes. HITL nodes and truly terminal end nodes (no outgoing edges) always stop regardless of mode. The response includes `autonomyContinued: boolean` to indicate when auto-continuation occurred.
+
+  **Task ID fix**: The write-through now explicitly preserves the original `task.id` before writing, preventing the filename-to-ID mismatch that caused Claude Code's task system to lose track of tasks.
+
 ## 1.4.1
 
 ### Patch Changes
