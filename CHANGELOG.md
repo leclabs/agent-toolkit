@@ -1,5 +1,11 @@
 # @leclabs/agent-toolkit
 
+## 1.4.1
+
+### Patch Changes
+
+- Prevent auto-loading project workflows on startup. Require explicit workflowIds for project workflow loading. Support both flat and directory formats in external workflow loader. Fix stale sourceRoot on reload. Resolve lint and formatting issues.
+
 ## 1.4.0
 
 ### Minor Changes
