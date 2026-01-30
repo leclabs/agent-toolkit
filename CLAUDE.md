@@ -57,11 +57,10 @@ gh pr create  # or update existing PR
 
 # 5. Merge PR to main (requires approval)
 
-# 6. Authenticate to npm (user must do this — requires 2FA token)
-npm login
-
-# 7. Publish to npm
-npm run publish:all
+# 6. Publish to npm (ask user for OTP code from authenticator app)
+#    Pass --otp to each publish separately (OTP is time-limited, publish:all won't forward it)
+npm publish --access public --otp=CODE
+cd packages/agent-flow-navigator-mcp && npm publish --access public --otp=CODE
 ```
 
 ### How it works
