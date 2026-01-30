@@ -1,6 +1,6 @@
 {
   "name": "@leclabs/agent-toolkit",
-  "version": "1.3.0",
+  "version": "1.4.0",
   "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration",
   "main": "index.js",
   "bin": {
