@@ -55,7 +55,12 @@ git add -A && git commit -m "chore: bump version to X.Y.Z"
 git push
 gh pr create  # or update existing PR
 
-# 5. After PR merge to main, publish to npm
+# 5. Merge PR to main (requires approval)
+
+# 6. Authenticate to npm (user must do this — requires 2FA token)
+npm login
+
+# 7. Publish to npm
 npm run publish:all
 ```
 
