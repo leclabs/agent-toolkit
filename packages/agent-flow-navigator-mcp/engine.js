@@ -77,7 +77,16 @@ const WORKFLOW_EMOJIS = {
 /**
  * Build formatted task subject for write-through
  */
-export function buildTaskSubject(taskId, userDescription, workflowType, stepId, subagent, terminal, maxRetries, retryCount) {
+export function buildTaskSubject(
+  taskId,
+  userDescription,
+  workflowType,
+  stepId,
+  subagent,
+  terminal,
+  maxRetries,
+  retryCount
+) {
   const emoji = WORKFLOW_EMOJIS[workflowType] || "";
   const line1 = `#${taskId} ${userDescription}${emoji ? ` ${emoji}` : ""}`;
 
@@ -118,7 +127,13 @@ export function getBaselineInstructions(stepId, stepName) {
   }
 
   // Analysis/Requirements steps
-  if (id.includes("analyze") || id.includes("analysis") || id.includes("parse") || id.includes("requirements") || name.includes("analyze")) {
+  if (
+    id.includes("analyze") ||
+    id.includes("analysis") ||
+    id.includes("parse") ||
+    id.includes("requirements") ||
+    name.includes("analyze")
+  ) {
     return "Review the task requirements carefully. Identify key constraints, dependencies, and acceptance criteria. Create a clear plan before proceeding.";
   }
   if (id.includes("plan") || id.includes("design") || name.includes("plan")) {
@@ -201,7 +216,7 @@ export function resolveContextFile(file, projectRoot, sourceRoot) {
  */
 export function resolveProseRefs(text, sourceRoot) {
   if (!text || !sourceRoot) return text;
-  return text.replace(/\.\/[\w\-\.\/]+/g, (match) => join(sourceRoot, match));
+  return text.replace(/\.\/[\w\-./]+/g, (match) => join(sourceRoot, match));
 }
 
 /**
@@ -218,7 +233,15 @@ export function buildContextInstructions({ contextFiles, projectRoot, sourceRoot
  * Build orchestrator instructions for task creation/update
  * Returns null for terminal nodes (no further work)
  */
-function buildOrchestratorInstructions(workflowType, stepId, stage, subagent, stepInstructions, description, contextBlock) {
+function buildOrchestratorInstructions(
+  workflowType,
+  stepId,
+  stage,
+  subagent,
+  stepInstructions,
+  description,
+  contextBlock
+) {
   if (!stepInstructions) return null; // Terminal nodes have no instructions
 
   const delegationPrefix = subagent ? `Invoke ${subagent} to complete the following task: ` : "";
@@ -276,11 +299,7 @@ function buildNavigateResponse(
   const metadata = {
     workflowType,
     currentStep: stepId,
-    retryCount: retriesIncremented
-      ? retryCount + 1
-      : action === "start" || resetRetryCount
-        ? 0
-        : retryCount,
+    retryCount: retriesIncremented ? retryCount + 1 : action === "start" || resetRetryCount ? 0 : retryCount,
   };
 
   return {
@@ -526,7 +545,18 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
-      return buildNavigateResponse(workflowType, firstEdge.to, firstStepDef, "start", false, 0, description, false, projectRoot, sourceRoot);
+      return buildNavigateResponse(
+        workflowType,
+        firstEdge.to,
+        firstStepDef,
+        "start",
+        false,
+        0,
+        description,
+        false,
+        projectRoot,
+        sourceRoot
+      );
     }
 
     // Case 2: currentStep but no result - return current state
@@ -536,7 +566,18 @@ export class WorkflowEngine {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
       }
 
-      return buildNavigateResponse(workflowType, currentStep, stepDef, "current", false, retryCount, description, false, projectRoot, sourceRoot);
+      return buildNavigateResponse(
+        workflowType,
+        currentStep,
+        stepDef,
+        "current",
+        false,
+        retryCount,
+        description,
+        false,
+        projectRoot,
+        sourceRoot
+      );
     }
 
     // Case 3: currentStep and result - advance to next step
@@ -594,13 +635,19 @@ export class WorkflowEngine {
         const userDesc = task.metadata?.userDescription || "";
         task.metadata = { ...task.metadata, ...response.metadata };
         task.subject = buildTaskSubject(
-          task.id, userDesc, response.metadata.workflowType,
-          response.currentStep, response.subagent, response.terminal,
-          response.maxRetries, response.metadata.retryCount
+          task.id,
+          userDesc,
+          response.metadata.workflowType,
+          response.currentStep,
+          response.subagent,
+          response.terminal,
+          response.maxRetries,
+          response.metadata.retryCount
         );
         task.activeForm = buildTaskActiveForm(
           response.stepInstructions?.name || response.currentStep,
-          response.subagent, response.terminal
+          response.subagent,
+          response.terminal
         );
         if (response.orchestratorInstructions) {
           task.description = response.orchestratorInstructions;

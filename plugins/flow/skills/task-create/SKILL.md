@@ -16,13 +16,13 @@ Create a new flow task from issues, requirements, or descriptions.
 
 **Signiture:** `/flow:task-create <description> [<workflowType>] [--run]`
 
-| Command                                                       | Description                                                 |
+| Command | Description |
 | ------------------------------------------------------------- | -------z---------------------------------------------------- |
-| /flow:task-create                                             | Interactive multi-panel workflowType selection              |
-| /flow:task-create "Make a cup of coffee"                      | Infer workflowType → create task                            |
-| /flow:task-create "Make a cup of coffee" --run                | Infer workflowType → create task → execute                  |
-| /flow:task-create "Make a coffee machine" feature-development | Create task with feature-development workflowType           |
-| /flow:task-create "Replace coffee filter" agile-task --run    | Create task with feature-development workflowType → execute |
+| /flow:task-create | Interactive multi-panel workflowType selection |
+| /flow:task-create "Make a cup of coffee" | Infer workflowType → create task |
+| /flow:task-create "Make a cup of coffee" --run | Infer workflowType → create task → execute |
+| /flow:task-create "Make a coffee machine" feature-development | Create task with feature-development workflowType |
+| /flow:task-create "Replace coffee filter" agile-task --run | Create task with feature-development workflowType → execute |
 
 </usage>
 

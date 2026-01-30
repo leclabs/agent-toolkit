@@ -155,16 +155,9 @@ export interface NavigateOptions {
  * - "./path" → relative to sourceRoot (the workflow's source directory)
  * - "path"   → relative to projectRoot
  */
-export function resolveContextFile(
-  file: string,
-  projectRoot: string,
-  sourceRoot?: string | null
-): string;
+export function resolveContextFile(file: string, projectRoot: string, sourceRoot?: string | null): string;
 
-export function resolveProseRefs(
-  text: string | null,
-  sourceRoot: string | null
-): string | null;
+export function resolveProseRefs(text: string | null, sourceRoot: string | null): string | null;
 
 export function buildContextInstructions(options: {
   contextFiles?: string[];

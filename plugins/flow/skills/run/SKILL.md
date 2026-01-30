@@ -73,11 +73,11 @@ Current step: {currentStep} (retryCount: {retryCount})
 
 Offer these options:
 
-| Option | Action |
-|--------|--------|
-| Continue (+25) | Reset the iteration counter and resume. Warns again at 25 more. |
-| Abort | Stop the loop. Report current state as incomplete (see Final Report). |
-| Investigate | Show the full `stepTrace`, then abort. Helps diagnose the cycle. |
+| Option         | Action                                                                |
+| -------------- | --------------------------------------------------------------------- |
+| Continue (+25) | Reset the iteration counter and resume. Warns again at 25 more.       |
+| Abort          | Stop the loop. Report current state as incomplete (see Final Report). |
+| Investigate    | Show the full `stepTrace`, then abort. Helps diagnose the cycle.      |
 
 If the user selects **Continue**, reset `iterationCount` to `0` and resume the loop.
 If the user selects **Investigate**, display the full step trace table, then abort.
@@ -108,11 +108,11 @@ Steps so far: parse_requirements → implement → code_review (failed x3) → h
 
 Offer these options:
 
-| Option | Description |
-|--------|-------------|
-| I've fixed it — continue (passed) | User has resolved the issue. Advance with `passed` and resume the loop. |
+| Option                            | Description                                                               |
+| --------------------------------- | ------------------------------------------------------------------------- |
+| I've fixed it — continue (passed) | User has resolved the issue. Advance with `passed` and resume the loop.   |
 | Still failing — continue (failed) | User wants to re-escalate or try a different path. Advance with `failed`. |
-| Leave pending | Exit the loop. Task stays `pending` for later via `/flow:task-advance`. |
+| Leave pending                     | Exit the loop. Task stays `pending` for later via `/flow:task-advance`.   |
 
 **If the user selects "I've fixed it":**
 
@@ -272,4 +272,3 @@ Reason: Loop guard triggered after 25 iterations
 Last steps: ... → implement → lint_format → implement → lint_format
 Action: Investigate with `/flow:task-get {taskId}`, resume with `/flow:task-advance {taskId} <passed|failed>`
 ```
-

@@ -230,8 +230,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             path: {
               type: "string",
-              description:
-                "Directory containing {id}.json workflow files. For external plugins only.",
+              description: "Directory containing {id}.json workflow files. For external plugins only.",
             },
             sourceRoot: {
               type: "string",
