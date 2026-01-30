@@ -35,6 +35,17 @@ plugins/flow/                          .flow/
    - We're using the flow plugin to develop the flow plugin
    - `plugins/flow/` and `packages/agent-flow-navigator-mcp/` = source we're building
 
+## Releases
+
+Use **changesets** for versioning. Never manually edit package.json versions or CHANGELOG.md.
+
+```bash
+npx changeset          # Create a changeset describing the change
+npm run version        # Consume changesets → bump versions + update CHANGELOG + sync-versions.js
+```
+
+The `npm run version` script runs `changeset version && node scripts/sync-versions.js`, which syncs the version to `marketplace.json`, `plugin.json`, and `packages/agent-flow-navigator-mcp/package.json`.
+
 ## Naming Hierarchy
 
 ```
