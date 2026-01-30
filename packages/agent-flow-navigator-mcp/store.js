@@ -46,6 +46,8 @@ export class WorkflowStore {
     this.sources.set(id, source);
     if (sourceRoot) {
       this.sourceRoots.set(id, sourceRoot);
+    } else {
+      this.sourceRoots.delete(id);
     }
     return id;
   }

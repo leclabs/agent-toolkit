@@ -145,4 +145,3 @@ Action: Review and fix manually, then `/flow:task-advance {taskId} passed`
 | -        | in_progress   | Work continues   |
 | success  | completed     | Task done        |
 | hitl     | pending       | Needs human help |
-

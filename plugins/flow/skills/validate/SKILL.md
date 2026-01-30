@@ -43,30 +43,30 @@ For each workflow, perform these checks. Track results as `{severity, category, 
 
 #### Schema Checks
 
-| Check | Severity | Details |
-|-------|----------|---------|
-| Has `id` field | error | Workflow must have an id |
-| Has `name` field | error | Workflow must have a name |
-| Has `nodes` object | error | Workflow must have a nodes object |
-| Has `edges` array | error | Workflow must have an edges array |
-| All nodes have `type` | error | Every node must have a type field |
-| Node types are valid | error | Valid types: `start`, `end`, `task`, `gate`. Flag any others |
-| All edges have `from` and `to` | error | Every edge must reference source and target |
-| Edge `from`/`to` reference existing nodes | error | No dangling references |
-| Edge `on` values are valid | warn | Expected: `"passed"`, `"failed"`, or absent. Flag others |
+| Check                                     | Severity | Details                                                      |
+| ----------------------------------------- | -------- | ------------------------------------------------------------ |
+| Has `id` field                            | error    | Workflow must have an id                                     |
+| Has `name` field                          | error    | Workflow must have a name                                    |
+| Has `nodes` object                        | error    | Workflow must have a nodes object                            |
+| Has `edges` array                         | error    | Workflow must have an edges array                            |
+| All nodes have `type`                     | error    | Every node must have a type field                            |
+| Node types are valid                      | error    | Valid types: `start`, `end`, `task`, `gate`. Flag any others |
+| All edges have `from` and `to`            | error    | Every edge must reference source and target                  |
+| Edge `from`/`to` reference existing nodes | error    | No dangling references                                       |
+| Edge `on` values are valid                | warn     | Expected: `"passed"`, `"failed"`, or absent. Flag others     |
 
 #### Topology Checks
 
-| Check | Severity | Details |
-|-------|----------|---------|
-| Exactly 1 start node | error | Must have exactly one node with `type: "start"` |
-| At least 1 end node | error | Must have at least one node with `type: "end"` |
-| At least 1 success end | warn | Should have at least one end with `result: "success"` |
-| No orphan nodes | warn | All nodes should be referenced by at least one edge (as `from` or `to`), except start |
-| All nodes reachable from start | error | BFS/DFS from start node, following edges. All non-start nodes must be reachable |
-| All non-terminal nodes can reach an end | warn | BFS/DFS backward from end nodes. All task/gate nodes should have a path to some end |
-| No dead-end non-terminals | error | Non-end nodes with no outgoing edges |
-| End nodes have no outgoing edges | warn | End nodes should not have outgoing edges |
+| Check                                   | Severity | Details                                                                               |
+| --------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
+| Exactly 1 start node                    | error    | Must have exactly one node with `type: "start"`                                       |
+| At least 1 end node                     | error    | Must have at least one node with `type: "end"`                                        |
+| At least 1 success end                  | warn     | Should have at least one end with `result: "success"`                                 |
+| No orphan nodes                         | warn     | All nodes should be referenced by at least one edge (as `from` or `to`), except start |
+| All nodes reachable from start          | error    | BFS/DFS from start node, following edges. All non-start nodes must be reachable       |
+| All non-terminal nodes can reach an end | warn     | BFS/DFS backward from end nodes. All task/gate nodes should have a path to some end   |
+| No dead-end non-terminals               | error    | Non-end nodes with no outgoing edges                                                  |
+| End nodes have no outgoing edges        | warn     | End nodes should not have outgoing edges                                              |
 
 **BFS reachability algorithm (forward):**
 
@@ -100,24 +100,24 @@ stuckNodes = nonTerminalNodeIds - canReachEnd
 
 For each node with `type: "gate"` or `maxRetries > 0`:
 
-| Check | Severity | Details |
-|-------|----------|---------|
-| Has `"passed"` edge | error | Gate nodes must have at least one edge with `on: "passed"` |
-| Has `"failed"` edge for retry | warn | Gates with `maxRetries` should have a failed edge to non-end node (retry path) |
-| Has `"failed"` edge for escalation | warn | Gates with `maxRetries` should have a failed edge to end node (escalation path) |
-| `maxRetries` is a positive integer | warn | Should be >= 1 if present |
-| Gate without `maxRetries` but with dual failed edges | info | Has retry infrastructure but no retry limit set |
-| Non-gate with `maxRetries` | info | Task node with `maxRetries` acts as implicit gate |
+| Check                                                | Severity | Details                                                                         |
+| ---------------------------------------------------- | -------- | ------------------------------------------------------------------------------- |
+| Has `"passed"` edge                                  | error    | Gate nodes must have at least one edge with `on: "passed"`                      |
+| Has `"failed"` edge for retry                        | warn     | Gates with `maxRetries` should have a failed edge to non-end node (retry path)  |
+| Has `"failed"` edge for escalation                   | warn     | Gates with `maxRetries` should have a failed edge to end node (escalation path) |
+| `maxRetries` is a positive integer                   | warn     | Should be >= 1 if present                                                       |
+| Gate without `maxRetries` but with dual failed edges | info     | Has retry infrastructure but no retry limit set                                 |
+| Non-gate with `maxRetries`                           | info     | Task node with `maxRetries` acts as implicit gate                               |
 
 #### Instruction Coverage
 
 For each non-terminal node, classify its instruction source:
 
-| Classification | Meaning |
-|----------------|---------|
-| `custom` | Node has an explicit `instructions` field |
+| Classification      | Meaning                                                                                                         |
+| ------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `custom`            | Node has an explicit `instructions` field                                                                       |
 | `keyword:<pattern>` | Node ID or name matches a baseline keyword pattern (review, analyze, plan, implement, test, lint, commit, etc.) |
-| `default` | Falls through to the baseline default instruction |
+| `default`           | Falls through to the baseline default instruction                                                               |
 
 Report which nodes get which classification.
 
@@ -125,9 +125,9 @@ Report which nodes get which classification.
 
 For each non-terminal node:
 
-| Check | Severity | Details |
-|-------|----------|---------|
-| Node without `agent` | info | Step will run as direct (no subagent delegation) |
+| Check                | Severity | Details                                          |
+| -------------------- | -------- | ------------------------------------------------ |
+| Node without `agent` | info     | Step will run as direct (no subagent delegation) |
 
 List all unique agents referenced across the workflow.
 
@@ -138,12 +138,12 @@ For each gate node, produce a retry trace:
 ```markdown
 ### <stepId> (maxRetries: <N>)
 
-| Failure # | Action | Target | Remaining |
-|-----------|--------|--------|-----------|
-| 1 | retry | <retryTarget> | <N-1> |
-| 2 | retry | <retryTarget> | <N-2> |
-| ... | | | |
-| N+1 | escalate | <escalationTarget> | 0 |
+| Failure # | Action   | Target             | Remaining |
+| --------- | -------- | ------------------ | --------- |
+| 1         | retry    | <retryTarget>      | <N-1>     |
+| 2         | retry    | <retryTarget>      | <N-2>     |
+| ...       |          |                    |           |
+| N+1       | escalate | <escalationTarget> | 0         |
 ```
 
 ### 4. Write Report
@@ -159,19 +159,19 @@ Write markdown report to `.cruft/validate/<workflowId>/report.md`:
 
 ## Results
 
-| Severity | Category | Check | Details |
-|----------|----------|-------|---------|
-| error | schema | Missing `nodes` | Workflow has no nodes object |
-| warn | topology | Orphan node | Node `foo` not referenced by any edge |
-| info | agents | No agent | Node `commit` has no agent assigned |
+| Severity | Category | Check           | Details                               |
+| -------- | -------- | --------------- | ------------------------------------- |
+| error    | schema   | Missing `nodes` | Workflow has no nodes object          |
+| warn     | topology | Orphan node     | Node `foo` not referenced by any edge |
+| info     | agents   | No agent        | Node `commit` has no agent assigned   |
 
 ## Summary
 
 | Severity | Count |
-|----------|-------|
-| error | 0 |
-| warn | 2 |
-| info | 3 |
+| -------- | ----- |
+| error    | 0     |
+| warn     | 2     |
+| info     | 3     |
 
 **Status:** PASS (0 errors) / FAIL (<N> errors)
 
@@ -179,36 +179,37 @@ Write markdown report to `.cruft/validate/<workflowId>/report.md`:
 
 ### plan_review (maxRetries: 2)
 
-| Failure # | Action | Target | Remaining |
-|-----------|--------|--------|-----------|
-| 1 | retry | create_plan | 1 |
-| 2 | retry | create_plan | 0 |
-| 3 | escalate | hitl_plan_failed | - |
+| Failure # | Action   | Target           | Remaining |
+| --------- | -------- | ---------------- | --------- |
+| 1         | retry    | create_plan      | 1         |
+| 2         | retry    | create_plan      | 0         |
+| 3         | escalate | hitl_plan_failed | -         |
 
 Passed edge: → implement
 
 ### run_tests (maxRetries: 3)
+
 ...
 
 ## Instruction Coverage
 
-| Step | Classification | Pattern/Source |
-|------|---------------|----------------|
-| parse_requirements | keyword:analyze | ID matches "parse", "requirements" |
-| create_plan | keyword:plan | ID matches "plan" |
-| implement | keyword:implement | ID matches "implement" |
-| commit | keyword:commit | ID matches "commit" |
-| plan_review | keyword:review | ID matches "review" |
+| Step               | Classification    | Pattern/Source                     |
+| ------------------ | ----------------- | ---------------------------------- |
+| parse_requirements | keyword:analyze   | ID matches "parse", "requirements" |
+| create_plan        | keyword:plan      | ID matches "plan"                  |
+| implement          | keyword:implement | ID matches "implement"             |
+| commit             | keyword:commit    | ID matches "commit"                |
+| plan_review        | keyword:review    | ID matches "review"                |
 
 ## Agents
 
-| Agent | Steps |
-|-------|-------|
-| Planner | parse_requirements, explore_codebase, create_plan |
-| Developer | implement, lint_format, commit, create_pr |
-| Reviewer | plan_review, code_review |
-| Tester | write_tests, run_tests |
-| (direct) | <any steps without agent> |
+| Agent     | Steps                                             |
+| --------- | ------------------------------------------------- |
+| Planner   | parse_requirements, explore_codebase, create_plan |
+| Developer | implement, lint_format, commit, create_pr         |
+| Reviewer  | plan_review, code_review                          |
+| Tester    | write_tests, run_tests                            |
+| (direct)  | <any steps without agent>                         |
 ```
 
 ### 5. Display Results
@@ -231,11 +232,11 @@ When validating all workflows, run each workflow through the same process, then 
 ```markdown
 ## Combined Validation Summary
 
-| Workflow | Nodes | Edges | Errors | Warnings | Info | Status |
-|----------|-------|-------|--------|----------|------|--------|
-| feature-development | 14 | 18 | 0 | 2 | 3 | PASS |
-| bug-fix | 8 | 12 | 0 | 1 | 2 | PASS |
-| quick-task | 5 | 8 | 0 | 0 | 1 | PASS |
+| Workflow            | Nodes | Edges | Errors | Warnings | Info | Status |
+| ------------------- | ----- | ----- | ------ | -------- | ---- | ------ |
+| feature-development | 14    | 18    | 0      | 2        | 3    | PASS   |
+| bug-fix             | 8     | 12    | 0      | 1        | 2    | PASS   |
+| quick-task          | 5     | 8     | 0      | 0        | 1    | PASS   |
 
 Overall: <total errors> errors across <count> workflows
 ```

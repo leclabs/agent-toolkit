@@ -467,15 +467,11 @@ describe("refactor workflow HITL resume", () => {
   it("should have recovery edges from both HITL nodes", () => {
     const workflow = loadRefactorWorkflow();
 
-    const analysisRecovery = workflow.edges.find(
-      (e) => e.from === "hitl_analysis_failed" && e.on === "passed"
-    );
+    const analysisRecovery = workflow.edges.find((e) => e.from === "hitl_analysis_failed" && e.on === "passed");
     assert.ok(analysisRecovery, "hitl_analysis_failed should have a recovery edge");
     assert.strictEqual(analysisRecovery.to, "design_refactor");
 
-    const devRecovery = workflow.edges.find(
-      (e) => e.from === "hitl_dev_failed" && e.on === "passed"
-    );
+    const devRecovery = workflow.edges.find((e) => e.from === "hitl_dev_failed" && e.on === "passed");
     assert.ok(devRecovery, "hitl_dev_failed should have a recovery edge");
     assert.strictEqual(devRecovery.to, "extract_core");
   });

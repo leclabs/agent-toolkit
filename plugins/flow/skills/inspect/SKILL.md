@@ -68,7 +68,7 @@ Available steps:
 
 Show the full JSON of the node:
 
-```markdown
+````markdown
 ## Node Definition
 
 ```json
@@ -84,7 +84,9 @@ Show the full JSON of the node:
   }
 }
 ```
-```
+````
+
+````
 
 ### 5. Display Identity Table
 
@@ -100,7 +102,7 @@ Show the full JSON of the node:
 | Agent | `Reviewer` → `@flow:Reviewer` |
 | Subagent Ref | `@flow:Reviewer` |
 | maxRetries | 2 |
-```
+````
 
 For nodes without `agent`, show `(direct)`. For nodes without `maxRetries`, show `0` or `-`.
 
@@ -111,9 +113,9 @@ Find all edges where `to === stepId`:
 ```markdown
 ## Incoming Edges
 
-| From | Condition | Label |
-|------|-----------|-------|
-| `create_plan` | (unconditional) | - |
+| From          | Condition       | Label |
+| ------------- | --------------- | ----- |
+| `create_plan` | (unconditional) | -     |
 ```
 
 For start nodes, this table will be empty — note: "Start node: no incoming edges (expected)."
@@ -129,11 +131,11 @@ Find all edges where `from === stepId`. Classify each edge:
 ```markdown
 ## Outgoing Edges
 
-| To | Condition | Label | Classification |
-|----|-----------|-------|----------------|
-| `create_plan` | `failed` | Revise plan based on feedback | retry |
-| `hitl_plan_failed` | `failed` | Planning exhausted retries | escalation |
-| `implement` | `passed` | Plan approved, begin implementation | advance |
+| To                 | Condition | Label                               | Classification |
+| ------------------ | --------- | ----------------------------------- | -------------- |
+| `create_plan`      | `failed`  | Revise plan based on feedback       | retry          |
+| `hitl_plan_failed` | `failed`  | Planning exhausted retries          | escalation     |
+| `implement`        | `passed`  | Plan approved, begin implementation | advance        |
 ```
 
 For end nodes, this table will be empty — note: "End node: no outgoing edges (expected)."
@@ -147,11 +149,11 @@ For nodes with `maxRetries > 0`, show what happens at each failure count:
 
 **Budget:** 2 retries before escalation
 
-| Failure # | retryCount | Action | Target | Retries Remaining |
-|-----------|------------|--------|--------|-------------------|
-| 1 | 0 → 1 | retry | `create_plan` | 1 |
-| 2 | 1 → 2 | retry | `create_plan` | 0 |
-| 3 | 2 (exhausted) | escalate | `hitl_plan_failed` | - |
+| Failure # | retryCount    | Action   | Target             | Retries Remaining |
+| --------- | ------------- | -------- | ------------------ | ----------------- |
+| 1         | 0 → 1         | retry    | `create_plan`      | 1                 |
+| 2         | 1 → 2         | retry    | `create_plan`      | 0                 |
+| 3         | 2 (exhausted) | escalate | `hitl_plan_failed` | -                 |
 
 **On pass:** → `implement` (Plan approved, begin implementation)
 ```

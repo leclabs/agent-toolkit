@@ -9,6 +9,7 @@ Feature request: `~/Desktop/feature-request-navigator-context-loading.md`
 ### R1: Workflow-level context metadata in SelectWorkflow response
 
 The `SelectWorkflow` tool response must include a `context` object containing three arrays:
+
 - `required_skills`: Skills the agent should have available (invocable) for this workflow
 - `context_skills`: Skills whose SKILL.md content should be loaded as read-only reference
 - `context_files`: Documentation files to load into the agent's working context
@@ -18,6 +19,7 @@ These values are read verbatim from the workflow definition's top-level fields (
 ### R2: Step-level context metadata in Navigate response
 
 The `Navigate` tool response must include a `stepContext` object containing two arrays:
+
 - `requiredSkills`: Skills the agent should invoke or have available for this specific step
 - `contextSkills`: Skills whose SKILL.md content should be loaded as reference for this step
 
@@ -26,6 +28,7 @@ These values are read from the current step's node definition. If a step does no
 ### R3: Navigator remains a data provider (pass-through only)
 
 The navigator does NOT:
+
 - Resolve namespace references (e.g., `fusion-studio:`) to file paths
 - Load file contents
 - Invoke skills
@@ -43,15 +46,15 @@ The context metadata fields are read-only pass-through. They do not influence no
 
 ## Acceptance Criteria
 
-| AC | Summary | Verification |
-|----|---------|-------------|
+| AC   | Summary                                                                                                   | Verification                                                                                                         |
+| ---- | --------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------- |
 | AC-1 | SelectWorkflow returns workflow-level `context` with `required_skills`, `context_skills`, `context_files` | Call SelectWorkflow for a workflow with all three fields. Response includes all three arrays matching workflow.json. |
-| AC-2 | SelectWorkflow returns empty arrays for absent fields | A workflow without `context_skills` returns `context.context_skills: []`. |
-| AC-3 | Navigate returns step-level `stepContext` with `requiredSkills` and `contextSkills` | Navigate to a step that declares `requiredSkills`. Response includes `stepContext.requiredSkills` matching node. |
-| AC-4 | Navigate returns step-level `contextSkills` when declared | Navigate to a step with `contextSkills`. Response includes matching `stepContext.contextSkills`. |
-| AC-5 | Navigate returns empty arrays for steps without context metadata | Navigate to a step with neither field. Response includes both as `[]`. |
-| AC-6 | Backward compatibility -- existing callers unaffected | Existing callers that destructure known fields continue to work. New fields are additive only. |
-| AC-7 | No behavioral change to DAG traversal logic | Same Navigate sequence before/after change produces identical `currentStep`, `action`, and `terminal` values. |
+| AC-2 | SelectWorkflow returns empty arrays for absent fields                                                     | A workflow without `context_skills` returns `context.context_skills: []`.                                            |
+| AC-3 | Navigate returns step-level `stepContext` with `requiredSkills` and `contextSkills`                       | Navigate to a step that declares `requiredSkills`. Response includes `stepContext.requiredSkills` matching node.     |
+| AC-4 | Navigate returns step-level `contextSkills` when declared                                                 | Navigate to a step with `contextSkills`. Response includes matching `stepContext.contextSkills`.                     |
+| AC-5 | Navigate returns empty arrays for steps without context metadata                                          | Navigate to a step with neither field. Response includes both as `[]`.                                               |
+| AC-6 | Backward compatibility -- existing callers unaffected                                                     | Existing callers that destructure known fields continue to work. New fields are additive only.                       |
+| AC-7 | No behavioral change to DAG traversal logic                                                               | Same Navigate sequence before/after change produces identical `currentStep`, `action`, and `terminal` values.        |
 
 ## Non-Goals
 
@@ -67,15 +70,15 @@ The context metadata fields are read-only pass-through. They do not influence no
 
 The navigator MCP server (`packages/agent-flow-navigator-mcp/`) is a stateless workflow DAG engine. Key files:
 
-| File | Purpose |
-|------|---------|
-| `index.js` | MCP server entry, tool definitions, request handlers |
-| `engine.js` | `WorkflowEngine` class, `buildNavigateResponse()`, DAG traversal |
-| `store.js` | `WorkflowStore` class, in-memory workflow storage |
-| `dialog.js` | `buildWorkflowSelectionDialog()` for SelectWorkflow |
-| `catalog.js` | Catalog listing helpers |
-| `types.d.ts` | TypeScript type definitions |
-| `schema/workflow.schema.json` | JSON Schema for workflow validation |
+| File                          | Purpose                                                          |
+| ----------------------------- | ---------------------------------------------------------------- |
+| `index.js`                    | MCP server entry, tool definitions, request handlers             |
+| `engine.js`                   | `WorkflowEngine` class, `buildNavigateResponse()`, DAG traversal |
+| `store.js`                    | `WorkflowStore` class, in-memory workflow storage                |
+| `dialog.js`                   | `buildWorkflowSelectionDialog()` for SelectWorkflow              |
+| `catalog.js`                  | Catalog listing helpers                                          |
+| `types.d.ts`                  | TypeScript type definitions                                      |
+| `schema/workflow.schema.json` | JSON Schema for workflow validation                              |
 
 ### Where context metadata is NOT returned today
 
@@ -92,6 +95,7 @@ The `buildNavigateResponse()` function constructs the Navigate response from `st
 The workflow JSON schema (`schema/workflow.schema.json`) currently has `additionalProperties: false` at the top level with only `id`, `name`, `description`, `nodes`, `edges`. To support workflow-level `required_skills`, `context_skills`, and `context_files`, the schema needs new top-level properties (or a top-level `metadata` object containing them).
 
 The feature request specifies these as top-level `metadata` block fields. However, based on the schema, it would be cleaner to add them as either:
+
 - A top-level `context` object with `required_skills`, `context_skills`, `context_files`
 - Or direct top-level arrays: `required_skills`, `context_skills`, `context_files`
 
@@ -102,6 +106,7 @@ Looking at the node-level pattern, nodes already have a `metadata` field (`"meta
 ### Where step-level context would be stored
 
 Nodes already have a `metadata` field in the schema. The `requiredSkills` and `contextSkills` could live either:
+
 - Directly on the node object (requires adding them to the schema's node definitions)
 - Inside the node's `metadata` object (already allowed since `additionalProperties: true`)
 
@@ -109,16 +114,16 @@ The feature request treats them as direct node-level properties (`node.requiredS
 
 ### Files That Need Changes
 
-| File | Change |
-|------|--------|
-| `engine.js` | `buildNavigateResponse()`: Add `stepContext` field to response with `requiredSkills` and `contextSkills` from `stepDef` |
-| `index.js` | `SelectWorkflow` handler: Extract workflow-level context from the full definition and include in response |
-| `dialog.js` | `buildWorkflowSelectionDialog()`: Accept workflow definitions (not just summaries) OR have the caller inject context |
-| `store.js` | `listWorkflows()`: Optionally include context metadata, OR add a method to get full definitions |
-| `types.d.ts` | Add `requiredSkills?`, `contextSkills?` to TaskNode and GateNode interfaces. Add context fields to Workflow interface. |
-| `schema/workflow.schema.json` | Add `metadata` (or `context`) at workflow level. Add `requiredSkills`, `contextSkills` to task/gate node definitions. |
-| `engine.test.js` | Add tests for AC-3, AC-4, AC-5 (stepContext in Navigate response) |
-| New test or existing test | Add tests for AC-1, AC-2 (context in SelectWorkflow response) |
+| File                          | Change                                                                                                                  |
+| ----------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| `engine.js`                   | `buildNavigateResponse()`: Add `stepContext` field to response with `requiredSkills` and `contextSkills` from `stepDef` |
+| `index.js`                    | `SelectWorkflow` handler: Extract workflow-level context from the full definition and include in response               |
+| `dialog.js`                   | `buildWorkflowSelectionDialog()`: Accept workflow definitions (not just summaries) OR have the caller inject context    |
+| `store.js`                    | `listWorkflows()`: Optionally include context metadata, OR add a method to get full definitions                         |
+| `types.d.ts`                  | Add `requiredSkills?`, `contextSkills?` to TaskNode and GateNode interfaces. Add context fields to Workflow interface.  |
+| `schema/workflow.schema.json` | Add `metadata` (or `context`) at workflow level. Add `requiredSkills`, `contextSkills` to task/gate node definitions.   |
+| `engine.test.js`              | Add tests for AC-3, AC-4, AC-5 (stepContext in Navigate response)                                                       |
+| New test or existing test     | Add tests for AC-1, AC-2 (context in SelectWorkflow response)                                                           |
 
 ### Design Approach
 
@@ -142,6 +147,7 @@ The spec does NOT ask for workflow-level context in Navigate responses -- only s
 ## Complexity Assessment
 
 **Small-Medium.** The changes are straightforward data pass-through with no logic changes. The main work is:
+
 1. Adding ~5 lines to `buildNavigateResponse()` for `stepContext`
 2. Adding context extraction to SelectWorkflow handler (~10 lines)
 3. Schema updates (adding properties)

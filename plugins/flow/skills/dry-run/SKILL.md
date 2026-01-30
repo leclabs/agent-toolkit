@@ -191,16 +191,17 @@ Write a markdown report to `.cruft/dry-run/<workflowId>/report.md`:
 
 ## Step Trace
 
-| # | Step | Result | Action | Next Step | Retries | Write-Through |
-|---|------|--------|--------|-----------|---------|---------------|
-| 0 | parse_requirements | passed | advance | explore_codebase | 0/0 | pass |
-| 1 | explore_codebase | passed | advance | create_plan | 0/0 | pass |
-| ... | | | | | | |
+| #   | Step               | Result | Action  | Next Step        | Retries | Write-Through |
+| --- | ------------------ | ------ | ------- | ---------------- | ------- | ------------- |
+| 0   | parse_requirements | passed | advance | explore_codebase | 0/0     | pass          |
+| 1   | explore_codebase   | passed | advance | create_plan      | 0/0     | pass          |
+| ... |                    |        |         |                  |         |               |
 
 ## Path Taken
-
 ```
+
 start → parse_requirements → explore_codebase → create_plan → ... → end_success
+
 ```
 
 ## Diagrams

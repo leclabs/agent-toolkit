@@ -658,9 +658,7 @@ describe("build-review-murder-board HITL resume", () => {
 
   it("should have a recovery edge from hitl_blocked to build", () => {
     const workflow = loadMurderBoardWorkflow();
-    const recoveryEdge = workflow.edges.find(
-      (e) => e.from === "hitl_blocked" && e.on === "passed"
-    );
+    const recoveryEdge = workflow.edges.find((e) => e.from === "hitl_blocked" && e.on === "passed");
     assert.ok(recoveryEdge, "hitl_blocked should have a recovery edge");
     assert.strictEqual(recoveryEdge.to, "build");
   });
@@ -707,9 +705,7 @@ describe("build-review-quick HITL resume", () => {
 
   it("should have a recovery edge from hitl_blocked to build", () => {
     const workflow = loadQuickWorkflow();
-    const recoveryEdge = workflow.edges.find(
-      (e) => e.from === "hitl_blocked" && e.on === "passed"
-    );
+    const recoveryEdge = workflow.edges.find((e) => e.from === "hitl_blocked" && e.on === "passed");
     assert.ok(recoveryEdge, "hitl_blocked should have a recovery edge");
     assert.strictEqual(recoveryEdge.to, "build");
   });

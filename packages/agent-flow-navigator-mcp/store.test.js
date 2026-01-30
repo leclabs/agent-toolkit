@@ -108,7 +108,6 @@ describe("WorkflowStore", () => {
       const list = store.listWorkflows();
       assert.strictEqual(list[0].description, "");
     });
-
   });
 
   describe("listWorkflows with external filter", () => {

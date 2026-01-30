@@ -81,8 +81,8 @@ When `maxRetries` is 0 (task node), omit the retries display.
 
 ````markdown
 #1 Implement feature X ✨ (@flow:Developer)
- → feature-development · development
- → implement · in_progress
+→ feature-development · development
+→ implement · in_progress
 
 ```mermaid
 flowchart TD
@@ -101,8 +101,8 @@ flowchart TD
 
 ````markdown
 #1 Implement feature X ✨ (@flow:Reviewer)
- → feature-development · verification
- → code_review · in_progress · retries: 1/2
+→ feature-development · verification
+→ code_review · in_progress · retries: 1/2
 
 ```mermaid
 ...
@@ -151,4 +151,3 @@ Flow tasks have metadata with `workflowType`:
   "metadata": {}  // or no metadata at all
 }
 ```
-

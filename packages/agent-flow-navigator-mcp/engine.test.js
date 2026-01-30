@@ -1099,7 +1099,8 @@ describe("WorkflowEngine", () => {
             task: {
               type: "task",
               name: "Setup Session",
-              description: "Start Chrome session using ./skills/chrome-debug-session/SKILL.md and authenticate via ./skills/upwork-login/SKILL.md.",
+              description:
+                "Start Chrome session using ./skills/chrome-debug-session/SKILL.md and authenticate via ./skills/upwork-login/SKILL.md.",
             },
             end: { type: "end", result: "success" },
           },
@@ -1116,7 +1117,9 @@ describe("WorkflowEngine", () => {
         });
 
         assert.ok(result.stepInstructions);
-        assert.ok(result.stepInstructions.description.includes("/opt/fusion-studio/skills/chrome-debug-session/SKILL.md"));
+        assert.ok(
+          result.stepInstructions.description.includes("/opt/fusion-studio/skills/chrome-debug-session/SKILL.md")
+        );
         assert.ok(result.stepInstructions.description.includes("/opt/fusion-studio/skills/upwork-login/SKILL.md"));
         assert.ok(!result.stepInstructions.description.includes("./skills/"));
       });
