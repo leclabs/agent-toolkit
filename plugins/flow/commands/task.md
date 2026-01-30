@@ -1,8 +1,8 @@
 ---
-description: Create an agile task
+description: Create a task with workflow selection
 argument-hint: [task description]
 ---
 
-Create an agile task (general development work) and add it to the queue.
+Create a task and prompt the user to choose a workflow type.
 
-Execute: `/flow:task-create "$ARGUMENTS" agile-task`
+Execute: `/flow:task-create "$ARGUMENTS"`
