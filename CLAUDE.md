@@ -41,6 +41,8 @@ Use **changesets** for versioning. Never manually edit package.json versions or 
 
 ### Full release process
 
+**Claude does steps 1–5:**
+
 ```bash
 # 1. Create changeset (describes what changed and semver bump type)
 npx changeset
@@ -48,17 +50,20 @@ npx changeset
 # 2. Consume changesets → bump versions + update CHANGELOG + sync across packages
 npm run version
 
-# 3. Commit the version bump (changeset consumption + version sync output)
+# 3. Commit the version bump
 git add -A && git commit -m "chore: bump version to X.Y.Z"
 
 # 4. Push and create/update PR
 git push
 gh pr create  # or update existing PR
+```
 
-# 5. Merge PR to main (requires approval)
+**User does steps 5–6 (requires human auth):**
 
-# 6. Publish to npm (ask user for OTP code from authenticator app)
-#    Pass --otp to each publish separately (OTP is time-limited, publish:all won't forward it)
+```bash
+# 5. Merge PR to main
+
+# 6. Publish to npm (requires 2FA OTP from authenticator app)
 npm publish --access public --otp=CODE
 cd packages/agent-flow-navigator-mcp && npm publish --access public --otp=CODE
 ```
