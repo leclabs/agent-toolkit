@@ -1,7 +1,7 @@
 /**
  * Workflow Engine
  *
- * Evaluates DAG transitions based on node outputs and retry state.
+ * Evaluates graph transitions based on node outputs and retry state.
  *
  * Schema:
  * - nodes: { [id]: { type, name, maxRetries?, ... } }

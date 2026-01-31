@@ -12,7 +12,7 @@
 export function generateFlowReadme() {
   return `# Flow Plugin
 
-DAG-based workflow orchestration for AI agents.
+Graph-based workflow orchestration for AI agents.
 
 ## Quick Start
 
@@ -65,7 +65,7 @@ This directory contains workflow definitions for the flow plugin.
 .flow/workflows/
 ├── README.md              # This file
 └── {workflow}/
-    └── workflow.json      # DAG definition (steps + edges)
+    └── workflow.json      # Workflow definition (steps + edges)
 \`\`\`
 
 ## How Step Instructions Work
@@ -105,11 +105,11 @@ To add custom instructions for a step, add an \`instructions\` field to the node
 
 ### workflow.json
 
-Defines the workflow DAG:
+Defines the workflow graph:
 - \`nodes\`: Map of node definitions (type, name, description, agent, maxRetries)
 - \`edges\`: Array of transitions between nodes (from, to, on, label)
 
-Do NOT edit edge logic unless you understand DAG flow control.
+Do NOT edit edge logic unless you understand workflow flow control.
 
 ## Adding Custom Workflows
 

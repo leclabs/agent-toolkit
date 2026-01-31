@@ -2,7 +2,7 @@
   "$schema": "http://json-schema.org/draft-07/schema#",
   "$id": "https://agent-toolkit/flow/workflow.schema.json",
   "title": "Flow Workflow Schema",
-  "description": "DAG-based workflow definition for agent orchestration",
+  "description": "Graph-based workflow definition for agent orchestration",
   "type": "object",
   "required": ["id", "name", "nodes", "edges"],
   "additionalProperties": false,

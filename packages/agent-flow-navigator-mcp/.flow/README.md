@@ -1,6 +1,6 @@
 # Flow Plugin
 
-DAG-based workflow orchestration for Claude Code.
+Graph-based workflow orchestration for Claude Code.
 
 ## Overview
 
@@ -65,7 +65,7 @@ Flow's workflows work directly from the catalog in the flow->navigator mcp. If y
 
 ## How It Works
 
-1. **Navigate API** - Stateless MCP server computes next step based on workflow DAG
+1. **Navigate API** - Stateless MCP server computes next step based on workflow graph
 2. **Task Metadata** - Workflow state stored in Claude Code task metadata
 3. **Subagent Delegation** - Steps delegated to specialized agents (planner, developer, tester, reviewer)
 4. **Retry Logic** - Failed steps retry with configurable limits, escalate to HITL if exceeded

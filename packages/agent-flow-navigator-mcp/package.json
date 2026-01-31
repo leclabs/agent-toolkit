@@ -1,7 +1,7 @@
 {
   "name": "@leclabs/agent-flow-navigator-mcp",
   "version": "1.5.2",
-  "description": "MCP server that navigates agents through DAG-based workflows",
+  "description": "MCP server that navigates agents through graph-based workflows",
   "license": "MIT",
   "author": "leclabs",
   "homepage": "https://github.com/leclabs/agent-toolkit",
