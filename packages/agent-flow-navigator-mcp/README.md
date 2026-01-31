@@ -2,7 +2,7 @@
 
 [![npm](https://img.shields.io/npm/v/@leclabs/agent-flow-navigator-mcp)](https://npmjs.com/package/@leclabs/agent-flow-navigator-mcp)
 
-A workflow state machine MCP server that navigates agents through DAG-based workflows.
+A workflow state machine MCP server that navigates agents through graph-based workflows.
 
 Navigator tracks task state and evaluates graph edges -- it tells the orchestrator _where to go next_, but doesn't drive. Think of it like a GPS: you tell it where you are and what happened, it tells you where to go.
 
@@ -145,13 +145,13 @@ Lists workflows available in the built-in catalog. No parameters.
 
 ### Key Concepts
 
-| Concept                 | Description                                                                           |
-| ----------------------- | ------------------------------------------------------------------------------------- |
-| **Workflow Definition** | A DAG blueprint describing how to execute a type of work (nodes + conditional edges)  |
-| **Navigate 3-Mode API** | Start a workflow, get current state, or advance -- one tool, three calling patterns   |
-| **Write-Through**       | State transitions are persisted to the task file atomically on every advance          |
-| **Conditional Edges**   | Edges with `on` condition (passed/failed) -- retry logic is on nodes via `maxRetries` |
-| **HITL Escalation**     | When retries are exhausted, tasks route to end nodes with `escalation: "hitl"`        |
+| Concept                 | Description                                                                            |
+| ----------------------- | -------------------------------------------------------------------------------------- |
+| **Workflow Definition** | A graph blueprint describing how to execute a type of work (nodes + conditional edges) |
+| **Navigate 3-Mode API** | Start a workflow, get current state, or advance -- one tool, three calling patterns    |
+| **Write-Through**       | State transitions are persisted to the task file atomically on every advance           |
+| **Conditional Edges**   | Edges with `on` condition (passed/failed) -- retry logic is on nodes via `maxRetries`  |
+| **HITL Escalation**     | When retries are exhausted, tasks route to end nodes with `escalation: "hitl"`         |
 
 ## Workflow Definition Schema
 
@@ -163,6 +163,8 @@ Lists workflows available in the built-in catalog. No parameters.
 | `end`     | Exit point with `result` (success/failure/blocked/cancelled) |
 | `task`    | Executable work unit                                         |
 | `gate`    | Quality gate / review checkpoint                             |
+| `fork`    | Fan out into parallel branches (paired with a `join`)        |
+| `join`    | Collect parallel branches back together                      |
 | `subflow` | Connector to another workflow                                |
 
 ### End Node Properties
@@ -192,6 +194,77 @@ Lists workflows available in the built-in catalog. No parameters.
 | `on`        | Output value that triggers this edge (for conditional routing) |
 | `label`     | Human-readable edge description                                |
 | `condition` | Expression for future conditional routing (informational)      |
+
+### Fork/Join (Parallel Branches)
+
+Fork/join lets a workflow fan out into parallel investigation tracks that converge at a join point. Each fork must be paired 1:1 with a join, and nested forks are not supported.
+
+#### Fork Node
+
+```json
+{
+  "type": "fork",
+  "name": "Fork Investigation",
+  "join": "join_investigate",
+  "branches": {
+    "reproduce": {
+      "entryStep": "reproduce",
+      "description": "Try to trigger the bug"
+    },
+    "code_archaeology": {
+      "entryStep": "code_archaeology",
+      "description": "Trace code paths related to symptoms"
+    }
+  }
+}
+```
+
+| Property   | Description                                                    |
+| ---------- | -------------------------------------------------------------- |
+| `join`     | ID of the paired join node (required)                          |
+| `branches` | Map of branch name to `{ entryStep, description? }` (required) |
+
+Each branch's `entryStep` must reference an existing task/gate node in the workflow. The orchestrator creates a child task per branch and runs them from their entry step.
+
+#### Join Node
+
+```json
+{
+  "type": "join",
+  "name": "Join Investigation",
+  "fork": "fork_investigate",
+  "strategy": "all-pass"
+}
+```
+
+| Property   | Description                                                                                  |
+| ---------- | -------------------------------------------------------------------------------------------- |
+| `fork`     | ID of the paired fork node (required)                                                        |
+| `strategy` | `"all-pass"` (all branches must pass) or `"any-pass"` (one is enough). Default: `"all-pass"` |
+
+#### Edges
+
+Wire the fork and join like any other nodes. Branches run from their `entryStep` until they reach the join node via normal edges:
+
+```json
+{ "from": "triage", "to": "fork_investigate" },
+{ "from": "fork_investigate", "to": "reproduce" },
+{ "from": "fork_investigate", "to": "code_archaeology" },
+{ "from": "reproduce", "to": "join_investigate" },
+{ "from": "code_archaeology", "to": "join_investigate" },
+{ "from": "join_investigate", "to": "synthesize", "on": "passed" },
+{ "from": "join_investigate", "to": "hitl_inconclusive", "on": "failed" }
+```
+
+The join node supports conditional edges (`on: "passed"` / `on: "failed"`) so the workflow can route to different paths depending on whether the branches succeeded.
+
+#### Validation Rules
+
+- Fork and join must reference each other (1:1 pairing)
+- All branch `entryStep` values must reference existing nodes
+- Branch entry steps cannot be fork nodes (no nesting)
+
+See `catalog/workflows/bug-hunt.json` for a complete working example.
 
 ## Testing
 

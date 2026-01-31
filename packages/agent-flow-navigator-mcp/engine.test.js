@@ -3,6 +3,7 @@ import assert from "node:assert";
 import {
   WorkflowEngine,
   isTerminalNode,
+  isForkJoinNode,
   getTerminalType,
   toSubagentRef,
   getBaselineInstructions,
@@ -2397,6 +2398,267 @@ describe("HITL resume behavior", () => {
 
       // Should return error since no outgoing edge from hitl with on: "passed"
       assert.ok(result.error);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+});
+
+describe("fork/join", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+  });
+
+  /**
+   * Fork/join workflow:
+   * start → analyze → fork_impl
+   *                     ├→ impl_frontend → test_frontend → join_impl
+   *                     └→ impl_backend  → test_backend  → join_impl
+   *                                                          └→ integration_test → end_success
+   *                                                          └→ hitl_failed
+   */
+  function createForkJoinWorkflow() {
+    return {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
+        fork_impl: {
+          type: "fork",
+          name: "Fork Implementation",
+          branches: {
+            frontend: { entryStep: "impl_frontend", description: "Build UI" },
+            backend: { entryStep: "impl_backend", description: "Build API" },
+          },
+          join: "join_impl",
+        },
+        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "Developer" },
+        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "Tester" },
+        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "Developer" },
+        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "Tester" },
+        join_impl: {
+          type: "join",
+          name: "Join Implementation",
+          fork: "fork_impl",
+          strategy: "all-pass",
+        },
+        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "Tester" },
+        end_success: { type: "end", result: "success", name: "Complete" },
+        hitl_failed: { type: "end", result: "blocked", escalation: "hitl", name: "Needs Help" },
+      },
+      edges: [
+        { from: "start", to: "analyze" },
+        { from: "analyze", to: "fork_impl", on: "passed" },
+        { from: "fork_impl", to: "impl_frontend" },
+        { from: "fork_impl", to: "impl_backend" },
+        { from: "impl_frontend", to: "test_frontend", on: "passed" },
+        { from: "test_frontend", to: "join_impl", on: "passed" },
+        { from: "impl_backend", to: "test_backend", on: "passed" },
+        { from: "test_backend", to: "join_impl", on: "passed" },
+        { from: "join_impl", to: "integration_test", on: "passed" },
+        { from: "join_impl", to: "hitl_failed", on: "failed" },
+        { from: "integration_test", to: "end_success", on: "passed" },
+      ],
+    };
+  }
+
+  it("should return action 'fork' with branch metadata when navigating to fork node", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-fork-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test fork",
+        metadata: { workflowType: "fork-wf", currentStep: "analyze", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "fork_impl");
+      assert.strictEqual(result.action, "fork");
+      assert.ok(result.fork);
+      assert.strictEqual(result.fork.joinStep, "join_impl");
+      assert.ok(result.fork.branches.frontend);
+      assert.strictEqual(result.fork.branches.frontend.entryStep, "impl_frontend");
+      assert.ok(result.fork.branches.backend);
+      assert.strictEqual(result.fork.branches.backend.entryStep, "impl_backend");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should return action 'join' with strategy when navigating to join node", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-join-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test join",
+        metadata: { workflowType: "fork-wf", currentStep: "test_frontend", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "join_impl");
+      assert.strictEqual(result.action, "join");
+      assert.ok(result.join);
+      assert.strictEqual(result.join.forkStep, "fork_impl");
+      assert.strictEqual(result.join.strategy, "all-pass");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should advance through join with 'passed' following on:'passed' edge", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-join-advance-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test join advance",
+        metadata: { workflowType: "fork-wf", currentStep: "join_impl", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "integration_test");
+      assert.strictEqual(result.action, "advance");
+      assert.strictEqual(result.terminal, null);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should advance through join with 'failed' following on:'failed' edge", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-join-fail-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test join fail",
+        metadata: { workflowType: "fork-wf", currentStep: "join_impl", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });
+
+      assert.strictEqual(result.currentStep, "hitl_failed");
+      assert.strictEqual(result.terminal, "hitl");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("isTerminalNode returns false for fork/join nodes", () => {
+    assert.strictEqual(isTerminalNode({ type: "fork", name: "F", branches: {}, join: "j" }), false);
+    assert.strictEqual(isTerminalNode({ type: "join", name: "J", fork: "f" }), false);
+  });
+
+  it("isForkJoinNode returns true for fork/join, false for others", () => {
+    assert.strictEqual(isForkJoinNode({ type: "fork", name: "F", branches: {}, join: "j" }), true);
+    assert.strictEqual(isForkJoinNode({ type: "join", name: "J", fork: "f" }), true);
+    assert.strictEqual(isForkJoinNode({ type: "task", name: "T" }), false);
+    assert.strictEqual(isForkJoinNode({ type: "start" }), false);
+    assert.strictEqual(isForkJoinNode({ type: "end", result: "success" }), false);
+    assert.strictEqual(isForkJoinNode(null), false);
+  });
+
+  it("getTerminalType returns null for fork/join nodes", () => {
+    assert.strictEqual(getTerminalType({ type: "fork", name: "F", branches: {}, join: "j" }), null);
+    assert.strictEqual(getTerminalType({ type: "join", name: "J", fork: "f" }), null);
+  });
+
+  it("fork response has null subagent, null stepInstructions, null terminal", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-fork-fields-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test fork fields",
+        metadata: { workflowType: "fork-wf", currentStep: "analyze", retryCount: 0 },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.action, "fork");
+      assert.strictEqual(result.subagent, null);
+      assert.strictEqual(result.stepInstructions, null);
+      assert.strictEqual(result.terminal, null);
+      assert.strictEqual(result.stage, null);
+      assert.strictEqual(result.orchestratorInstructions, null);
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("write-through preserves forkState in metadata", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const taskDir = join(tmpdir(), "flow-fork-writethrough-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "Test fork write-through",
+        metadata: {
+          workflowType: "fork-wf",
+          currentStep: "analyze",
+          retryCount: 0,
+          forkState: { test: "should-be-preserved" },
+        },
+      })
+    );
+
+    try {
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "fork_impl");
+
+      // Read task file — forkState should be preserved (engine doesn't overwrite it)
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.currentStep, "fork_impl");
+      assert.ok(updated.metadata.forkState);
+      assert.strictEqual(updated.metadata.forkState.test, "should-be-preserved");
     } finally {
       rmSync(taskDir, { recursive: true });
     }

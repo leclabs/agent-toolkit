@@ -1,0 +1,242 @@
+{
+  "id": "bug-hunt",
+  "name": "Bug Hunt",
+  "description": "Parallel investigation workflow for vague bug reports. Fans out into reproduction, code archaeology, and git forensics tracks, then synthesizes findings into a root cause analysis and fix.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Bug hunt begins"
+    },
+    "triage": {
+      "type": "task",
+      "name": "Triage Report",
+      "description": "Parse the vague report. Extract symptoms, affected area, timing, severity. Form 2-3 hypotheses to test.",
+      "agent": "Investigator",
+      "stage": "planning"
+    },
+    "fork_investigate": {
+      "type": "fork",
+      "name": "Fork Investigation",
+      "join": "join_investigate",
+      "branches": {
+        "reproduce": {
+          "entryStep": "reproduce",
+          "description": "Try to trigger the bug"
+        },
+        "code_archaeology": {
+          "entryStep": "code_archaeology",
+          "description": "Trace code paths related to symptoms"
+        },
+        "git_forensics": {
+          "entryStep": "git_forensics",
+          "description": "Check recent commits and git blame"
+        }
+      }
+    },
+    "reproduce": {
+      "type": "task",
+      "name": "Reproduce Bug",
+      "description": "Try to trigger the bug. Document exact reproduction steps, environment, and observed vs expected behavior.",
+      "agent": "Tester",
+      "stage": "investigation"
+    },
+    "code_archaeology": {
+      "type": "task",
+      "name": "Code Archaeology",
+      "description": "Trace the code paths related to the reported symptoms. Map data flow, identify suspect modules, check edge cases.",
+      "agent": "Investigator",
+      "stage": "investigation"
+    },
+    "git_forensics": {
+      "type": "task",
+      "name": "Git Forensics",
+      "description": "Check recent commits touching affected areas. Run git blame on suspect files. Look for correlated changes or regressions.",
+      "agent": "Investigator",
+      "stage": "investigation"
+    },
+    "join_investigate": {
+      "type": "join",
+      "name": "Join Investigation",
+      "fork": "fork_investigate",
+      "strategy": "all-pass"
+    },
+    "synthesize": {
+      "type": "task",
+      "name": "Synthesize Findings",
+      "description": "Combine findings from all investigation tracks into a root cause analysis. Identify the most likely cause, supporting evidence, and a fix strategy.",
+      "agent": "Architect",
+      "stage": "planning"
+    },
+    "write_fix": {
+      "type": "task",
+      "name": "Write Fix",
+      "description": "Implement the fix with minimal changes",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "add_regression_test": {
+      "type": "task",
+      "name": "Add Regression Test",
+      "description": "Write a test that would have caught this bug",
+      "agent": "Tester",
+      "stage": "development"
+    },
+    "verify_fix": {
+      "type": "gate",
+      "name": "Verify Fix",
+      "description": "Run tests, verify fix addresses root cause",
+      "agent": "Tester",
+      "stage": "verification",
+      "maxRetries": 3
+    },
+    "lint_format": {
+      "type": "gate",
+      "name": "Lint & Format",
+      "description": "Run lint and format checks. Auto-fix issues where possible.",
+      "agent": "Developer",
+      "stage": "delivery",
+      "maxRetries": 3
+    },
+    "commit": {
+      "type": "task",
+      "name": "Commit Changes",
+      "description": "Commit the fix and regression test with a descriptive message",
+      "agent": "Developer",
+      "stage": "delivery"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Bug Fixed",
+      "description": "Bug hunted down and fixed"
+    },
+    "hitl_inconclusive": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Inconclusive",
+      "description": "Investigation tracks couldn't determine root cause - needs human context"
+    },
+    "hitl_fix_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Fix Failed",
+      "description": "Unable to fix the bug - needs human help"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "triage"
+    },
+    {
+      "from": "triage",
+      "to": "fork_investigate"
+    },
+    {
+      "from": "fork_investigate",
+      "to": "reproduce",
+      "label": "Branch: reproduce"
+    },
+    {
+      "from": "fork_investigate",
+      "to": "code_archaeology",
+      "label": "Branch: code archaeology"
+    },
+    {
+      "from": "fork_investigate",
+      "to": "git_forensics",
+      "label": "Branch: git forensics"
+    },
+    {
+      "from": "reproduce",
+      "to": "join_investigate"
+    },
+    {
+      "from": "code_archaeology",
+      "to": "join_investigate"
+    },
+    {
+      "from": "git_forensics",
+      "to": "join_investigate"
+    },
+    {
+      "from": "join_investigate",
+      "to": "synthesize",
+      "on": "passed",
+      "label": "All tracks complete"
+    },
+    {
+      "from": "join_investigate",
+      "to": "hitl_inconclusive",
+      "on": "failed",
+      "label": "Investigation couldn't determine root cause"
+    },
+    {
+      "from": "synthesize",
+      "to": "write_fix"
+    },
+    {
+      "from": "write_fix",
+      "to": "add_regression_test"
+    },
+    {
+      "from": "add_regression_test",
+      "to": "verify_fix"
+    },
+    {
+      "from": "verify_fix",
+      "to": "lint_format",
+      "on": "passed",
+      "label": "Fix verified, run lint checks"
+    },
+    {
+      "from": "verify_fix",
+      "to": "write_fix",
+      "on": "failed",
+      "label": "Fix didn't work, try again"
+    },
+    {
+      "from": "verify_fix",
+      "to": "hitl_fix_failed",
+      "on": "failed",
+      "label": "Cannot fix the bug"
+    },
+    {
+      "from": "lint_format",
+      "to": "commit",
+      "on": "passed",
+      "label": "Lint passes, commit changes"
+    },
+    {
+      "from": "lint_format",
+      "to": "write_fix",
+      "on": "failed",
+      "label": "Fix lint/format issues"
+    },
+    {
+      "from": "lint_format",
+      "to": "hitl_fix_failed",
+      "on": "failed",
+      "label": "Lint issues persist"
+    },
+    {
+      "from": "commit",
+      "to": "end_success"
+    },
+    {
+      "from": "hitl_inconclusive",
+      "to": "triage",
+      "on": "passed",
+      "label": "Human provided context, re-triage"
+    },
+    {
+      "from": "hitl_fix_failed",
+      "to": "write_fix",
+      "on": "passed",
+      "label": "Human resolved issue, resume fix"
+    }
+  ]
+}

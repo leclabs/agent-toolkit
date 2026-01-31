@@ -20,6 +20,73 @@ export function validateWorkflow(id, content) {
     console.error(`Invalid workflow ${id}: missing 'edges' array`);
     return false;
   }
+
+  // Validate fork/join nodes
+  const nodes = content.nodes;
+  const forkNodes = Object.entries(nodes).filter(([, n]) => n.type === "fork");
+  const joinNodes = Object.entries(nodes).filter(([, n]) => n.type === "join");
+
+  for (const [forkId, forkDef] of forkNodes) {
+    // Fork's join field must reference an existing join node
+    if (!forkDef.join || !nodes[forkDef.join]) {
+      console.error(`Invalid workflow ${id}: fork '${forkId}' references missing join node '${forkDef.join}'`);
+      return false;
+    }
+    if (nodes[forkDef.join].type !== "join") {
+      console.error(`Invalid workflow ${id}: fork '${forkId}' join field '${forkDef.join}' is not a join node`);
+      return false;
+    }
+
+    // All branch entryStep values must reference existing nodes
+    if (!forkDef.branches || typeof forkDef.branches !== "object") {
+      console.error(`Invalid workflow ${id}: fork '${forkId}' missing branches`);
+      return false;
+    }
+    for (const [branchName, branchDef] of Object.entries(forkDef.branches)) {
+      if (!branchDef.entryStep || !nodes[branchDef.entryStep]) {
+        console.error(
+          `Invalid workflow ${id}: fork '${forkId}' branch '${branchName}' references missing node '${branchDef.entryStep}'`
+        );
+        return false;
+      }
+    }
+
+    // No nested forks in v1: branch paths must not contain fork nodes
+    for (const [branchName, branchDef] of Object.entries(forkDef.branches)) {
+      if (nodes[branchDef.entryStep]?.type === "fork") {
+        console.error(
+          `Invalid workflow ${id}: fork '${forkId}' branch '${branchName}' entry step '${branchDef.entryStep}' is a nested fork (not supported in v1)`
+        );
+        return false;
+      }
+    }
+  }
+
+  for (const [joinId, joinDef] of joinNodes) {
+    // Join's fork field must reference an existing fork node
+    if (!joinDef.fork || !nodes[joinDef.fork]) {
+      console.error(`Invalid workflow ${id}: join '${joinId}' references missing fork node '${joinDef.fork}'`);
+      return false;
+    }
+    if (nodes[joinDef.fork].type !== "fork") {
+      console.error(`Invalid workflow ${id}: join '${joinId}' fork field '${joinDef.fork}' is not a fork node`);
+      return false;
+    }
+  }
+
+  // Fork-join pairs must be matched 1:1
+  const forkToJoin = new Map(forkNodes.map(([id, def]) => [id, def.join]));
+  const joinToFork = new Map(joinNodes.map(([id, def]) => [id, def.fork]));
+
+  for (const [forkId, joinId] of forkToJoin) {
+    if (joinToFork.get(joinId) !== forkId) {
+      console.error(
+        `Invalid workflow ${id}: fork '${forkId}' → join '${joinId}' pair mismatch (join points to '${joinToFork.get(joinId)}')`
+      );
+      return false;
+    }
+  }
+
   return true;
 }
 
