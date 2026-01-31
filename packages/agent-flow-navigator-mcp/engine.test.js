@@ -1032,6 +1032,153 @@ describe("WorkflowEngine", () => {
       }
     });
 
+    describe("mid-flow start with stepId", () => {
+      function createMidFlowWorkflow() {
+        return {
+          nodes: {
+            start: { type: "start", name: "Start" },
+            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
+            implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
+            review: { type: "gate", name: "Review", stage: "verification", agent: "Reviewer", maxRetries: 2 },
+            fork_impl: {
+              type: "fork",
+              name: "Fork Impl",
+              branches: {
+                frontend: { entryStep: "impl_frontend", description: "Build UI" },
+                backend: { entryStep: "impl_backend", description: "Build API" },
+              },
+              join: "join_impl",
+            },
+            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "Developer" },
+            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "Developer" },
+            join_impl: { type: "join", name: "Join Impl", fork: "fork_impl", strategy: "all-pass" },
+            end: { type: "end", result: "success" },
+          },
+          edges: [
+            { from: "start", to: "analyze" },
+            { from: "analyze", to: "implement", on: "passed" },
+            { from: "implement", to: "review", on: "passed" },
+            { from: "review", to: "fork_impl", on: "passed" },
+            { from: "review", to: "implement", on: "failed" },
+            { from: "fork_impl", to: "impl_frontend" },
+            { from: "fork_impl", to: "impl_backend" },
+            { from: "impl_frontend", to: "join_impl", on: "passed" },
+            { from: "impl_backend", to: "join_impl", on: "passed" },
+            { from: "join_impl", to: "end", on: "passed" },
+          ],
+        };
+      }
+
+      it("should start at a mid-flow task step", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        const result = engine.navigate({ workflowType: "mid-wf", stepId: "implement" });
+
+        assert.strictEqual(result.currentStep, "implement");
+        assert.strictEqual(result.action, "start");
+        assert.strictEqual(result.stage, "development");
+        assert.strictEqual(result.subagent, "Developer");
+        assert.strictEqual(result.terminal, null);
+        assert.ok(result.stepInstructions);
+        assert.strictEqual(result.metadata.currentStep, "implement");
+        assert.strictEqual(result.metadata.retryCount, 0);
+      });
+
+      it("should start at a mid-flow gate step", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        const result = engine.navigate({ workflowType: "mid-wf", stepId: "review" });
+
+        assert.strictEqual(result.currentStep, "review");
+        assert.strictEqual(result.action, "start");
+        assert.strictEqual(result.stage, "verification");
+        assert.strictEqual(result.subagent, "Reviewer");
+        assert.strictEqual(result.maxRetries, 2);
+      });
+
+      it("should start at a fork step and return fork response", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        const result = engine.navigate({ workflowType: "mid-wf", stepId: "fork_impl" });
+
+        assert.strictEqual(result.currentStep, "fork_impl");
+        assert.strictEqual(result.action, "fork");
+        assert.ok(result.fork);
+        assert.strictEqual(result.fork.joinStep, "join_impl");
+        assert.ok(result.fork.branches.frontend);
+        assert.ok(result.fork.branches.backend);
+      });
+
+      it("should throw for non-existent step", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        assert.throws(
+          () => engine.navigate({ workflowType: "mid-wf", stepId: "nonexistent" }),
+          /Step 'nonexistent' not found/
+        );
+      });
+
+      it("should throw for start node", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        assert.throws(() => engine.navigate({ workflowType: "mid-wf", stepId: "start" }), /Cannot start at start node/);
+      });
+
+      it("should throw for end node", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        assert.throws(() => engine.navigate({ workflowType: "mid-wf", stepId: "end" }), /Cannot start at end node/);
+      });
+
+      it("should ignore stepId when currentStep exists (advance mode)", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        const taskDir = join(tmpdir(), "flow-mid-ignore-" + Date.now());
+        mkdirSync(taskDir, { recursive: true });
+        const taskFile = join(taskDir, "task.json");
+        writeFileSync(
+          taskFile,
+          JSON.stringify({
+            id: "1",
+            subject: "Test stepId ignored",
+            metadata: {
+              workflowType: "mid-wf",
+              currentStep: "analyze",
+              retryCount: 0,
+            },
+          })
+        );
+
+        try {
+          // stepId should be ignored because taskFilePath sets currentStep
+          const result = engine.navigate({
+            taskFilePath: taskFile,
+            result: "passed",
+            stepId: "review",
+          });
+
+          // Should advance from analyze → implement, not jump to review
+          assert.strictEqual(result.currentStep, "implement");
+          assert.strictEqual(result.action, "advance");
+        } finally {
+          rmSync(taskDir, { recursive: true });
+        }
+      });
+
+      it("should include description in orchestratorInstructions for mid-flow start", () => {
+        store.loadDefinition("mid-wf", createMidFlowWorkflow());
+
+        const result = engine.navigate({
+          workflowType: "mid-wf",
+          stepId: "implement",
+          description: "Fix the login bug",
+        });
+
+        assert.ok(result.orchestratorInstructions);
+        assert.ok(result.orchestratorInstructions.includes("Fix the login bug"));
+      });
+    });
+
     describe("context in orchestratorInstructions", () => {
       it("should return null from buildContextInstructions when contextFiles empty", () => {
         const result = buildContextInstructions({
@@ -1343,6 +1490,30 @@ describe("resolveProseRefs", () => {
     const result = resolveProseRefs(text, "/ext");
     assert.ok(result.includes("/ext/skills/chrome-debug-session/SKILL.md"));
     assert.ok(result.includes("/ext/config/app.settings.json"));
+  });
+});
+
+describe("resolveProseRefs - project sourceRoot regression (Bug 3)", () => {
+  it("should resolve ./ paths when project sourceRoot is provided", () => {
+    const result = resolveProseRefs("See ./docs/plan.md", "/project/root");
+    assert.strictEqual(result, "See /project/root/docs/plan.md");
+  });
+
+  it("should leave ./ paths unchanged when sourceRoot is null (pre-fix behavior)", () => {
+    const result = resolveProseRefs("See ./docs/plan.md", null);
+    assert.strictEqual(result, "See ./docs/plan.md");
+  });
+});
+
+describe("resolveContextFile - explicit sourceRoot vs null fallback (Bug 3)", () => {
+  it("should resolve ./ path via sourceRoot when provided", () => {
+    const result = resolveContextFile("./foo.md", "/project", "/project");
+    assert.strictEqual(result, join("/project", "foo.md"));
+  });
+
+  it("should resolve ./ path via projectRoot fallback when sourceRoot is null", () => {
+    const result = resolveContextFile("./foo.md", "/project", null);
+    assert.strictEqual(result, join("/project", "foo.md"));
   });
 });
 

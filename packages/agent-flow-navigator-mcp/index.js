@@ -169,6 +169,11 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description:
                 "When true, auto-continue through stage boundary end nodes (non-HITL end nodes with outgoing edges).",
             },
+            stepId: {
+              type: "string",
+              description:
+                "Start at a specific step instead of the beginning (mid-flow recovery). Only used when starting a workflow (no taskFilePath). Ignored during advance.",
+            },
           },
         },
       },
@@ -221,7 +226,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             workflowIds: {
               type: "array",
               items: { type: "string" },
-              description: "Workflow IDs to copy. Empty = all.",
+              description: "Workflow IDs to copy. Required. Use ListCatalog to see available workflows.",
             },
           },
         },
@@ -277,6 +282,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           description: args.description,
           projectRoot: PROJECT_ROOT,
           autonomy: args.autonomy,
+          stepId: args.stepId,
         });
         return jsonResponse(result);
       }
@@ -365,7 +371,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             writeFileSync(join(workflowDir, "workflow.json"), JSON.stringify(content, null, 2));
 
             // Load into memory
-            store.loadDefinition(id, content);
+            store.loadDefinition(id, content, "project", PROJECT_ROOT);
             copied.push(id);
           } catch (e) {
             errors.push({ id, error: e.message });
@@ -435,7 +441,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           try {
             const content = JSON.parse(readFileSync(wfFile, "utf-8"));
             if (validateWorkflow(id, content)) {
-              store.loadDefinition(id, content, "project");
+              store.loadDefinition(id, content, "project", PROJECT_ROOT);
               loaded.push(id);
             } else {
               errors.push({ id, error: "invalid schema" });

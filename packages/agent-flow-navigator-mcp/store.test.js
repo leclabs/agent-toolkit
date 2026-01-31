@@ -218,6 +218,31 @@ describe("WorkflowStore", () => {
     });
   });
 
+  describe("project source tag and sourceRoot (Bug 2 & 3 regression)", () => {
+    it("should set source to 'project' and enable hasProjectWorkflows", () => {
+      store.loadDefinition("proj-wf", { name: "Proj", nodes: {}, edges: [] }, "project", "/some/root");
+
+      assert.strictEqual(store.getSource("proj-wf"), "project");
+      assert.strictEqual(store.hasProjectWorkflows(), true);
+    });
+
+    it("should track sourceRoot for project workflows", () => {
+      store.loadDefinition("proj-wf", { name: "Proj", nodes: {}, edges: [] }, "project", "/project/root");
+
+      assert.strictEqual(store.getSourceRoot("proj-wf"), "/project/root");
+    });
+
+    it("should update sourceRoot when reloaded from catalog to project", () => {
+      store.loadDefinition("wf", { name: "WF", nodes: {}, edges: [] }, "catalog");
+      assert.strictEqual(store.getSource("wf"), "catalog");
+      assert.strictEqual(store.getSourceRoot("wf"), undefined);
+
+      store.loadDefinition("wf", { name: "WF", nodes: {}, edges: [] }, "project", "/project/root");
+      assert.strictEqual(store.getSource("wf"), "project");
+      assert.strictEqual(store.getSourceRoot("wf"), "/project/root");
+    });
+  });
+
   describe("has", () => {
     it("should return true for existing workflow", () => {
       store.loadDefinition("test", { nodes: {}, edges: [] });
