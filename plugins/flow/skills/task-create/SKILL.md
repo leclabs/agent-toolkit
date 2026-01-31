@@ -14,7 +14,7 @@ Create a new flow task from issues, requirements, or descriptions.
 - `workflowType` - workflow type
 - `--run` - autorun after creation
 
-**Signiture:** `/flow:task-create <description> [<workflowType>] [--run]`
+**Signiture:** `/flow:task-create <description> [<workflowType>] [stepId[--run]`
 
 | Command | Description |
 | ------------------------------------------------------------- | -------z---------------------------------------------------- |

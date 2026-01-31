@@ -1,5 +1,11 @@
 # @leclabs/agent-toolkit
 
+## 1.6.0
+
+### Minor Changes
+
+- Add bug-hunt workflow with fork/join parallel investigation
+
 ## 1.5.2
 
 ### Patch Changes
