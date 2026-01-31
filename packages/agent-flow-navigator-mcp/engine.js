@@ -532,9 +532,10 @@ export class WorkflowEngine {
    * @param {string} [options.workflowType] - Workflow ID (for start only)
    * @param {string} [options.result] - Step result: "passed" | "failed" (for advance)
    * @param {string} [options.description] - User's task description
+   * @param {string} [options.stepId] - Start at a specific step (mid-flow recovery). Only used when starting a workflow (no currentStep).
    * @returns {Object} Navigation response with currentStep, stepInstructions, terminal, action, metadata, etc.
    */
-  navigate({ taskFilePath, workflowType, result, description, projectRoot, autonomy } = {}) {
+  navigate({ taskFilePath, workflowType, result, description, projectRoot, autonomy, stepId } = {}) {
     let currentStep = null;
     let retryCount = 0;
 
@@ -584,33 +585,52 @@ export class WorkflowEngine {
 
     const { nodes } = wfDef;
 
-    // Case 1: No currentStep - start at first work step
+    // Case 1: No currentStep - start at first work step (or stepId if provided)
     if (!currentStep) {
-      const startEntry = Object.entries(nodes).find(([, node]) => node.type === "start");
-      if (!startEntry) {
-        throw new Error(`Workflow '${workflowType}' has no start node`);
-      }
-      const startStepId = startEntry[0];
+      let targetStepId;
+      let targetStepDef;
 
-      const firstEdge = wfDef.edges.find((e) => e.from === startStepId);
-      if (!firstEdge) {
-        throw new Error(`No edge from start step in workflow '${workflowType}'`);
-      }
+      if (stepId) {
+        // Mid-flow start: validate and use the provided stepId
+        targetStepDef = nodes[stepId];
+        if (!targetStepDef) {
+          throw new Error(`Step '${stepId}' not found in workflow '${workflowType}'`);
+        }
+        if (isTerminalNode(targetStepDef)) {
+          throw new Error(
+            `Cannot start at ${targetStepDef.type} node '${stepId}'. Provide a task, gate, or fork/join step.`
+          );
+        }
+        targetStepId = stepId;
+      } else {
+        // Default: find first step after start node
+        const startEntry = Object.entries(nodes).find(([, node]) => node.type === "start");
+        if (!startEntry) {
+          throw new Error(`Workflow '${workflowType}' has no start node`);
+        }
+        const startNodeId = startEntry[0];
 
-      const firstStepDef = nodes[firstEdge.to];
-      if (!firstStepDef) {
-        throw new Error(`First step '${firstEdge.to}' not found in workflow`);
+        const firstEdge = wfDef.edges.find((e) => e.from === startNodeId);
+        if (!firstEdge) {
+          throw new Error(`No edge from start step in workflow '${workflowType}'`);
+        }
+
+        targetStepDef = nodes[firstEdge.to];
+        if (!targetStepDef) {
+          throw new Error(`First step '${firstEdge.to}' not found in workflow`);
+        }
+        targetStepId = firstEdge.to;
       }
 
       // Fork/join at start position — return control-flow response
-      if (isForkJoinNode(firstStepDef)) {
-        return buildForkJoinResponse(workflowType, firstEdge.to, firstStepDef, "start", 0, sourceRoot);
+      if (isForkJoinNode(targetStepDef)) {
+        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, "start", 0, sourceRoot);
       }
 
       return buildNavigateResponse(
         workflowType,
-        firstEdge.to,
-        firstStepDef,
+        targetStepId,
+        targetStepDef,
         "start",
         false,
         0,

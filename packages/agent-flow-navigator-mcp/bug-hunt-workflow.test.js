@@ -402,6 +402,65 @@ describe("bug-hunt workflow diagram generation", () => {
 });
 
 // =============================================================================
+// Bug Hunt workflow - Mid-flow start with stepId
+// =============================================================================
+
+describe("bug-hunt workflow mid-flow start", () => {
+  let store;
+  let engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("bug-hunt", loadBugHuntWorkflow());
+  });
+
+  it("should start at write_fix mid-flow", () => {
+    const result = engine.navigate({ workflowType: "bug-hunt", stepId: "write_fix" });
+
+    assert.strictEqual(result.currentStep, "write_fix");
+    assert.strictEqual(result.action, "start");
+    assert.strictEqual(result.stage, "development");
+    assert.strictEqual(result.subagent, "Developer");
+    assert.strictEqual(result.terminal, null);
+    assert.ok(result.stepInstructions);
+    assert.strictEqual(result.metadata.retryCount, 0);
+  });
+
+  it("should start at synthesize mid-flow", () => {
+    const result = engine.navigate({ workflowType: "bug-hunt", stepId: "synthesize" });
+
+    assert.strictEqual(result.currentStep, "synthesize");
+    assert.strictEqual(result.action, "start");
+    assert.strictEqual(result.stage, "planning");
+    assert.strictEqual(result.subagent, "Architect");
+  });
+
+  it("should start at fork_investigate and return fork response", () => {
+    const result = engine.navigate({ workflowType: "bug-hunt", stepId: "fork_investigate" });
+
+    assert.strictEqual(result.currentStep, "fork_investigate");
+    assert.strictEqual(result.action, "fork");
+    assert.ok(result.fork);
+    assert.strictEqual(result.fork.joinStep, "join_investigate");
+    assert.ok(result.fork.branches.reproduce);
+    assert.ok(result.fork.branches.code_archaeology);
+    assert.ok(result.fork.branches.git_forensics);
+  });
+
+  it("should reject starting at start node", () => {
+    assert.throws(() => engine.navigate({ workflowType: "bug-hunt", stepId: "start" }), /Cannot start at start node/);
+  });
+
+  it("should reject starting at end_success node", () => {
+    assert.throws(
+      () => engine.navigate({ workflowType: "bug-hunt", stepId: "end_success" }),
+      /Cannot start at end node/
+    );
+  });
+});
+
+// =============================================================================
 // Bug Hunt workflow - Full walkthrough simulation
 // =============================================================================
 
