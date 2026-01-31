@@ -95,19 +95,16 @@ describe("isValidWorkflowForCopy", () => {
 describe("computeWorkflowsToCopy", () => {
   const availableIds = ["wf1", "wf2", "wf3", "wf4"];
 
-  it("should return all available when no specific requested", () => {
-    const result = computeWorkflowsToCopy([], availableIds);
-    assert.deepStrictEqual(result, availableIds);
+  it("should throw when requestedIds is empty", () => {
+    assert.throws(() => computeWorkflowsToCopy([], availableIds), { message: /workflowIds is required/ });
   });
 
-  it("should return all available when requestedIds is undefined", () => {
-    const result = computeWorkflowsToCopy(undefined, availableIds);
-    assert.deepStrictEqual(result, availableIds);
+  it("should throw when requestedIds is undefined", () => {
+    assert.throws(() => computeWorkflowsToCopy(undefined, availableIds), { message: /workflowIds is required/ });
   });
 
-  it("should return all available when requestedIds is null", () => {
-    const result = computeWorkflowsToCopy(null, availableIds);
-    assert.deepStrictEqual(result, availableIds);
+  it("should throw when requestedIds is null", () => {
+    assert.throws(() => computeWorkflowsToCopy(null, availableIds), { message: /workflowIds is required/ });
   });
 
   it("should return only requested IDs when specified", () => {

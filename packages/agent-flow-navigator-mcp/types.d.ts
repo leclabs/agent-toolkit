@@ -169,6 +169,8 @@ export interface NavigateOptions {
   description?: string;
   projectRoot?: string;
   autonomy?: boolean;
+  /** Start at a specific step instead of the beginning (mid-flow recovery). Only used when starting a workflow (no taskFilePath). Ignored during advance. */
+  stepId?: string;
 }
 
 export interface NavigateResponse {

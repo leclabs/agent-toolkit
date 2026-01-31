@@ -135,8 +135,8 @@ export function isValidWorkflowForCopy(content) {
  * @returns {string[]} IDs to copy
  */
 export function computeWorkflowsToCopy(requestedIds, availableIds) {
-  if (requestedIds && requestedIds.length > 0) {
-    return requestedIds;
+  if (!requestedIds || requestedIds.length === 0) {
+    throw new Error("workflowIds is required. Use ListCatalog to see available workflows, then pass specific IDs.");
   }
-  return availableIds;
+  return requestedIds;
 }

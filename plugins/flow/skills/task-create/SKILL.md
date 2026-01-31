@@ -14,15 +14,17 @@ Create a new flow task from issues, requirements, or descriptions.
 - `workflowType` - workflow type
 - `--run` - autorun after creation
 
-**Signiture:** `/flow:task-create <description> [<workflowType>] [stepId[--run]`
+**Signiture:** `/flow:task-create <description> [<workflowType>] [<stepId>] [--run]`
 
 | Command | Description |
-| ------------------------------------------------------------- | -------z---------------------------------------------------- |
+| --------------------------------------------------------------------------- | ------------------------------------------------------- |
 | /flow:task-create | Interactive multi-panel workflowType selection |
 | /flow:task-create "Make a cup of coffee" | Infer workflowType → create task |
 | /flow:task-create "Make a cup of coffee" --run | Infer workflowType → create task → execute |
 | /flow:task-create "Make a coffee machine" feature-development | Create task with feature-development workflowType |
-| /flow:task-create "Replace coffee filter" agile-task --run | Create task with feature-development workflowType → execute |
+| /flow:task-create "Replace coffee filter" agile-task --run | Create task with agile-task workflowType → execute |
+| /flow:task-create "Fix auth" bug-fix write_fix | Create task starting at write_fix step (mid-flow) |
+| /flow:task-create "Fix auth" bug-fix write_fix --run | Mid-flow start → execute |
 
 </usage>
 
@@ -30,12 +32,22 @@ Create a new flow task from issues, requirements, or descriptions.
 
 ## 1. Call Navigate to Start Workflow
 
-Call `Navigator.Navigate` with `workflowType` and `description`:
+Call `Navigator.Navigate` with `workflowType`, `description`, and optionally `stepId`:
 
 ```json
 {
   "workflowType": "feature-development",
   "description": "Add user authentication"
+}
+```
+
+For mid-flow recovery (starting at a specific step):
+
+```json
+{
+  "workflowType": "bug-fix",
+  "description": "Fix auth token refresh",
+  "stepId": "write_fix"
 }
 ```
 
@@ -120,6 +132,16 @@ Append emoji after task subject based on workflowType:
 | `ui-reconstruction`    | 🎨     |
 | `test-coverage`        | 🧪     |
 | (unknown/missing)      | (none) |
+
+## Mid-Flow Recovery
+
+When a `stepId` argument is provided, the task starts at that specific workflow step instead of the beginning. This enables recovery scenarios:
+
+- **Session break**: A previous session completed some steps manually. Resume from the next step.
+- **Partial re-run**: Skip early steps (e.g., analysis) when context is already established.
+- **Fork/join entry**: Start at a fork node to kick off parallel branches directly.
+
+The `stepId` must be a valid task, gate, fork, or join node — not a start or end node.
 
 ## 3. Auto-Execute (if --run flag)
 

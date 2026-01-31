@@ -1,5 +1,11 @@
 # @leclabs/agent-toolkit
 
+## 1.7.0
+
+### Minor Changes
+
+- feat: mid-flow task recovery via stepId parameter; fix implicit workflow copying and sourceRoot tracking
+
 ## 1.6.0
 
 ### Minor Changes
