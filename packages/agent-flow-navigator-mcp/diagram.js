@@ -58,6 +58,8 @@ export function generateDiagram(workflowDef, currentStep = null) {
       lines.push(`    ${stepId}[["${label}"]]`);
     } else if (termType === "hitl" || termType === "failure") {
       lines.push(`    ${stepId}{{"${label}"}}`);
+    } else if (step.type === "fork" || step.type === "join") {
+      lines.push(`    ${stepId}{{{"${label}"}}}`);
     } else if (step.type === "gate") {
       lines.push(`    ${stepId}{"${label}"}`);
     } else {
@@ -82,6 +84,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
   lines.push("    classDef successStep fill:#87CEEB,stroke:#4169E1");
   lines.push("    classDef hitlStep fill:#FFB6C1,stroke:#DC143C");
   lines.push("    classDef gateStep fill:#E6E6FA,stroke:#9370DB");
+  lines.push("    classDef forkJoinStep fill:#FFEAA7,stroke:#FDCB6E");
   lines.push("    classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px");
 
   const startSteps = Object.entries(nodes)
@@ -97,10 +100,15 @@ export function generateDiagram(workflowDef, currentStep = null) {
     .filter(([, s]) => s.type === "gate")
     .map(([id]) => id);
 
+  const forkJoinSteps = Object.entries(nodes)
+    .filter(([, s]) => s.type === "fork" || s.type === "join")
+    .map(([id]) => id);
+
   if (startSteps.length) lines.push(`    class ${startSteps.join(",")} startStep`);
   if (successSteps.length) lines.push(`    class ${successSteps.join(",")} successStep`);
   if (hitlSteps.length) lines.push(`    class ${hitlSteps.join(",")} hitlStep`);
   if (gateSteps.length) lines.push(`    class ${gateSteps.join(",")} gateStep`);
+  if (forkJoinSteps.length) lines.push(`    class ${forkJoinSteps.join(",")} forkJoinStep`);
 
   if (currentStep && nodes[currentStep]) {
     lines.push(`    class ${currentStep} currentStep`);
@@ -111,8 +119,10 @@ export function generateDiagram(workflowDef, currentStep = null) {
   tableRows.push("| Stage | Step | Name | Agent | Instructions |");
   tableRows.push("|-------|------|------|-------|--------------|");
 
-  // Group steps by stage for organized display - filter out terminal/start/end nodes
-  const stepEntries = Object.entries(nodes).filter(([, step]) => !isTerminalNode(step));
+  // Group steps by stage for organized display - filter out terminal/start/end and fork/join nodes
+  const stepEntries = Object.entries(nodes).filter(
+    ([, step]) => !isTerminalNode(step) && step.type !== "fork" && step.type !== "join"
+  );
 
   for (const [stepId, step] of stepEntries) {
     const stage = step.stage || "-";

@@ -214,18 +214,20 @@ Parse subagent response:
 
 Navigate returns:
 
-| Field                      | Purpose                                         |
-| -------------------------- | ----------------------------------------------- |
-| `currentStep`              | The new step                                    |
-| `stage`                    | Workflow stage (e.g., `"planning"`)             |
-| `subagent`                 | Who executes next step                          |
-| `stepInstructions`         | `{name, description, guidance}`                 |
-| `terminal`                 | `"success"` or `"hitl"` if done                 |
-| `orchestratorInstructions` | Updated task description                        |
-| `metadata`                 | `{ workflowType, currentStep, retryCount }`     |
-| `action`                   | `"advance"`, `"retry"`, or `"escalate"`         |
-| `retriesIncremented`       | `true` if retry count increased                 |
-| `autonomyContinued`        | `true` if auto-continued through stage boundary |
+| Field                      | Purpose                                                     |
+| -------------------------- | ----------------------------------------------------------- |
+| `currentStep`              | The new step                                                |
+| `stage`                    | Workflow stage (e.g., `"planning"`)                         |
+| `subagent`                 | Who executes next step                                      |
+| `stepInstructions`         | `{name, description, guidance}`                             |
+| `terminal`                 | `"success"` or `"hitl"` if done                             |
+| `orchestratorInstructions` | Updated task description                                    |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }`                 |
+| `action`                   | `"advance"`, `"retry"`, `"escalate"`, `"fork"`, or `"join"` |
+| `retriesIncremented`       | `true` if retry count increased                             |
+| `autonomyContinued`        | `true` if auto-continued through stage boundary             |
+| `fork`                     | `{ branches, joinStep }` when action is `"fork"`            |
+| `join`                     | `{ forkStep, strategy }` when action is `"join"`            |
 
 Then call TaskUpdate to sync status (Navigator's write-through has already updated subject, activeForm, description, and metadata in the task file):
 
@@ -244,6 +246,67 @@ After each step, show brief progress:
 ✓ parse_requirements (@flow:Planner) → passed
 ✓ implement (@flow:Developer) → passed
 ⟳ test (@flow:Tester) → in progress...
+```
+
+### Fork/Join Handling
+
+When Navigate returns `action: "fork"`, the workflow has branched into parallel work.
+
+**Fork handling** (when `action === "fork"`):
+
+1. Read `fork.branches` and `fork.joinStep` from Navigate response
+2. For each branch, use `TaskCreate` to create a child task with metadata:
+   ```json
+   {
+     "workflowType": "{same workflowType}",
+     "currentStep": "{branch.entryStep}",
+     "retryCount": 0,
+     "parentTaskId": "{current taskId}",
+     "forkStep": "{fork step id}",
+     "branchName": "{branch name}",
+     "userDescription": "{original task description}"
+   }
+   ```
+3. Record child task IDs in parent's metadata as `forkState`:
+   ```json
+   {
+     "forkStep": "fork_impl",
+     "joinStep": "join_impl",
+     "branches": {
+       "frontend": { "status": "running", "childTaskId": "42" },
+       "backend": { "status": "running", "childTaskId": "43" }
+     }
+   }
+   ```
+4. Execute each child sequentially using the Task tool (Claude Code runs subagents one at a time)
+5. After each child completes, update its branch status in parent's `forkState`
+
+**Child execution**: Each child runs the normal `/flow:run` loop starting from its `currentStep`. When Navigate returns `action: "join"` (child reached the join node), the child's loop exits — the branch is done. Mark the branch as `"passed"` or `"failed"` based on whether the child reached the join node successfully.
+
+**Join evaluation** (after all children finish):
+
+1. Check all branch statuses in parent's `forkState`
+2. Apply strategy from the join node:
+   - `all-pass`: all branches must have status `"passed"` → advance with `"passed"`, otherwise `"failed"`
+   - `any-pass`: at least one branch passed → advance with `"passed"`, otherwise `"failed"`
+3. Call `Navigate` on parent with `taskFilePath` and `result: "passed"` or `"failed"` to advance through the join node
+4. Clear `forkState` from parent metadata
+5. Resume normal execution loop
+
+**Progress reporting for fork/join:**
+
+```
+⑂ Fork: fork_impl → 2 branches
+  ├─ frontend (impl_frontend): running...
+  │  ✓ impl_frontend → passed
+  │  ✓ test_frontend → passed
+  │  → branch complete
+  └─ backend (impl_backend): running...
+     ✓ impl_backend → passed
+     ✓ test_backend → passed
+     → branch complete
+⑃ Join: join_impl (all-pass) → passed
+✓ integration_test → passed
 ```
 
 ### 9. Loop Termination

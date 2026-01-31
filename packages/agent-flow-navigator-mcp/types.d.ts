@@ -13,7 +13,7 @@
 // Node Types (Discriminated Union)
 // =============================================================================
 
-export type Node = StartNode | EndNode | TaskNode | GateNode | SubflowNode;
+export type Node = StartNode | EndNode | TaskNode | GateNode | SubflowNode | ForkNode | JoinNode;
 
 export interface StartNode {
   type: "start";
@@ -79,6 +79,30 @@ export interface SubflowNode {
   name?: string;
   description?: string;
   inputs?: Record<string, string>;
+}
+
+/**
+ * Fork node - declares parallel branches within the same workflow.
+ * Each branch names an entry step. Links to a join node that collects results.
+ */
+export interface ForkNode {
+  type: "fork";
+  name: string;
+  description?: string;
+  branches: Record<string, { entryStep: string; description?: string }>;
+  join: string; // join node ID
+}
+
+/**
+ * Join node - collects results from parallel branches.
+ * Strategy determines how branch results are evaluated.
+ */
+export interface JoinNode {
+  type: "join";
+  name: string;
+  description?: string;
+  fork: string; // fork node ID
+  strategy?: "all-pass" | "any-pass"; // default: "all-pass"
 }
 
 export type Stage = "planning" | "development" | "verification" | "delivery";
@@ -158,6 +182,8 @@ export interface NavigateResponse {
   autonomyContinued: boolean;
   maxRetries: number;
   orchestratorInstructions: string | null;
+  fork?: { branches: Record<string, { entryStep: string; description?: string }>; joinStep: string };
+  join?: { forkStep: string; strategy: string };
   metadata: {
     workflowType: string;
     currentStep: string;

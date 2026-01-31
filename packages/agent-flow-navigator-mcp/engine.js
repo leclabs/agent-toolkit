@@ -32,10 +32,19 @@ export function readTaskFile(taskFilePath) {
 
 /**
  * Check if a node is a terminal node (start or end)
+ * Fork/join are control-flow nodes, not terminal.
  */
 export function isTerminalNode(node) {
   if (!node) return false;
   return node.type === "start" || node.type === "end";
+}
+
+/**
+ * Check if a node is a fork or join control-flow node
+ */
+export function isForkJoinNode(node) {
+  if (!node) return false;
+  return node.type === "fork" || node.type === "join";
 }
 
 /**
@@ -67,6 +76,7 @@ export function toSubagentRef(agentId) {
 const WORKFLOW_EMOJIS = {
   "feature-development": "✨",
   "bug-fix": "🐛",
+  "bug-hunt": "🔍",
   "agile-task": "📋",
   "context-optimization": "🔧",
   "quick-task": "⚡",
@@ -251,6 +261,47 @@ function buildOrchestratorInstructions(
 ${description || "{task description}"}`;
   if (contextBlock) result += `\n\n${contextBlock}`;
   return result;
+}
+
+/**
+ * Build response for fork/join control-flow nodes.
+ * These nodes are declarative — the engine returns metadata for the orchestrator to act on.
+ */
+function buildForkJoinResponse(workflowType, stepId, stepDef, action, retryCount = 0, sourceRoot = null) {
+  const base = {
+    currentStep: stepId,
+    stage: null,
+    subagent: null,
+    stepInstructions: null,
+    terminal: null,
+    action,
+    retriesIncremented: false,
+    autonomyContinued: false,
+    maxRetries: 0,
+    orchestratorInstructions: null,
+    metadata: {
+      workflowType,
+      currentStep: stepId,
+      retryCount,
+    },
+    sourceRoot,
+  };
+
+  if (stepDef.type === "fork") {
+    base.action = "fork";
+    base.fork = {
+      branches: stepDef.branches,
+      joinStep: stepDef.join,
+    };
+  } else if (stepDef.type === "join") {
+    base.action = "join";
+    base.join = {
+      forkStep: stepDef.fork,
+      strategy: stepDef.strategy || "all-pass",
+    };
+  }
+
+  return base;
 }
 
 /**
@@ -551,6 +602,11 @@ export class WorkflowEngine {
         throw new Error(`First step '${firstEdge.to}' not found in workflow`);
       }
 
+      // Fork/join at start position — return control-flow response
+      if (isForkJoinNode(firstStepDef)) {
+        return buildForkJoinResponse(workflowType, firstEdge.to, firstStepDef, "start", 0, sourceRoot);
+      }
+
       return buildNavigateResponse(
         workflowType,
         firstEdge.to,
@@ -570,6 +626,11 @@ export class WorkflowEngine {
       const stepDef = nodes[currentStep];
       if (!stepDef) {
         throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
+      }
+
+      // Fork/join — return control-flow response
+      if (isForkJoinNode(stepDef)) {
+        return buildForkJoinResponse(workflowType, currentStep, stepDef, "current", retryCount, sourceRoot);
       }
 
       return buildNavigateResponse(
@@ -600,6 +661,42 @@ export class WorkflowEngine {
     const nextStepDef = nodes[evaluation.nextStep];
     if (!nextStepDef) {
       throw new Error(`Next step '${evaluation.nextStep}' not found in workflow`);
+    }
+
+    // Fork/join on advance — return control-flow response
+    if (isForkJoinNode(nextStepDef)) {
+      const forkJoinResponse = buildForkJoinResponse(
+        workflowType,
+        evaluation.nextStep,
+        nextStepDef,
+        nextStepDef.type, // "fork" or "join"
+        0,
+        sourceRoot
+      );
+
+      // Write-through for fork/join advance
+      if (taskFilePath) {
+        const task = readTaskFile(taskFilePath);
+        if (task) {
+          const filenameId = basename(taskFilePath, ".json");
+          if (task.id !== filenameId) {
+            console.error(
+              `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
+            );
+          }
+          const canonicalId = filenameId;
+          task.metadata = { ...task.metadata, ...forkJoinResponse.metadata };
+          task.id = canonicalId;
+          writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
+        }
+      }
+
+      // Persist autonomy in metadata
+      if (autonomy) {
+        forkJoinResponse.metadata.autonomy = true;
+      }
+
+      return forkJoinResponse;
     }
 
     // Determine action and whether retries incremented
