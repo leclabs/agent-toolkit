@@ -101,7 +101,7 @@ Customize workflows for your project with `/flow:init`.
          ▼                            ▼
 ┌──────────────────┐         ┌──────────────────┐
 │    Subagents     │         │    Workflows     │
-│  @flow:Planner   │         │    (DAGs)        │
+│  @flow:Planner   │         │                  │
 │  @flow:Developer │         └──────────────────┘
 │  @flow:Tester    │
 │  @flow:Reviewer  │
@@ -112,6 +112,7 @@ Customize workflows for your project with `/flow:init`.
 
 - [Flow Plugin](plugins/flow/README.md) -- commands, skills, workflows, and customization
 - [Navigator MCP Server](packages/agent-flow-navigator-mcp/README.md) -- workflow state machine
+- [Workflow Diagrams](.flow/diagrams/) -- mermaid diagrams for all workflows
 
 ## License
 

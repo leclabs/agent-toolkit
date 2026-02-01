@@ -1,6 +1,6 @@
 # Flow Plugin
 
-DAG-based workflow orchestration for AI agents. Flow provides structured, repeatable workflows that guide agents through complex tasks with automatic retry handling and human-in-the-loop escalation.
+Workflow orchestration for AI agents. Flow provides structured, repeatable workflows that guide agents through complex tasks with automatic retry handling and human-in-the-loop escalation.
 
 ## Overview
 
@@ -60,74 +60,74 @@ Skills are the internal orchestration interface used by the agent system:
 
 ## Workflows
 
-10 workflows ship in the catalog. Each defines a DAG with typed nodes, conditional edges, retry logic, and agent assignments.
+10 workflows ship in the catalog. Each defines a workflow with typed nodes, conditional edges, retry logic, and agent assignments.
 
 ### feature-development
 
-Full lifecycle for building features. Includes planning review gates and code review.
+Full lifecycle for building features. Includes planning review gates and code review. ([diagram](../../.flow/diagrams/feature-development.md))
 
 **Stages:** planning &rarr; development &rarr; verification &rarr; delivery
 **Steps:** parse_requirements &rarr; explore_codebase &rarr; create_plan &rarr; plan_review &rarr; implement &rarr; write_tests &rarr; run_tests &rarr; code_review &rarr; lint_format &rarr; commit &rarr; create_pr
 
 ### bug-fix
 
-Structured bug fixing with reproduction and regression testing.
+Structured bug fixing with reproduction and regression testing. ([diagram](../../.flow/diagrams/bug-fix.md))
 
 **Stages:** investigation &rarr; development &rarr; verification &rarr; delivery
 **Steps:** reproduce &rarr; investigate &rarr; write_fix &rarr; add_regression_test &rarr; verify_fix &rarr; lint_format &rarr; commit
 
 ### agile-task
 
-General development tasks with review.
+General development tasks with review. ([diagram](../../.flow/diagrams/agile-task.md))
 
 **Stages:** planning &rarr; development &rarr; verification &rarr; delivery
 **Steps:** analyze &rarr; implement &rarr; test &rarr; review &rarr; lint_format &rarr; commit
 
 ### quick-task
 
-Minimal workflow for small, straightforward tasks. No formal review gates.
+Minimal workflow for small, straightforward tasks. No formal review gates. ([diagram](../../.flow/diagrams/quick-task.md))
 
 **Stages:** planning &rarr; development &rarr; verification &rarr; delivery
 **Steps:** understand &rarr; execute &rarr; verify &rarr; lint_format &rarr; commit
 
 ### test-coverage
 
-Analyze coverage gaps and write tests to improve coverage.
+Analyze coverage gaps and write tests to improve coverage. ([diagram](../../.flow/diagrams/test-coverage.md))
 
 **Stages:** analysis &rarr; development &rarr; verification &rarr; delivery
 **Steps:** analyze_coverage &rarr; identify_gaps &rarr; write_tests &rarr; run_tests &rarr; review &rarr; lint_format &rarr; commit
 
 ### context-optimization
 
-Optimize agent context, instructions, and integration points.
+Optimize agent context, instructions, and integration points. ([diagram](../../.flow/diagrams/context-optimization.md))
 
 **Stages:** analysis &rarr; design &rarr; implementation &rarr; verification
 **Steps:** map_connections &rarr; identify_pathologies &rarr; design_improvements &rarr; review_design &rarr; implement &rarr; verify
 
 ### ui-reconstruction
 
-Reconstruct UI from screenshots or specifications using semantic intermediate representation.
+Reconstruct UI from screenshots or specifications using semantic intermediate representation. ([diagram](../../.flow/diagrams/ui-reconstruction.md))
 
 **Stages:** semantic-ir-extraction &rarr; ui-build-from-ir &rarr; unbiased-review &rarr; delivery
 **Steps:** extract_structure &rarr; extract_styles &rarr; extract_content &rarr; build_layout &rarr; build_components &rarr; build_styles &rarr; integrate &rarr; ir_review &rarr; visual_review &rarr; lint_format &rarr; commit
 
 ### refactor
 
-Intentional codebase restructuring following Functional Core / Imperative Shell principles.
+Intentional codebase restructuring following Functional Core / Imperative Shell principles. ([diagram](../../.flow/diagrams/refactor.md))
 
 **Stages:** analysis &rarr; planning &rarr; development &rarr; verification &rarr; delivery
 **Steps:** analyze_structure &rarr; identify_debt &rarr; classify_components &rarr; design_refactor &rarr; plan_review &rarr; extract_core &rarr; isolate_shell &rarr; run_tests &rarr; code_review &rarr; lint_format &rarr; commit
 
 ### build-review-murder-board
 
-Iterative build-review loop with level 5 scrutiny blind-shot review and 80% approval threshold.
+Iterative build-review loop with level 5 scrutiny blind-shot review and 80% approval threshold. ([diagram](../../.flow/diagrams/build-review-murder-board.md))
 
 **Stages:** development &rarr; verification &rarr; delivery
 **Steps:** build &rarr; review &rarr; lint_format &rarr; commit
 
 ### build-review-quick
 
-Iterative build-review loop with basic sanity check.
+Iterative build-review loop with basic sanity check. ([diagram](../../.flow/diagrams/build-review-quick.md))
 
 **Stages:** development &rarr; verification &rarr; delivery
 **Steps:** build &rarr; review &rarr; lint_format &rarr; commit
@@ -168,14 +168,14 @@ After editing, reload with `/flow:load`.
          ▼                            ▼
 ┌──────────────────┐         ┌──────────────────┐
 │    Subagents     │         │    Workflows     │
-│  @flow:*         │         │    (DAGs)        │
+│  @flow:*         │         │                  │
 └──────────────────┘         └──────────────────┘
 ```
 
 - **Orchestrator**: Coordinates workflow execution, delegates to subagents
 - **Navigator**: MCP server that evaluates workflow graphs and tracks state
 - **Subagents**: Specialized agents for each role
-- **Workflows**: DAG definitions with nodes, edges, and retry logic
+- **Workflows**: Definitions with nodes, edges, and retry logic
 
 ## Subagents
 
@@ -208,3 +208,4 @@ Action: Fix manually, then /flow:task-advance 1 passed
 
 - [Navigator MCP Server](../../packages/agent-flow-navigator-mcp/README.md) - Workflow state machine
 - [Workflow Catalog](../../packages/agent-flow-navigator-mcp/catalog/workflows/) - Built-in workflow definitions
+- [Workflow Diagrams](../../.flow/diagrams/) - Mermaid diagrams for all workflows

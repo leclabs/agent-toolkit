@@ -87,7 +87,7 @@ agent-toolkit (marketplace)
 | Component              | Name                                | Purpose                          |
 | ---------------------- | ----------------------------------- | -------------------------------- |
 | Marketplace            | `agent-toolkit`                     | Collection of agent tools        |
-| Plugin                 | `flow`                              | DAG-based workflow orchestration |
-| MCP Server flow config | `navigator`                         | Navigates through workflow DAGs  |
+| Plugin                 | `flow`                              | Workflow orchestration           |
+| MCP Server flow config | `navigator`                         | Navigates through workflows      |
 | MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package          |
 | Skills                 | `/flow:*`                           | User-facing commands             |
