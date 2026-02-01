@@ -76,6 +76,10 @@ npm run release
   - `packages/agent-flow-navigator-mcp/package.json`
 - `npm run release` — runs `npm whoami` to verify auth, then publishes both `@leclabs/agent-toolkit` and `@leclabs/agent-flow-navigator-mcp`. If auth fails, prints instructions to set the npm token.
 
+## MCP Server Restart
+
+After modifying files in `packages/agent-flow-navigator-mcp/` or `plugins/flow/`, **ask the user to restart the MCP server** before using any `/flow:*` skills (like `/flow:diagram`). The running server will have stale code until restarted.
+
 ## Naming Hierarchy
 
 ```
