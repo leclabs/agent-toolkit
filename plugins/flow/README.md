@@ -109,14 +109,14 @@ Optimize agent context, instructions, and integration points. ([diagram](../../.
 Reconstruct UI from screenshots or specifications using semantic intermediate representation. ([diagram](../../.flow/diagrams/ui-reconstruction.md))
 
 **Stages:** semantic-ir-extraction &rarr; ui-build-from-ir &rarr; unbiased-review &rarr; delivery
-**Steps:** extract_structure &rarr; extract_styles &rarr; extract_content &rarr; build_layout &rarr; build_components &rarr; build_styles &rarr; integrate &rarr; ir_review &rarr; visual_review &rarr; lint_format &rarr; commit
+**Steps:** ir_component_tree &rarr; ir_feature_boundary &rarr; ir_interactivity &rarr; ir_business_object &rarr; ir_annotate &rarr; ir_ascii &rarr; ir_review &rarr; uiRebuild_build &rarr; uiRebuild_review &rarr; final_review &rarr; lint_format &rarr; commit
 
 ### refactor
 
 Intentional codebase restructuring following Functional Core / Imperative Shell principles. ([diagram](../../.flow/diagrams/refactor.md))
 
 **Stages:** analysis &rarr; planning &rarr; development &rarr; verification &rarr; delivery
-**Steps:** analyze_structure &rarr; identify_debt &rarr; classify_components &rarr; design_refactor &rarr; plan_review &rarr; extract_core &rarr; isolate_shell &rarr; run_tests &rarr; code_review &rarr; lint_format &rarr; commit
+**Steps:** analyze_structure &rarr; identify_debt &rarr; classify_components &rarr; design_refactor &rarr; plan_review &rarr; extract_core &rarr; isolate_shell &rarr; write_tests &rarr; run_tests &rarr; code_review &rarr; lint_format &rarr; commit
 
 ### build-review-murder-board
 
@@ -136,15 +136,15 @@ Iterative build-review loop with basic sanity check. ([diagram](../../.flow/diag
 
 Parallel investigation workflow: triage, then fork into reproduce, code archaeology, and git forensics before synthesizing findings. ([diagram](../../.flow/diagrams/bug-hunt.md))
 
-**Stages:** triage &rarr; investigation (parallel) &rarr; synthesis &rarr; development &rarr; delivery
-**Steps:** triage &rarr; fork(reproduce, code_archaeology, git_forensics) &rarr; synthesize &rarr; write_fix &rarr; add_regression_test &rarr; commit
+**Stages:** planning &rarr; investigation (parallel) &rarr; development &rarr; verification &rarr; delivery
+**Steps:** triage &rarr; fork(reproduce, code_archaeology, git_forensics) &rarr; synthesize &rarr; write_fix &rarr; add_regression_test &rarr; verify_fix &rarr; lint_format &rarr; commit
 
 ### context-gather
 
 Parallel context gathering: fork into repo info, system info, and weather report before summarizing. ([diagram](../../.flow/diagrams/context-gather.md))
 
-**Stages:** gathering (parallel) &rarr; analysis &rarr; summary
-**Steps:** fork(repo_info, system_info, weather_report) &rarr; repo_analyze &rarr; summarize
+**Stages:** investigation (parallel) &rarr; planning
+**Steps:** fork(repo_info, system_info, weather_info) &rarr; repo_analyze &rarr; summarize
 
 ### execute
 
