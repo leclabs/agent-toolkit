@@ -1,23 +1,17 @@
-## Workflow: HITL Test
+## Workflow: Execute
 
-Minimal workflow for testing HITL recovery: work, gate, escalate, human resumes.
+Single-step workflow. Just do the thing.
 
 ### Diagram
 
 ```mermaid
 flowchart TD
     start(("Start"))
-    work["Do Work<br/><small>Developer</small>"]
-    check{"Check"}
+    execute["Execute<br/><small>Developer</small>"]
     end_success[["Done"]]
-    hitl_blocked{{"Blocked"}}
 
-    start --> work
-    work --> check
-    check -->|passed| end_success
-    check -->|failed| work
-    check -->|failed| hitl_blocked
-    hitl_blocked -->|passed| work
+    start --> execute
+    execute --> end_success
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -27,13 +21,10 @@ flowchart TD
     classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px
     class start startStep
     class end_success successStep
-    class hitl_blocked hitlStep
-    class check gateStep
 ```
 
 ### Step Instructions
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| development | work | Do Work | flow:Developer | Do the thing |
-| verification | check | Check | flow:Reviewer | Pass or fail |
+| development | execute | Execute | flow:Developer | Do the work described in the task. |

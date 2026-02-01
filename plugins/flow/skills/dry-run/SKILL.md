@@ -203,8 +203,8 @@ For each branch, create a child task using `TaskCreate` directly with the enrich
 
 ```
 TaskCreate(
-  subject: "#{parentId}/{branchName} Dry-run: <workflowId>
-→ <workflowType> · <entryStep> (<subagent>)",
+  subject: "#{parentId}/{branchName} {userDescription}
+→ {workflowType} · {entryStep} ({subagent})",
   activeForm: "<stepInstructions.name> (<subagent>)",
   description: "<orchestratorInstructions>",
   metadata: {

@@ -59,7 +59,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
     } else if (termType === "hitl" || termType === "failure") {
       lines.push(`    ${stepId}{{"${label}"}}`);
     } else if (step.type === "fork" || step.type === "join") {
-      lines.push(`    ${stepId}{{"${label}"}}`);
+      lines.push(`    ${stepId}(["${label}"])`);
     } else if (step.type === "gate") {
       lines.push(`    ${stepId}{"${label}"}`);
     } else {
@@ -149,6 +149,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
     "### Step Instructions",
     "",
     ...tableRows,
+    "",
   ].join("\n");
 }
 

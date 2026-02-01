@@ -49,10 +49,10 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| analysis | analyze_coverage | Analyze Coverage | Tester | Run coverage tools and identify untested code paths |
-| analysis | identify_gaps | Identify Gaps | Planner | Prioritize coverage gaps by risk and importance |
-| development | write_tests | Write Tests | Tester | Write tests for identified gaps |
-| verification | run_tests | Run Tests | Tester | Execute test suite and verify new tests pass |
-| verification | review | Review | Reviewer | Review test quality and coverage improvement |
-| delivery | lint_format | Lint & Format | Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Tests | Developer | Commit new tests with coverage metrics |
+| analysis | analyze_coverage | Analyze Coverage | flow:Tester | Run coverage tools and identify untested code paths |
+| analysis | identify_gaps | Identify Gaps | flow:Planner | Prioritize coverage gaps by risk and importance |
+| development | write_tests | Write Tests | flow:Tester | Write tests for identified gaps |
+| verification | run_tests | Run Tests | flow:Tester | Execute test suite and verify new tests pass |
+| verification | review | Review | flow:Reviewer | Review test quality and coverage improvement |
+| delivery | lint_format | Lint & Format | flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Tests | flow:Developer | Commit new tests with coverage metrics |

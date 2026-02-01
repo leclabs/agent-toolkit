@@ -280,7 +280,7 @@ ${description || "{task description}"}`;
  * Produces the same data buildNavigateResponse() would for the entry step,
  * so the orchestrator can create child tasks without extra Navigate calls.
  */
-function buildBranchInfo(workflowType, branchName, branchDef, nodes, edges, description, projectRoot, sourceRoot) {
+function buildBranchInfo(workflowType, branchDef, nodes, edges, description, projectRoot, sourceRoot, joinNodeId) {
   const entryStepId = branchDef.entryStep;
   const entryStepDef = nodes[entryStepId];
   if (!entryStepDef) return { ...branchDef, error: `Entry step '${entryStepId}' not found` };
@@ -300,12 +300,9 @@ function buildBranchInfo(workflowType, branchName, branchDef, nodes, edges, desc
     workflowType, entryStepId, stage, subagent, stepInstructions, description, contextBlock
   );
 
-  // Single-step branch = all outgoing edges lead to join nodes
+  // Single-step branch = all outgoing edges lead to this fork's join node
   const outgoing = edges.filter(e => e.from === entryStepId);
-  const joinNodeIds = new Set(
-    Object.entries(nodes).filter(([, n]) => n.type === "join").map(([id]) => id)
-  );
-  const multiStep = outgoing.some(e => !joinNodeIds.has(e.to));
+  const multiStep = outgoing.some(e => e.to !== joinNodeId);
 
   return {
     entryStep: entryStepId,
@@ -326,7 +323,7 @@ function buildBranchInfo(workflowType, branchName, branchDef, nodes, edges, desc
  * Fork responses include enriched per-branch info so the orchestrator can create
  * child tasks without additional Navigate calls.
  */
-function buildForkJoinResponse(workflowType, stepId, stepDef, action, retryCount = 0, sourceRoot = null, nodes = null, edges = null, description = null, projectRoot = null) {
+function buildForkJoinResponse(workflowType, stepId, stepDef, action, { retryCount = 0, sourceRoot = null, nodes = null, edges = null, description = null, projectRoot = null } = {}) {
   const base = {
     currentStep: stepId,
     stage: null,
@@ -355,7 +352,7 @@ function buildForkJoinResponse(workflowType, stepId, stepDef, action, retryCount
       enrichedBranches = {};
       for (const [branchName, branchDef] of Object.entries(stepDef.branches)) {
         enrichedBranches[branchName] = buildBranchInfo(
-          workflowType, branchName, branchDef, nodes, edges, description, projectRoot, sourceRoot
+          workflowType, branchDef, nodes, edges, description, projectRoot, sourceRoot, stepDef.join
         );
       }
     } else {
@@ -444,6 +441,54 @@ function buildNavigateResponse(
     metadata,
     sourceRoot,
   };
+}
+
+/**
+ * Write-through: persist Navigate response state to a task file.
+ * Handles id correction, metadata merge, and optional subject/activeForm/description updates.
+ *
+ * @param {string} taskFilePath - Path to the task JSON file
+ * @param {Object} response - Navigate response object
+ * @param {Object} [opts]
+ * @param {boolean} [opts.metadataOnly=false] - Only merge metadata (skip subject/activeForm/description)
+ */
+function writeThrough(taskFilePath, response, { metadataOnly = false } = {}) {
+  const task = readTaskFile(taskFilePath);
+  if (!task) return;
+
+  const filenameId = basename(taskFilePath, ".json");
+  if (task.id !== filenameId) {
+    console.error(
+      `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
+    );
+  }
+
+  task.metadata = { ...task.metadata, ...response.metadata };
+  task.id = filenameId;
+
+  if (!metadataOnly) {
+    const userDesc = task.metadata?.userDescription || "";
+    task.subject = buildTaskSubject(
+      filenameId,
+      userDesc,
+      response.metadata.workflowType,
+      response.currentStep,
+      response.subagent,
+      response.terminal,
+      response.maxRetries,
+      response.metadata.retryCount
+    );
+    task.activeForm = buildTaskActiveForm(
+      response.stepInstructions?.name || response.currentStep,
+      response.subagent,
+      response.terminal
+    );
+    if (response.orchestratorInstructions) {
+      task.description = response.orchestratorInstructions;
+    }
+  }
+
+  writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
 }
 
 export class WorkflowEngine {
@@ -701,7 +746,7 @@ export class WorkflowEngine {
 
       // Fork/join at start position — return control-flow response
       if (isForkJoinNode(targetStepDef)) {
-        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, "start", 0, sourceRoot, nodes, wfDef.edges, description, projectRoot);
+        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, "start", { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot });
       }
 
       return buildNavigateResponse(
@@ -727,7 +772,7 @@ export class WorkflowEngine {
 
       // Fork/join — return control-flow response
       if (isForkJoinNode(stepDef)) {
-        return buildForkJoinResponse(workflowType, currentStep, stepDef, "current", retryCount, sourceRoot, nodes, wfDef.edges, description, projectRoot);
+        return buildForkJoinResponse(workflowType, currentStep, stepDef, "current", { retryCount, sourceRoot, nodes, edges: wfDef.edges, description, projectRoot });
       }
 
       return buildNavigateResponse(
@@ -774,93 +819,24 @@ export class WorkflowEngine {
       // If post-join step is another fork/join, return control-flow response
       if (isForkJoinNode(postJoinStepDef)) {
         const forkJoinResponse = buildForkJoinResponse(
-          workflowType,
-          joinEvaluation.nextStep,
-          postJoinStepDef,
-          postJoinStepDef.type,
-          0,
-          sourceRoot,
-          nodes,
-          wfDef.edges,
-          description,
-          projectRoot
+          workflowType, joinEvaluation.nextStep, postJoinStepDef, postJoinStepDef.type,
+          { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot }
         );
 
-        if (taskFilePath) {
-          const task = readTaskFile(taskFilePath);
-          if (task) {
-            const filenameId = basename(taskFilePath, ".json");
-            if (task.id !== filenameId) {
-              console.error(
-                `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-              );
-            }
-            task.metadata = { ...task.metadata, ...forkJoinResponse.metadata };
-            task.id = filenameId;
-            writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-          }
-        }
-
-        if (autonomy) {
-          forkJoinResponse.metadata.autonomy = true;
-        }
+        if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });
+        if (autonomy) forkJoinResponse.metadata.autonomy = true;
 
         return forkJoinResponse;
       }
 
       // Normal post-join step — build standard response
       let postJoinResponse = buildNavigateResponse(
-        workflowType,
-        joinEvaluation.nextStep,
-        postJoinStepDef,
-        "advance",
-        false,
-        0, // retryCount resets after join
-        description,
-        true, // resetRetryCount
-        projectRoot,
-        sourceRoot
+        workflowType, joinEvaluation.nextStep, postJoinStepDef, "advance",
+        false, 0, description, true, projectRoot, sourceRoot
       );
 
-      if (autonomy) {
-        postJoinResponse.metadata.autonomy = true;
-      }
-
-      // Write-through: persist state transition to task file
-      if (taskFilePath) {
-        const task = readTaskFile(taskFilePath);
-        if (task) {
-          const filenameId = basename(taskFilePath, ".json");
-          if (task.id !== filenameId) {
-            console.error(
-              `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-            );
-          }
-          const canonicalId = filenameId;
-          const userDesc = task.metadata?.userDescription || "";
-          task.metadata = { ...task.metadata, ...postJoinResponse.metadata };
-          task.subject = buildTaskSubject(
-            canonicalId,
-            userDesc,
-            postJoinResponse.metadata.workflowType,
-            postJoinResponse.currentStep,
-            postJoinResponse.subagent,
-            postJoinResponse.terminal,
-            postJoinResponse.maxRetries,
-            postJoinResponse.metadata.retryCount
-          );
-          task.activeForm = buildTaskActiveForm(
-            postJoinResponse.stepInstructions?.name || postJoinResponse.currentStep,
-            postJoinResponse.subagent,
-            postJoinResponse.terminal
-          );
-          if (postJoinResponse.orchestratorInstructions) {
-            task.description = postJoinResponse.orchestratorInstructions;
-          }
-          task.id = canonicalId;
-          writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-        }
-      }
+      if (autonomy) postJoinResponse.metadata.autonomy = true;
+      if (taskFilePath) writeThrough(taskFilePath, postJoinResponse);
 
       return postJoinResponse;
     }
@@ -883,39 +859,12 @@ export class WorkflowEngine {
     // Fork/join on advance — return control-flow response
     if (isForkJoinNode(nextStepDef)) {
       const forkJoinResponse = buildForkJoinResponse(
-        workflowType,
-        evaluation.nextStep,
-        nextStepDef,
-        nextStepDef.type, // "fork" or "join"
-        0,
-        sourceRoot,
-        nodes,
-        wfDef.edges,
-        description,
-        projectRoot
+        workflowType, evaluation.nextStep, nextStepDef, nextStepDef.type,
+        { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot }
       );
 
-      // Write-through for fork/join advance
-      if (taskFilePath) {
-        const task = readTaskFile(taskFilePath);
-        if (task) {
-          const filenameId = basename(taskFilePath, ".json");
-          if (task.id !== filenameId) {
-            console.error(
-              `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-            );
-          }
-          const canonicalId = filenameId;
-          task.metadata = { ...task.metadata, ...forkJoinResponse.metadata };
-          task.id = canonicalId;
-          writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-        }
-      }
-
-      // Persist autonomy in metadata
-      if (autonomy) {
-        forkJoinResponse.metadata.autonomy = true;
-      }
+      if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });
+      if (autonomy) forkJoinResponse.metadata.autonomy = true;
 
       return forkJoinResponse;
     }
@@ -985,44 +934,7 @@ export class WorkflowEngine {
     }
 
     // Write-through: persist state transition and presentation to task file
-    // IMPORTANT: preserve task.id — Claude Code's task system requires filename
-    // and id field to match ({id}.json must contain "id": "{id}")
-    if (taskFilePath) {
-      const task = readTaskFile(taskFilePath);
-      if (task) {
-        // Derive canonical ID from filename — this is the source of truth.
-        // Auto-corrects if task.id was corrupted by an external write.
-        const filenameId = basename(taskFilePath, ".json");
-        if (task.id !== filenameId) {
-          console.error(
-            `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-          );
-        }
-        const canonicalId = filenameId;
-        const userDesc = task.metadata?.userDescription || "";
-        task.metadata = { ...task.metadata, ...response.metadata };
-        task.subject = buildTaskSubject(
-          canonicalId,
-          userDesc,
-          response.metadata.workflowType,
-          response.currentStep,
-          response.subagent,
-          response.terminal,
-          response.maxRetries,
-          response.metadata.retryCount
-        );
-        task.activeForm = buildTaskActiveForm(
-          response.stepInstructions?.name || response.currentStep,
-          response.subagent,
-          response.terminal
-        );
-        if (response.orchestratorInstructions) {
-          task.description = response.orchestratorInstructions;
-        }
-        task.id = canonicalId;
-        writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-      }
-    }
+    if (taskFilePath) writeThrough(taskFilePath, response);
 
     return response;
   }

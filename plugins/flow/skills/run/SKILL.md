@@ -243,9 +243,9 @@ Then call TaskUpdate to sync status (Navigator's write-through has already updat
 After each step, show brief progress:
 
 ```
-✓ parse_requirements (@flow:Planner) → passed
-✓ implement (@flow:Developer) → passed
-⟳ test (@flow:Tester) → in progress...
+✓ parse_requirements (flow:Planner) → passed
+✓ implement (flow:Developer) → passed
+⟳ test (flow:Tester) → in progress...
 ```
 
 ### Fork/Join Handling
@@ -390,7 +390,7 @@ After all branch Task calls complete:
 **Progress reporting for fork/join:**
 
 ```
-⑂ Fork: fork_impl → 3 branches
+⑂ Fork: fork_investigate → 3 branches
   ├─ reproduce (#42): ✓ passed
   ├─ code_archaeology (#43): ✓ passed
   └─ git_forensics (#44): ✓ passed
@@ -415,7 +415,7 @@ Note: HITL does **not** automatically exit the loop. The user is given the choic
 **Success:**
 
 ```
-Completed: #1 Add user auth ✨ (@flow:Developer)
+Completed: #1 Add user auth ✨ (flow:Developer)
  → feature-development · end
  → end_success · completed ✓
 

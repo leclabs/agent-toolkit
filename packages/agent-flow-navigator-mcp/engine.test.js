@@ -2926,4 +2926,75 @@ describe("fork/join", () => {
     assert.ok(result.fork.branches.frontend.orchestratorInstructions);
     assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
   });
+
+  it("should return error info when branch entry step is not found", () => {
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_bad: {
+          type: "fork",
+          name: "Bad Fork",
+          branches: {
+            good: { entryStep: "step_a", description: "Valid branch" },
+            bad: { entryStep: "nonexistent", description: "Invalid branch" },
+          },
+          join: "join_bad",
+        },
+        step_a: { type: "task", name: "Step A", agent: "Developer", stage: "dev" },
+        join_bad: { type: "join", name: "Join", fork: "fork_bad", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_bad" },
+        { from: "fork_bad", to: "step_a" },
+        { from: "step_a", to: "join_bad" },
+        { from: "join_bad", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("bad-branch-wf", def);
+
+    const result = engine.navigate({ workflowType: "bad-branch-wf" });
+
+    assert.strictEqual(result.action, "fork");
+    // Good branch is enriched normally
+    assert.strictEqual(result.fork.branches.good.subagent, "flow:Developer");
+    assert.ok(result.fork.branches.good.stepInstructions);
+    // Bad branch has error
+    assert.ok(result.fork.branches.bad.error);
+    assert.ok(result.fork.branches.bad.error.includes("nonexistent"));
+  });
+
+  it("should detect multiStep only against the fork's own join node", () => {
+    // Workflow with two fork/join pairs — branch edges to a different join should be multiStep
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_a: {
+          type: "fork", name: "Fork A",
+          branches: { x: { entryStep: "step_x", description: "Branch X" } },
+          join: "join_a",
+        },
+        step_x: { type: "task", name: "Step X", agent: "Developer" },
+        step_y: { type: "task", name: "Step Y", agent: "Developer" },
+        join_a: { type: "join", name: "Join A", fork: "fork_a", strategy: "all-pass" },
+        join_b: { type: "join", name: "Join B", fork: "fork_a", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_a" },
+        { from: "fork_a", to: "step_x" },
+        // step_x goes to step_y (not join_a), so it's multi-step
+        { from: "step_x", to: "step_y", on: "passed" },
+        { from: "step_y", to: "join_a" },
+        { from: "join_a", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("multi-join-wf", def);
+
+    const result = engine.navigate({ workflowType: "multi-join-wf" });
+
+    assert.strictEqual(result.action, "fork");
+    // step_x → step_y (not join_a), so multiStep must be true
+    assert.strictEqual(result.fork.branches.x.multiStep, true);
+  });
 });

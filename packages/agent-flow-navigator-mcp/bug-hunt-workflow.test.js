@@ -733,3 +733,46 @@ describe("bug-hunt workflow HITL resume", () => {
     assert.strictEqual(regTest.nextStep, "add_regression_test");
   });
 });
+
+// =============================================================================
+// Context-gather workflow - failure edge and multi-step validation
+// =============================================================================
+
+const CONTEXT_GATHER_PATH = join(__dirname, "catalog", "workflows", "context-gather.json");
+
+function loadContextGatherWorkflow() {
+  return JSON.parse(readFileSync(CONTEXT_GATHER_PATH, "utf-8"));
+}
+
+describe("context-gather workflow edge coverage", () => {
+  let store, engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("context-gather", loadContextGatherWorkflow());
+  });
+
+  it("should have failure edge from repo_info to join_gather", () => {
+    const result = engine.evaluateEdge("context-gather", "repo_info", "failed", 0);
+    assert.strictEqual(result.nextStep, "join_gather");
+  });
+
+  it("should advance repo_info to repo_analyze on passed", () => {
+    const result = engine.evaluateEdge("context-gather", "repo_info", "passed", 0);
+    assert.strictEqual(result.nextStep, "repo_analyze");
+  });
+
+  it("should mark repo branch as multiStep and system/weather as single-step", () => {
+    const result = engine.navigate({ workflowType: "context-gather" });
+    assert.strictEqual(result.action, "fork");
+    assert.strictEqual(result.fork.branches.repo.multiStep, true);
+    assert.strictEqual(result.fork.branches.system.multiStep, false);
+    assert.strictEqual(result.fork.branches.weather.multiStep, false);
+  });
+
+  it("should use Investigator for system_info branch", () => {
+    const result = engine.navigate({ workflowType: "context-gather" });
+    assert.strictEqual(result.fork.branches.system.subagent, "flow:Investigator");
+  });
+});

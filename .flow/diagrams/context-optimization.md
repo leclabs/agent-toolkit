@@ -47,9 +47,9 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| analysis | map_connections | Map Connections | Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents) |
-| analysis | identify_pathologies | Identify Pathologies | Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing |
-| design | design_improvements | Design Improvements | Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
-| design | review_design | Review Design | Reviewer | Verify improvements don't sacrifice meaning for brevity |
-| implementation | implement | Implement | Developer | Apply the optimizations to actual files and configurations |
-| verification | verify | Verify | Tester | Test that agents still function correctly with optimized context |
+| analysis | map_connections | Map Connections | flow:Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents) |
+| analysis | identify_pathologies | Identify Pathologies | flow:Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing |
+| design | design_improvements | Design Improvements | flow:Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
+| design | review_design | Review Design | flow:Reviewer | Verify improvements don't sacrifice meaning for brevity |
+| implementation | implement | Implement | flow:Developer | Apply the optimizations to actual files and configurations |
+| verification | verify | Verify | flow:Tester | Test that agents still function correctly with optimized context |

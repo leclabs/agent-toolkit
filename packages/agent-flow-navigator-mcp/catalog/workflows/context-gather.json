@@ -31,7 +31,7 @@
       "type": "task",
       "name": "System Information",
       "description": "Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands.",
-      "agent": "Developer",
+      "agent": "Investigator",
       "stage": "investigation"
     },
     "weather_info": {
@@ -90,6 +90,7 @@
     { "from": "system_info", "to": "join_gather" },
     { "from": "weather_info", "to": "join_gather" },
     { "from": "repo_info", "to": "repo_analyze", "on": "passed" },
+    { "from": "repo_info", "to": "join_gather", "on": "failed" },
     { "from": "repo_analyze", "to": "join_gather" },
     { "from": "join_gather", "to": "summarize", "on": "passed", "label": "All branches complete" },
     { "from": "join_gather", "to": "hitl_failed", "on": "failed", "label": "One or more branches failed" },

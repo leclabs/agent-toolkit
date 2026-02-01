@@ -14,7 +14,7 @@ Create a new flow task from issues, requirements, or descriptions.
 - `workflowType` - workflow type
 - `--run` - autorun after creation
 
-**Signiture:** `/flow:task-create <description> [<workflowType>] [<stepId>] [--run]`
+**Signature:** `/flow:task-create <description> [<workflowType>] [<stepId>] [--run]`
 
 | Command | Description |
 | --------------------------------------------------------------------------- | ------------------------------------------------------- |
@@ -63,8 +63,8 @@ Call `TaskCreate` with subject formatted to show workflow position. The subject 
 ```
 TaskCreate(
   subject: "#1 Add user authentication ✨
-→ feature-development · parse_requirements (@flow:Planner)",
-  activeForm: "Parse Requirements (@flow:Planner)",
+→ feature-development · parse_requirements (flow:Planner)",
+  activeForm: "Parse Requirements (flow:Planner)",
   description: "{response.orchestratorInstructions}",
   metadata: {
     userDescription: "Add user authentication",
@@ -110,10 +110,10 @@ Examples:
 
 ```
 #1 Add user auth ✨
-→ feature-development · parse_requirements (@flow:Planner)
+→ feature-development · parse_requirements (flow:Planner)
 
 #3 Add user auth ✨
-→ feature-development · code_review (@flow:Reviewer) · retries: 0/2
+→ feature-development · code_review (flow:Reviewer) · retries: 0/2
 
 #7 Fix login bug 🐛
 → bug-fix · verify (direct)

@@ -50,10 +50,10 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| investigation | reproduce | Reproduce Bug | Investigator | Understand the bug and create a reliable reproduction case |
-| investigation | investigate | Investigate | Investigator | Find root cause by tracing code paths and debugging |
-| development | write_fix | Write Fix | Developer | Implement the fix with minimal changes |
-| development | add_regression_test | Add Regression Test | Tester | Write a test that would have caught this bug |
-| verification | verify_fix | Verify Fix | Tester | Run all tests and verify the bug is fixed |
-| delivery | lint_format | Lint & Format | Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | Developer | Commit the fix and regression test with a descriptive message |
+| investigation | reproduce | Reproduce Bug | flow:Investigator | Understand the bug and create a reliable reproduction case |
+| investigation | investigate | Investigate | flow:Investigator | Find root cause by tracing code paths and debugging |
+| development | write_fix | Write Fix | flow:Developer | Implement the fix with minimal changes |
+| development | add_regression_test | Add Regression Test | flow:Tester | Write a test that would have caught this bug |
+| verification | verify_fix | Verify Fix | flow:Tester | Run all tests and verify the bug is fixed |
+| delivery | lint_format | Lint & Format | flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | flow:Developer | Commit the fix and regression test with a descriptive message |
