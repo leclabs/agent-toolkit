@@ -23,6 +23,7 @@ flowchart TD
     classDef successStep fill:#87CEEB,stroke:#4169E1
     classDef hitlStep fill:#FFB6C1,stroke:#DC143C
     classDef gateStep fill:#E6E6FA,stroke:#9370DB
+    classDef forkJoinStep fill:#FFEAA7,stroke:#FDCB6E
     classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px
     class start startStep
     class end_success successStep
@@ -32,7 +33,7 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step  | Name    | Agent           | Instructions |
-| ------------ | ----- | ------- | --------------- | ------------ |
-| development  | work  | Do Work | @flow:Developer | Do the thing |
-| verification | check | Check   | @flow:Reviewer  | Pass or fail |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| development | work | Do Work | Developer | Do the thing |
+| verification | check | Check | Reviewer | Pass or fail |

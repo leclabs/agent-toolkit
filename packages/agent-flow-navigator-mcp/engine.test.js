@@ -282,7 +282,7 @@ describe("WorkflowEngine", () => {
       assert.strictEqual(result.currentStep, "analyze");
       assert.strictEqual(result.action, "start");
       assert.strictEqual(result.stage, "planning");
-      assert.strictEqual(result.subagent, "planner");
+      assert.strictEqual(result.subagent, "flow:planner");
       assert.strictEqual(result.terminal, null);
       assert.ok(result.stepInstructions);
       assert.strictEqual(result.stepInstructions.name, "Analyze");
@@ -1077,7 +1077,7 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "implement");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "development");
-        assert.strictEqual(result.subagent, "Developer");
+        assert.strictEqual(result.subagent, "flow:Developer");
         assert.strictEqual(result.terminal, null);
         assert.ok(result.stepInstructions);
         assert.strictEqual(result.metadata.currentStep, "implement");
@@ -1092,11 +1092,11 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "review");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "verification");
-        assert.strictEqual(result.subagent, "Reviewer");
+        assert.strictEqual(result.subagent, "flow:Reviewer");
         assert.strictEqual(result.maxRetries, 2);
       });
 
-      it("should start at a fork step and return fork response", () => {
+      it("should start at a fork step and return enriched fork response", () => {
         store.loadDefinition("mid-wf", createMidFlowWorkflow());
 
         const result = engine.navigate({ workflowType: "mid-wf", stepId: "fork_impl" });
@@ -1105,8 +1105,15 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.action, "fork");
         assert.ok(result.fork);
         assert.strictEqual(result.fork.joinStep, "join_impl");
+        assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+        // Enriched branch data
         assert.ok(result.fork.branches.frontend);
+        assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+        assert.strictEqual(result.fork.branches.frontend.stage, "development");
+        assert.ok(result.fork.branches.frontend.stepInstructions);
         assert.ok(result.fork.branches.backend);
+        assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
       });
 
       it("should throw for non-existent step", () => {
@@ -2204,12 +2211,16 @@ describe("Helper functions", () => {
   });
 
   describe("toSubagentRef", () => {
-    it("should pass through agent ID as-is", () => {
-      assert.strictEqual(toSubagentRef("Developer"), "Developer");
+    it("should prefix bare agent names with flow:", () => {
+      assert.strictEqual(toSubagentRef("Developer"), "flow:Developer");
     });
 
-    it("should pass through prefixed IDs as-is", () => {
-      assert.strictEqual(toSubagentRef("@flow:developer"), "@flow:developer");
+    it("should normalize @flow: display notation to flow:", () => {
+      assert.strictEqual(toSubagentRef("@flow:Developer"), "flow:Developer");
+    });
+
+    it("should keep flow: prefix as-is", () => {
+      assert.strictEqual(toSubagentRef("flow:Developer"), "flow:Developer");
     });
 
     it("should return null for falsy input", () => {
@@ -2217,7 +2228,7 @@ describe("Helper functions", () => {
       assert.strictEqual(toSubagentRef(""), null);
     });
 
-    it("should pass through namespaced IDs as-is", () => {
+    it("should pass through non-flow namespaced IDs as-is", () => {
       assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
     });
   });
@@ -2636,7 +2647,7 @@ describe("fork/join", () => {
     };
   }
 
-  it("should return action 'fork' with branch metadata when navigating to fork node", () => {
+  it("should return action 'fork' with enriched branch metadata when navigating to fork node", () => {
     const def = createForkJoinWorkflow();
     store.loadDefinition("fork-wf", def);
 
@@ -2659,10 +2670,30 @@ describe("fork/join", () => {
       assert.strictEqual(result.action, "fork");
       assert.ok(result.fork);
       assert.strictEqual(result.fork.joinStep, "join_impl");
-      assert.ok(result.fork.branches.frontend);
-      assert.strictEqual(result.fork.branches.frontend.entryStep, "impl_frontend");
-      assert.ok(result.fork.branches.backend);
-      assert.strictEqual(result.fork.branches.backend.entryStep, "impl_backend");
+      assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+      // Frontend branch — enriched fields
+      const frontend = result.fork.branches.frontend;
+      assert.ok(frontend);
+      assert.strictEqual(frontend.entryStep, "impl_frontend");
+      assert.strictEqual(frontend.description, "Build UI");
+      assert.strictEqual(frontend.subagent, "flow:Developer");
+      assert.strictEqual(frontend.stage, "development");
+      assert.ok(frontend.stepInstructions);
+      assert.strictEqual(frontend.stepInstructions.name, "Implement Frontend");
+      assert.ok(frontend.orchestratorInstructions);
+      assert.strictEqual(frontend.multiStep, true); // impl_frontend → test_frontend → join
+      assert.strictEqual(frontend.maxRetries, 0);
+      assert.ok(frontend.metadata);
+      assert.strictEqual(frontend.metadata.workflowType, "fork-wf");
+      assert.strictEqual(frontend.metadata.currentStep, "impl_frontend");
+
+      // Backend branch — enriched fields
+      const backend = result.fork.branches.backend;
+      assert.ok(backend);
+      assert.strictEqual(backend.entryStep, "impl_backend");
+      assert.strictEqual(backend.subagent, "flow:Developer");
+      assert.strictEqual(backend.multiStep, true); // impl_backend → test_backend → join
     } finally {
       rmSync(taskDir, { recursive: true });
     }
@@ -2833,5 +2864,66 @@ describe("fork/join", () => {
     } finally {
       rmSync(taskDir, { recursive: true });
     }
+  });
+
+  it("should mark single-step branches as multiStep=false", () => {
+    // Workflow where branches go directly to join (no intermediate steps)
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_gather: {
+          type: "fork",
+          name: "Fork Gather",
+          branches: {
+            alpha: { entryStep: "gather_alpha", description: "Gather alpha data" },
+            beta: { entryStep: "gather_beta", description: "Gather beta data" },
+          },
+          join: "join_gather",
+        },
+        gather_alpha: { type: "task", name: "Gather Alpha", agent: "Investigator", stage: "investigation" },
+        gather_beta: { type: "task", name: "Gather Beta", agent: "Investigator", stage: "investigation" },
+        join_gather: { type: "join", name: "Join Gather", fork: "fork_gather", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_gather" },
+        { from: "fork_gather", to: "gather_alpha" },
+        { from: "fork_gather", to: "gather_beta" },
+        { from: "gather_alpha", to: "join_gather", on: "passed" },
+        { from: "gather_beta", to: "join_gather", on: "passed" },
+        { from: "join_gather", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("single-step-fork", def);
+
+    const result = engine.navigate({ workflowType: "single-step-fork" });
+
+    assert.strictEqual(result.currentStep, "fork_gather");
+    assert.strictEqual(result.action, "fork");
+
+    // Both branches should be single-step (entry step edges only go to join)
+    assert.strictEqual(result.fork.branches.alpha.multiStep, false);
+    assert.strictEqual(result.fork.branches.beta.multiStep, false);
+    assert.strictEqual(result.fork.branches.alpha.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.branches.beta.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+  });
+
+  it("should include enriched fork data on mid-flow start with stepId", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const result = engine.navigate({ workflowType: "fork-wf", stepId: "fork_impl" });
+
+    assert.strictEqual(result.currentStep, "fork_impl");
+    assert.strictEqual(result.action, "fork");
+    assert.ok(result.fork);
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+    // Branches should have enriched data
+    assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+    assert.ok(result.fork.branches.frontend.stepInstructions);
+    assert.ok(result.fork.branches.frontend.orchestratorInstructions);
+    assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
   });
 });

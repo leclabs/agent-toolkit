@@ -27,11 +27,13 @@ flowchart TD
     lint_format -->|failed| implement
     lint_format -->|failed| hitl_failed
     commit --> end_success
+    hitl_failed -->|passed| implement
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
     classDef hitlStep fill:#FFB6C1,stroke:#DC143C
     classDef gateStep fill:#E6E6FA,stroke:#9370DB
+    classDef forkJoinStep fill:#FFEAA7,stroke:#FDCB6E
     classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px
     class start startStep
     class end_success successStep
@@ -41,11 +43,11 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step        | Name           | Agent           | Instructions                                                |
-| ------------ | ----------- | -------------- | --------------- | ----------------------------------------------------------- |
-| planning     | analyze     | Analyze        | @flow:Planner   | Understand requirements and plan approach                   |
-| development  | implement   | Implement      | @flow:Developer | Write the code or make changes                              |
-| verification | test        | Test           | @flow:Tester    | Verify the implementation works correctly                   |
-| verification | review      | Review         | @flow:Reviewer  | Review code quality and correctness                         |
-| delivery     | lint_format | Lint & Format  | @flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery     | commit      | Commit Changes | @flow:Developer | Commit all changes with a descriptive message               |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| planning | analyze | Analyze | Planner | Understand requirements and plan approach |
+| development | implement | Implement | Developer | Write the code or make changes |
+| verification | test | Test | Tester | Verify the implementation works correctly |
+| verification | review | Review | Reviewer | Review code quality and correctness |
+| delivery | lint_format | Lint & Format | Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | Developer | Commit all changes with a descriptive message |

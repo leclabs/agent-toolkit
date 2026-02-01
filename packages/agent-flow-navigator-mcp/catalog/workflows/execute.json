@@ -1,0 +1,29 @@
+{
+  "id": "execute",
+  "name": "Execute",
+  "description": "Single-step workflow. Just do the thing.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Execute begins"
+    },
+    "execute": {
+      "type": "task",
+      "name": "Execute",
+      "description": "Do the work described in the task.",
+      "agent": "Developer",
+      "stage": "development"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Done",
+      "description": "Task completed"
+    }
+  },
+  "edges": [
+    { "from": "start", "to": "execute" },
+    { "from": "execute", "to": "end_success" }
+  ]
+}

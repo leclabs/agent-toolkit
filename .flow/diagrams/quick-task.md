@@ -25,11 +25,13 @@ flowchart TD
     lint_format -->|failed| execute
     lint_format -->|failed| hitl_blocked
     commit --> end_success
+    hitl_blocked -->|passed| execute
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
     classDef hitlStep fill:#FFB6C1,stroke:#DC143C
     classDef gateStep fill:#E6E6FA,stroke:#9370DB
+    classDef forkJoinStep fill:#FFEAA7,stroke:#FDCB6E
     classDef currentStep fill:#FFD700,stroke:#FF8C00,stroke-width:3px
     class start startStep
     class end_success successStep
@@ -39,10 +41,10 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step        | Name           | Agent           | Instructions                                                |
-| ------------ | ----------- | -------------- | --------------- | ----------------------------------------------------------- |
-| planning     | understand  | Understand     | @flow:Developer | Clarify what needs to be done and identify the approach     |
-| development  | execute     | Execute        | @flow:Developer | Make the changes or complete the work                       |
-| verification | verify      | Verify         | @flow:Developer | Confirm the work is correct and complete                    |
-| delivery     | lint_format | Lint & Format  | @flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery     | commit      | Commit Changes | @flow:Developer | Commit all changes with a descriptive message               |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| planning | understand | Understand | Developer | Clarify what needs to be done and identify the approach |
+| development | execute | Execute | Developer | Make the changes or complete the work |
+| verification | verify | Verify | Developer | Confirm the work is correct and complete |
+| delivery | lint_format | Lint & Format | Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | Developer | Commit all changes with a descriptive message |

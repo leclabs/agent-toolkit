@@ -58,20 +58,21 @@ Response includes:
 
 ## 2. Create Task with Metadata
 
-Call `TaskCreate` with subject formatted to show workflow position:
+Call `TaskCreate` with subject formatted to show workflow position. The subject is two lines separated by a **real newline** (not a literal `\n`):
 
-```json
-{
-  "subject": "#1 Add user authentication ✨\n→ feature-development · parse_requirements (@flow:Planner)",
-  "activeForm": "Parse Requirements (@flow:Planner)",
-  "description": "{response.orchestratorInstructions}",
-  "metadata": {
-    "userDescription": "Add user authentication",
-    "workflowType": "{response.metadata.workflowType}",
-    "currentStep": "{response.metadata.currentStep}",
-    "retryCount": 0
+```
+TaskCreate(
+  subject: "#1 Add user authentication ✨
+→ feature-development · parse_requirements (@flow:Planner)",
+  activeForm: "Parse Requirements (@flow:Planner)",
+  description: "{response.orchestratorInstructions}",
+  metadata: {
+    userDescription: "Add user authentication",
+    workflowType: "{response.metadata.workflowType}",
+    currentStep: "{response.metadata.currentStep}",
+    retryCount: 0
   }
-}
+)
 ```
 
 **Key points:**

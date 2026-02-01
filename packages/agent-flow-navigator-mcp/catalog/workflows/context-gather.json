@@ -1,0 +1,99 @@
+{
+  "id": "context-gather",
+  "name": "Context Gather",
+  "description": "Toy workflow demonstrating fork/join. Fans out into three parallel information-gathering branches (system info, weather, repository), then synthesizes everything into a single summary.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Context gathering begins"
+    },
+    "fork_gather": {
+      "type": "fork",
+      "name": "Fork Gather",
+      "join": "join_gather",
+      "branches": {
+        "system": {
+          "entryStep": "system_info",
+          "description": "Gather system information"
+        },
+        "weather": {
+          "entryStep": "weather_info",
+          "description": "Get today's weather at current location"
+        },
+        "repo": {
+          "entryStep": "repo_info",
+          "description": "Get information about the current repository"
+        }
+      }
+    },
+    "system_info": {
+      "type": "task",
+      "name": "System Information",
+      "description": "Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands.",
+      "agent": "Developer",
+      "stage": "investigation"
+    },
+    "weather_info": {
+      "type": "task",
+      "name": "Weather Report",
+      "description": "Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast.",
+      "agent": "Planner",
+      "stage": "investigation"
+    },
+    "repo_info": {
+      "type": "task",
+      "name": "Repository Information",
+      "description": "Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata.",
+      "agent": "Investigator",
+      "stage": "investigation"
+    },
+    "repo_analyze": {
+      "type": "task",
+      "name": "Analyze Repository",
+      "description": "Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions.",
+      "agent": "Reviewer",
+      "stage": "investigation"
+    },
+    "join_gather": {
+      "type": "join",
+      "name": "Join Gather",
+      "fork": "fork_gather",
+      "strategy": "all-pass"
+    },
+    "summarize": {
+      "type": "task",
+      "name": "Summarize Context",
+      "description": "Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format.",
+      "agent": "Architect",
+      "stage": "planning"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Context Gathered",
+      "description": "All context gathered and summarized"
+    },
+    "hitl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Gather Failed",
+      "description": "One or more branches failed to gather information"
+    }
+  },
+  "edges": [
+    { "from": "start", "to": "fork_gather" },
+    { "from": "fork_gather", "to": "system_info", "label": "Branch: system" },
+    { "from": "fork_gather", "to": "weather_info", "label": "Branch: weather" },
+    { "from": "fork_gather", "to": "repo_info", "label": "Branch: repo" },
+    { "from": "system_info", "to": "join_gather" },
+    { "from": "weather_info", "to": "join_gather" },
+    { "from": "repo_info", "to": "repo_analyze", "on": "passed" },
+    { "from": "repo_analyze", "to": "join_gather" },
+    { "from": "join_gather", "to": "summarize", "on": "passed", "label": "All branches complete" },
+    { "from": "join_gather", "to": "hitl_failed", "on": "failed", "label": "One or more branches failed" },
+    { "from": "summarize", "to": "end_success" },
+    { "from": "hitl_failed", "to": "fork_gather", "on": "passed", "label": "Human resolved issue, retry" }
+  ]
+}
