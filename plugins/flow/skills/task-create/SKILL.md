@@ -127,6 +127,7 @@ Append emoji after task subject based on workflowType:
 | ---------------------- | ------ |
 | `feature-development`  | ✨     |
 | `bug-fix`              | 🐛     |
+| `bug-hunt`             | 🔍     |
 | `agile-task`           | 📋     |
 | `context-optimization` | 🔧     |
 | `quick-task`           | ⚡     |

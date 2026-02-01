@@ -38,7 +38,7 @@ Commands are what you type. Each creates a task with the appropriate workflow:
 | `/flow:go`    | _(orchestration)_    | Execute all pending flow tasks           |
 | `/flow:recon` | _(exploration)_      | Deep project reconnaissance              |
 
-Three additional workflows exist in the catalog without command shortcuts: `refactor`, `build-review-murder-board`, and `build-review-quick`. Use `/flow:task-create "description" <workflow-id>` to invoke them directly.
+Seven additional workflows exist in the catalog without command shortcuts: `refactor`, `build-review-murder-board`, `build-review-quick`, `bug-hunt`, `context-gather`, `execute`, and `hitl-test`. Use `/flow:task-create "description" <workflow-id>` to invoke them directly.
 
 ## Skills
 
@@ -60,7 +60,7 @@ Skills are the internal orchestration interface used by the agent system:
 
 ## Workflows
 
-10 workflows ship in the catalog. Each defines a workflow with typed nodes, conditional edges, retry logic, and agent assignments.
+14 workflows ship in the catalog. Each workflow is a graph of typed nodes connected by conditional edges, with retry logic and agent assignments.
 
 ### feature-development
 
@@ -131,6 +131,33 @@ Iterative build-review loop with basic sanity check. ([diagram](../../.flow/diag
 
 **Stages:** development &rarr; verification &rarr; delivery
 **Steps:** build &rarr; review &rarr; lint_format &rarr; commit
+
+### bug-hunt
+
+Parallel investigation workflow: triage, then fork into reproduce, code archaeology, and git forensics before synthesizing findings. ([diagram](../../.flow/diagrams/bug-hunt.md))
+
+**Stages:** triage &rarr; investigation (parallel) &rarr; synthesis &rarr; development &rarr; delivery
+**Steps:** triage &rarr; fork(reproduce, code_archaeology, git_forensics) &rarr; synthesize &rarr; write_fix &rarr; add_regression_test &rarr; commit
+
+### context-gather
+
+Parallel context gathering: fork into repo info, system info, and weather report before summarizing. ([diagram](../../.flow/diagrams/context-gather.md))
+
+**Stages:** gathering (parallel) &rarr; analysis &rarr; summary
+**Steps:** fork(repo_info, system_info, weather_report) &rarr; repo_analyze &rarr; summarize
+
+### execute
+
+Single-step workflow. Just do the thing. ([diagram](../../.flow/diagrams/execute.md))
+
+**Steps:** execute
+
+### hitl-test
+
+Minimal workflow for testing HITL recovery: work, gate check, escalate if blocked. ([diagram](../../.flow/diagrams/hitl-test.md))
+
+**Stages:** development &rarr; verification
+**Steps:** work &rarr; check
 
 ## Customization
 

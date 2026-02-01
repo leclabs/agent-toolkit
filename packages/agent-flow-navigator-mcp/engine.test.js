@@ -2997,4 +2997,41 @@ describe("fork/join", () => {
     // step_x → step_y (not join_a), so multiStep must be true
     assert.strictEqual(result.fork.branches.x.multiStep, true);
   });
+
+  it("should persist autonomy flag to task file on fork/join write-through", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf-auto", def);
+
+    const taskDir = join(tmpdir(), "flow-fork-autonomy-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "task",
+        subject: "Test autonomy persistence",
+        metadata: {
+          workflowType: "fork-wf-auto",
+          currentStep: "analyze",
+          retryCount: 0,
+        },
+      })
+    );
+
+    try {
+      // Advance with autonomy=true — should hit fork_impl (a fork node)
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      assert.strictEqual(result.currentStep, "fork_impl");
+      assert.strictEqual(result.action, "fork");
+      assert.strictEqual(result.metadata.autonomy, true);
+
+      // Task file on disk must also have autonomy persisted
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.autonomy, true);
+      assert.strictEqual(updated.metadata.currentStep, "fork_impl");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
 });

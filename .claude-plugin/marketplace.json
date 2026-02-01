@@ -11,7 +11,7 @@
     {
       "name": "flow",
       "source": "./plugins/flow",
-      "description": "Workflow orchestration for Claude Code",
+      "description": "Workflow orchestration for Claude Code.",
       "version": "1.7.0",
       "author": {
         "name": "Lance Caraccioli"
