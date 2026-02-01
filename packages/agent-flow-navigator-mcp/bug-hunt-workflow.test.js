@@ -503,8 +503,8 @@ describe("bug-hunt workflow diagram generation", () => {
     const workflow = loadBugHuntWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('verify_fix{"Verify Fix"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 Tester</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {

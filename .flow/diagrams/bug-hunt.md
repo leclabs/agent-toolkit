@@ -7,44 +7,44 @@ Parallel investigation workflow for vague bug reports. Fans out into reproductio
 ```mermaid
 flowchart TD
     start(("Start"))
-    triage["Triage Report<br/><small>Investigator</small>"]
+    triage["Triage Report<br/><small>🔍 Investigator</small>"]
     fork_investigate(["Fork Investigation"])
-    reproduce["Reproduce Bug<br/><small>Tester</small>"]
-    code_archaeology["Code Archaeology<br/><small>Investigator</small>"]
-    git_forensics["Git Forensics<br/><small>Investigator</small>"]
+    reproduce["Reproduce Bug<br/><small>🧪 Tester</small>"]
+    code_archaeology["Code Archaeology<br/><small>🔍 Investigator</small>"]
+    git_forensics["Git Forensics<br/><small>🔍 Investigator</small>"]
     join_investigate(["Join Investigation"])
-    synthesize["Synthesize Findings<br/><small>Architect</small>"]
-    write_fix["Write Fix<br/><small>Developer</small>"]
-    add_regression_test["Add Regression Test<br/><small>Tester</small>"]
-    verify_fix{"Verify Fix"}
-    lint_format{"Lint and Format"}
-    commit["Commit Changes<br/><small>Developer</small>"]
+    synthesize["Synthesize Findings<br/><small>🏛️ Architect</small>"]
+    write_fix["Write Fix<br/><small>🔧 Developer</small>"]
+    add_regression_test["Add Regression Test<br/><small>🧪 Tester</small>"]
+    verify_fix{"Verify Fix<br/><small>🧪 Tester</small>"}
+    lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}
+    commit["Commit Changes<br/><small>🔧 Developer</small>"]
     end_success[["Bug Fixed"]]
-    hitl_inconclusive{{"Inconclusive"}}
-    hitl_fix_failed{{"Fix Failed"}}
+    hitl_inconclusive{{"✋ Inconclusive"}}
+    hitl_fix_failed{{"✋ Fix Failed"}}
 
     start --> triage
     triage --> fork_investigate
-    fork_investigate --> reproduce
-    fork_investigate --> code_archaeology
-    fork_investigate --> git_forensics
+    fork_investigate -->|Branch: reproduce| reproduce
+    fork_investigate -->|Branch: code archaeology| code_archaeology
+    fork_investigate -->|Branch: git forensics| git_forensics
     reproduce --> join_investigate
     code_archaeology --> join_investigate
     git_forensics --> join_investigate
-    join_investigate -->|passed| synthesize
-    join_investigate -->|failed| hitl_inconclusive
+    join_investigate -->|All tracks complete| synthesize
+    join_investigate -->|Investigation couldn't determine root cause| hitl_inconclusive
     synthesize --> write_fix
     write_fix --> add_regression_test
     add_regression_test --> verify_fix
-    verify_fix -->|passed| lint_format
-    verify_fix -->|failed| write_fix
-    verify_fix -->|failed| hitl_fix_failed
-    lint_format -->|passed| commit
-    lint_format -->|failed| write_fix
-    lint_format -->|failed| hitl_fix_failed
+    verify_fix -->|Fix verified, run lint checks| lint_format
+    verify_fix -->|Fix didn't work, try again| write_fix
+    verify_fix -->|Cannot fix the bug| hitl_fix_failed
+    lint_format -->|Lint passes, commit changes| commit
+    lint_format -->|Fix lint/format issues| write_fix
+    lint_format -->|Lint issues persist| hitl_fix_failed
     commit --> end_success
-    hitl_inconclusive -->|passed| triage
-    hitl_fix_failed -->|passed| write_fix
+    hitl_inconclusive -->|Human provided context, re-triage| triage
+    hitl_fix_failed -->|Human resolved issue, resume fix| write_fix
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -63,13 +63,13 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| planning | triage | Triage Report | flow:Investigator | Parse the vague report. Extract symptoms, affected area, timing, severity. Form 2-3 hypotheses to test. |
-| investigation | reproduce | Reproduce Bug | flow:Tester | Try to trigger the bug. Document exact reproduction steps, environment, and observed vs expected behavior. |
-| investigation | code_archaeology | Code Archaeology | flow:Investigator | Trace the code paths related to the reported symptoms. Map data flow, identify suspect modules, check edge cases. |
-| investigation | git_forensics | Git Forensics | flow:Investigator | Check recent commits touching affected areas. Run git blame on suspect files. Look for correlated changes or regressions. |
-| planning | synthesize | Synthesize Findings | flow:Architect | Combine findings from all investigation tracks into a root cause analysis. Identify the most likely cause, supporting evidence, and a fix strategy. |
-| development | write_fix | Write Fix | flow:Developer | Implement the fix with minimal changes |
-| development | add_regression_test | Add Regression Test | flow:Tester | Write a test that would have caught this bug |
-| verification | verify_fix | Verify Fix | flow:Tester | Run tests, verify fix addresses root cause |
-| delivery | lint_format | Lint & Format | flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | flow:Developer | Commit the fix and regression test with a descriptive message |
+| planning | triage | Triage Report | 🔍 flow:Investigator | Parse the vague report. Extract symptoms, affected area, timing, severity. Form 2-3 hypotheses to test. |
+| investigation | reproduce | Reproduce Bug | 🧪 flow:Tester | Try to trigger the bug. Document exact reproduction steps, environment, and observed vs expected behavior. |
+| investigation | code_archaeology | Code Archaeology | 🔍 flow:Investigator | Trace the code paths related to the reported symptoms. Map data flow, identify suspect modules, check edge cases. |
+| investigation | git_forensics | Git Forensics | 🔍 flow:Investigator | Check recent commits touching affected areas. Run git blame on suspect files. Look for correlated changes or regressions. |
+| planning | synthesize | Synthesize Findings | 🏛️ flow:Architect | Combine findings from all investigation tracks into a root cause analysis. Identify the most likely cause, supporting evidence, and a fix strategy. |
+| development | write_fix | Write Fix | 🔧 flow:Developer | Implement the fix with minimal changes |
+| development | add_regression_test | Add Regression Test | 🧪 flow:Tester | Write a test that would have caught this bug |
+| verification | verify_fix | Verify Fix | 🧪 flow:Tester | Run tests, verify fix addresses root cause |
+| delivery | lint_format | Lint & Format | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | 🔧 flow:Developer | Commit the fix and regression test with a descriptive message |

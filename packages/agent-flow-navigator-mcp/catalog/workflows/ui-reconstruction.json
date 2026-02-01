@@ -12,6 +12,7 @@
       "name": "ir_component_tree",
       "description": "Extract UI component hierarchy with element types, nesting, and framework imports. Output: Component tree with semantic roles.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_feature_boundary": {
@@ -19,6 +20,7 @@
       "name": "ir_feature_boundary",
       "description": "Determine logical groupings of components that form discrete features. Output: Feature map with parent-child relationships.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_interactivity": {
@@ -26,6 +28,7 @@
       "name": "ir_interactivity",
       "description": "Document user interactions: click handlers, form submissions, state mutations, and data flow. Output: Interaction inventory.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_business_object": {
@@ -33,6 +36,7 @@
       "name": "ir_business_object",
       "description": "Identify domain entities displayed or manipulated by the UI and their CRUD operations. Output: Business object catalog.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_annotate": {
@@ -40,6 +44,7 @@
       "name": "ir_annotate",
       "description": "Overlay visual markers on screenshot identifying components, features, and interactions. Output: Annotated screenshot.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_ascii": {
@@ -47,6 +52,7 @@
       "name": "ir_ascii",
       "description": "Create text-based diagrams showing UI state transitions and user flows. Output: ASCII state machine diagram.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
     "ir_review": {
@@ -54,6 +60,7 @@
       "name": "Review",
       "description": "Validate completeness and accuracy of Semantic IR against source UI. Criteria: All visible elements mapped, interactions documented.",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "semantic-ir-extraction",
       "maxRetries": 3,
       "config": {
@@ -65,6 +72,7 @@
       "name": "uiRebuild_build",
       "description": "Implement UI from Semantic IR specification, matching visual layout and behavior. Preserve semantic structure over visual mimicry.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "ui-build-from-ir"
     },
     "uiRebuild_review": {
@@ -72,6 +80,7 @@
       "name": "Review",
       "description": "Compare rebuilt UI against original screenshot and Semantic IR. Verify functional equivalence and semantic fidelity.",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "ui-build-from-ir",
       "maxRetries": 3,
       "config": {
@@ -83,6 +92,7 @@
       "name": "Review",
       "description": "Verify rebuilt UI captures essential purpose (Platonic Form) not just appearance. Test: Could this IR reconstruct the UI in a different framework?",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "unbiased-review",
       "maxRetries": 1,
       "config": {
@@ -117,6 +127,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -125,6 +136,7 @@
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     }
   },

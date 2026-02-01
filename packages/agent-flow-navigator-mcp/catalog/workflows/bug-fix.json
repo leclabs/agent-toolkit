@@ -13,6 +13,7 @@
       "name": "Reproduce Bug",
       "description": "Understand the bug and create a reliable reproduction case",
       "agent": "Investigator",
+      "emoji": "🔍",
       "stage": "investigation"
     },
     "investigate": {
@@ -20,6 +21,7 @@
       "name": "Investigate",
       "description": "Find root cause by tracing code paths and debugging",
       "agent": "Investigator",
+      "emoji": "🔍",
       "stage": "investigation"
     },
     "write_fix": {
@@ -27,6 +29,7 @@
       "name": "Write Fix",
       "description": "Implement the fix with minimal changes",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "add_regression_test": {
@@ -34,6 +37,7 @@
       "name": "Add Regression Test",
       "description": "Write a test that would have caught this bug",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "verify_fix": {
@@ -41,6 +45,7 @@
       "name": "Verify Fix",
       "description": "Run all tests and verify the bug is fixed",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
     },
@@ -49,6 +54,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -57,6 +63,7 @@
       "name": "Commit Changes",
       "description": "Commit the fix and regression test with a descriptive message",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

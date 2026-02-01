@@ -13,6 +13,7 @@
       "name": "Map Connections",
       "description": "Identify all connection points between components (MCP, skills, agents, subagents)",
       "agent": "Context Engineer",
+      "emoji": "🧠",
       "stage": "analysis"
     },
     "identify_pathologies": {
@@ -20,6 +21,7 @@
       "name": "Identify Pathologies",
       "description": "Find context pathologies: specification bloat, attention dilution, redundant framing",
       "agent": "Context Engineer",
+      "emoji": "🧠",
       "stage": "analysis"
     },
     "design_improvements": {
@@ -27,6 +29,7 @@
       "name": "Design Improvements",
       "description": "Apply compression techniques: lead with conclusions, causal chains, precise terminology",
       "agent": "Context Engineer",
+      "emoji": "🧠",
       "stage": "design"
     },
     "review_design": {
@@ -34,6 +37,7 @@
       "name": "Review Design",
       "description": "Verify improvements don't sacrifice meaning for brevity",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "design",
       "maxRetries": 2,
       "config": {
@@ -45,6 +49,7 @@
       "name": "Implement",
       "description": "Apply the optimizations to actual files and configurations",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "implementation"
     },
     "verify": {
@@ -52,6 +57,7 @@
       "name": "Verify",
       "description": "Test that agents still function correctly with optimized context",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 2
     },

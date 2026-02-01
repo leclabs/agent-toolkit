@@ -13,6 +13,7 @@
       "name": "Analyze Coverage",
       "description": "Run coverage tools and identify untested code paths",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "analysis"
     },
     "identify_gaps": {
@@ -20,6 +21,7 @@
       "name": "Identify Gaps",
       "description": "Prioritize coverage gaps by risk and importance",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "analysis"
     },
     "write_tests": {
@@ -27,6 +29,7 @@
       "name": "Write Tests",
       "description": "Write tests for identified gaps",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "run_tests": {
@@ -34,6 +37,7 @@
       "name": "Run Tests",
       "description": "Execute test suite and verify new tests pass",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 2
     },
@@ -42,6 +46,7 @@
       "name": "Review",
       "description": "Review test quality and coverage improvement",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 1,
       "config": {
@@ -53,6 +58,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -61,6 +67,7 @@
       "name": "Commit Tests",
       "description": "Commit new tests with coverage metrics",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

@@ -13,6 +13,7 @@
       "name": "Execute",
       "description": "Do the work described in the task.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "end_success": {

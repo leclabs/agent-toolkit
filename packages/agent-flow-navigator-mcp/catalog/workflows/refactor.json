@@ -13,6 +13,7 @@
       "name": "Analyze Structure",
       "description": "Map current architecture: modules, dependencies, entry points. Identify coupling and cohesion issues.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "analysis"
     },
     "identify_debt": {
@@ -20,6 +21,7 @@
       "name": "Identify Technical Debt",
       "description": "Find code smells, anti-patterns, outdated practices. Document violations of SOLID, DRY, and separation of concerns.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "analysis"
     },
     "classify_components": {
@@ -27,6 +29,7 @@
       "name": "Classify Components",
       "description": "Categorize code into Functional Core (pure logic, no side effects) vs Imperative Shell (I/O, state, external calls).",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "analysis"
     },
     "design_refactor": {
@@ -34,6 +37,7 @@
       "name": "Design Refactor Plan",
       "description": "Create transformation plan: define functional core boundaries, shell interfaces, and migration sequence.",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "plan_review": {
@@ -41,6 +45,7 @@
       "name": "Review Plan",
       "description": "Verify refactor plan maintains behavioral equivalence while achieving architectural goals.",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "planning",
       "maxRetries": 2,
       "config": {
@@ -52,6 +57,7 @@
       "name": "Extract Functional Core",
       "description": "Refactor pure business logic into functional core: no side effects, deterministic, testable in isolation.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "isolate_shell": {
@@ -59,6 +65,7 @@
       "name": "Isolate Imperative Shell",
       "description": "Wrap side effects (I/O, state, external services) in thin imperative shell that coordinates functional core.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "write_tests": {
@@ -66,6 +73,7 @@
       "name": "Write Tests",
       "description": "Add tests verifying behavioral equivalence. Unit tests for functional core, integration tests for shell.",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "run_tests": {
@@ -73,6 +81,7 @@
       "name": "Run Tests",
       "description": "Execute test suite. Verify refactored code produces identical behavior to original.",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
     },
@@ -81,6 +90,7 @@
       "name": "Code Review",
       "description": "Review architecture: clean functional/shell separation, no hidden side effects in core, shell is minimal.",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
       "config": {
@@ -92,6 +102,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -100,6 +111,7 @@
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the refactoring",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

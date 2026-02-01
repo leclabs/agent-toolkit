@@ -351,10 +351,10 @@ describe("refactor workflow diagram generation", () => {
     const workflow = loadRefactorWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('plan_review{"Review Plan"}'));
-    assert.ok(diagram.includes('run_tests{"Run Tests"}'));
-    assert.ok(diagram.includes('code_review{"Code Review"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('plan_review{"Review Plan<br/><small>👀 Reviewer</small>"}'));
+    assert.ok(diagram.includes('run_tests{"Run Tests<br/><small>🧪 Tester</small>"}'));
+    assert.ok(diagram.includes('code_review{"Code Review<br/><small>👀 Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {

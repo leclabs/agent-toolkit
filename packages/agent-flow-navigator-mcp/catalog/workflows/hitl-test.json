@@ -12,6 +12,7 @@
       "name": "Do Work",
       "description": "Do the thing",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "check": {
@@ -19,6 +20,7 @@
       "name": "Check",
       "description": "Pass or fail",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 1
     },

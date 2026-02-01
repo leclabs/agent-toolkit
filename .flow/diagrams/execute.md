@@ -7,7 +7,7 @@ Single-step workflow. Just do the thing.
 ```mermaid
 flowchart TD
     start(("Start"))
-    execute["Execute<br/><small>Developer</small>"]
+    execute["Execute<br/><small>🔧 Developer</small>"]
     end_success[["Done"]]
 
     start --> execute
@@ -27,4 +27,4 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| development | execute | Execute | flow:Developer | Do the work described in the task. |
+| development | execute | Execute | 🔧 flow:Developer | Do the work described in the task. |

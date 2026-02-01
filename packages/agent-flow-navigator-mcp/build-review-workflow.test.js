@@ -552,8 +552,8 @@ describe("build-review-murder-board diagram generation", () => {
     const workflow = loadMurderBoardWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('review{"Murder Board Review"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('review{"Murder Board Review<br/><small>👀 Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {
@@ -589,8 +589,8 @@ describe("build-review-quick diagram generation", () => {
     const workflow = loadQuickWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('review{"Quick Review"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('review{"Quick Review<br/><small>👀 Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {

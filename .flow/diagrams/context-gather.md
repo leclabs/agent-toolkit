@@ -8,28 +8,28 @@ Toy workflow demonstrating fork/join. Fans out into three parallel information-g
 flowchart TD
     start(("Start"))
     fork_gather(["Fork Gather"])
-    system_info["System Information<br/><small>Investigator</small>"]
-    weather_info["Weather Report<br/><small>Planner</small>"]
-    repo_info["Repository Information<br/><small>Investigator</small>"]
-    repo_analyze["Analyze Repository<br/><small>Reviewer</small>"]
+    system_info["System Information<br/><small>🔍 Investigator</small>"]
+    weather_info["Weather Report<br/><small>📋 Planner</small>"]
+    repo_info["Repository Information<br/><small>🔍 Investigator</small>"]
+    repo_analyze["Analyze Repository<br/><small>👀 Reviewer</small>"]
     join_gather(["Join Gather"])
-    summarize["Summarize Context<br/><small>Architect</small>"]
+    summarize["Summarize Context<br/><small>🏛️ Architect</small>"]
     end_success[["Context Gathered"]]
-    hitl_failed{{"Gather Failed"}}
+    hitl_failed{{"✋ Gather Failed"}}
 
     start --> fork_gather
-    fork_gather --> system_info
-    fork_gather --> weather_info
-    fork_gather --> repo_info
+    fork_gather -->|Branch: system| system_info
+    fork_gather -->|Branch: weather| weather_info
+    fork_gather -->|Branch: repo| repo_info
     system_info --> join_gather
     weather_info --> join_gather
     repo_info -->|passed| repo_analyze
     repo_info -->|failed| join_gather
     repo_analyze --> join_gather
-    join_gather -->|passed| summarize
-    join_gather -->|failed| hitl_failed
+    join_gather -->|All branches complete| summarize
+    join_gather -->|One or more branches failed| hitl_failed
     summarize --> end_success
-    hitl_failed -->|passed| fork_gather
+    hitl_failed -->|Human resolved issue, retry| fork_gather
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -47,8 +47,8 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| investigation | system_info | System Information | flow:Investigator | Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands. |
-| investigation | weather_info | Weather Report | flow:Planner | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast. |
-| investigation | repo_info | Repository Information | flow:Investigator | Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata. |
-| investigation | repo_analyze | Analyze Repository | flow:Reviewer | Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions. |
-| planning | summarize | Summarize Context | flow:Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |
+| investigation | system_info | System Information | 🔍 flow:Investigator | Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands. |
+| investigation | weather_info | Weather Report | 📋 flow:Planner | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast. |
+| investigation | repo_info | Repository Information | 🔍 flow:Investigator | Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata. |
+| investigation | repo_analyze | Analyze Repository | 👀 flow:Reviewer | Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions. |
+| planning | summarize | Summarize Context | 🏛️ flow:Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |

@@ -13,6 +13,7 @@
       "name": "Parse Requirements",
       "description": "Extract acceptance criteria and requirements from the issue or request",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "explore_codebase": {
@@ -20,6 +21,7 @@
       "name": "Explore Codebase",
       "description": "Find relevant files, understand patterns, identify where changes are needed",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "create_plan": {
@@ -27,6 +29,7 @@
       "name": "Create Plan",
       "description": "Write implementation plan with specific files and changes needed",
       "agent": "Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "plan_review": {
@@ -34,6 +37,7 @@
       "name": "Review Plan",
       "description": "Verify plan is complete and feasible",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "planning",
       "maxRetries": 2,
       "config": {
@@ -45,6 +49,7 @@
       "name": "Implement",
       "description": "Write the code following the plan",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "write_tests": {
@@ -52,6 +57,7 @@
       "name": "Write Tests",
       "description": "Add unit and integration tests for the new feature",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "run_tests": {
@@ -59,6 +65,7 @@
       "name": "Run Tests",
       "description": "Execute test suite and verify all tests pass",
       "agent": "Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
     },
@@ -67,6 +74,7 @@
       "name": "Code Review",
       "description": "Review code quality, patterns, and correctness",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
       "config": {
@@ -78,6 +86,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -86,6 +95,7 @@
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the work done",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "create_pr": {
@@ -93,6 +103,7 @@
       "name": "Create PR",
       "description": "Create pull request with summary and test plan",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

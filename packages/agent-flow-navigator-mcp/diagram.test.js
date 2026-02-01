@@ -140,6 +140,30 @@ describe("generateDiagram", () => {
     assert.ok(result.includes("task_a -->|passed| end_success"));
   });
 
+  it("should prefer edge label over on for display", () => {
+    const wf = {
+      ...testWorkflow,
+      edges: [
+        { from: "start", to: "task_a" },
+        { from: "task_a", to: "end_success", on: "passed", label: "Tests pass" },
+      ],
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes("task_a -->|Tests pass| end_success"));
+  });
+
+  it("should render edge label even without on", () => {
+    const wf = {
+      ...testWorkflow,
+      edges: [
+        { from: "start", to: "task_a", label: "Begin work" },
+        { from: "task_a", to: "end_success" },
+      ],
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes("start -->|Begin work| task_a"));
+  });
+
   it("should include step instructions table", () => {
     const result = generateDiagram(testWorkflow);
     assert.ok(result.includes("### Step Instructions"));
@@ -174,6 +198,54 @@ describe("generateDiagram", () => {
     assert.ok(result.includes("class end_success successStep"));
   });
 
+  it("should render task node with emoji and agent", () => {
+    const wf = {
+      ...testWorkflow,
+      nodes: {
+        ...testWorkflow.nodes,
+        task_b: { type: "task", name: "Build", agent: "Developer", emoji: "🔧", stage: "dev", description: "Build it" },
+      },
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes('task_b["Build<br/><small>🔧 Developer</small>"]'));
+  });
+
+  it("should render task node with emoji only (no agent)", () => {
+    const wf = {
+      ...testWorkflow,
+      nodes: {
+        ...testWorkflow.nodes,
+        task_b: { type: "task", name: "Build", emoji: "🔧", stage: "dev", description: "Build it" },
+      },
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes('task_b["Build<br/><small>🔧</small>"]'));
+  });
+
+  it("should include emoji in step instructions table", () => {
+    const wf = {
+      ...testWorkflow,
+      nodes: {
+        ...testWorkflow.nodes,
+        task_b: { type: "task", name: "Build", agent: "Developer", emoji: "🔧", stage: "dev", description: "Build it" },
+      },
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes("| dev | task_b | Build | 🔧 flow:Developer | Build it |"));
+  });
+
+  it("should render gate node with emoji and agent", () => {
+    const wf = {
+      ...testWorkflow,
+      nodes: {
+        ...testWorkflow.nodes,
+        gate_review: { type: "gate", name: "Review Gate", agent: "Reviewer", emoji: "👀" },
+      },
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes('gate_review{"Review Gate<br/><small>👀 Reviewer</small>"}'));
+  });
+
   it("should render gate nodes as diamonds", () => {
     const wf = {
       ...testWorkflow,
@@ -186,16 +258,28 @@ describe("generateDiagram", () => {
     assert.ok(result.includes('gate_review{"Review Gate"}'));
   });
 
-  it("should render HITL nodes as hexagons", () => {
+  it("should render HITL nodes as hexagons with raised hand emoji", () => {
     const wf = {
       ...testWorkflow,
       nodes: {
         ...testWorkflow.nodes,
-        hitl_escalate: { type: "end", result: "hitl", name: "Human Review" },
+        hitl_escalate: { type: "end", result: "failure", escalation: "hitl", name: "Human Review" },
       },
     };
     const result = generateDiagram(wf);
-    assert.ok(result.includes('hitl_escalate{{"Human Review"}}'));
+    assert.ok(result.includes('hitl_escalate{{"✋ Human Review"}}'));
+  });
+
+  it("should render failure nodes as hexagons without emoji", () => {
+    const wf = {
+      ...testWorkflow,
+      nodes: {
+        ...testWorkflow.nodes,
+        fail_node: { type: "end", result: "failure", name: "Failed" },
+      },
+    };
+    const result = generateDiagram(wf);
+    assert.ok(result.includes('fail_node{{"Failed"}}'));
   });
 
   it("should use workflow id when name is not provided", () => {

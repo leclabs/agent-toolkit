@@ -50,18 +50,21 @@ export function generateDiagram(workflowDef, currentStep = null) {
 
   for (const [stepId, step] of Object.entries(nodes)) {
     const label = sanitizeMermaidLabel(step.name || step.description || stepId);
-    const agent = step.agent ? `<br/><small>${step.agent}</small>` : "";
+    const agentParts = [step.emoji, step.agent].filter(Boolean);
+    const agent = agentParts.length ? `<br/><small>${agentParts.join(" ")}</small>` : "";
     const termType = getTerminalType(step);
     if (termType === "start") {
       lines.push(`    ${stepId}(("${label}"))`);
     } else if (termType === "success") {
       lines.push(`    ${stepId}[["${label}"]]`);
-    } else if (termType === "hitl" || termType === "failure") {
+    } else if (termType === "hitl") {
+      lines.push(`    ${stepId}{{"✋ ${label}"}}`);
+    } else if (termType === "failure") {
       lines.push(`    ${stepId}{{"${label}"}}`);
     } else if (step.type === "fork" || step.type === "join") {
       lines.push(`    ${stepId}(["${label}"])`);
     } else if (step.type === "gate") {
-      lines.push(`    ${stepId}{"${label}"}`);
+      lines.push(`    ${stepId}{"${label}${agent}"}`);
     } else {
       lines.push(`    ${stepId}["${label}${agent}"]`);
     }
@@ -70,8 +73,8 @@ export function generateDiagram(workflowDef, currentStep = null) {
   lines.push("");
 
   for (const edge of edges) {
-    const { from, to, on } = edge;
-    const edgeLabel = sanitizeEdgeLabel(on);
+    const { from, to, on, label } = edge;
+    const edgeLabel = sanitizeEdgeLabel(label || on);
     if (edgeLabel) {
       lines.push(`    ${from} -->|${edgeLabel}| ${to}`);
     } else {
@@ -127,7 +130,8 @@ export function generateDiagram(workflowDef, currentStep = null) {
   for (const [stepId, step] of stepEntries) {
     const stage = step.stage || "-";
     const name = step.name || stepId;
-    const agent = step.agent ? toSubagentRef(step.agent) : "-";
+    const agentRef = step.agent ? toSubagentRef(step.agent) : null;
+    const agent = agentRef ? [step.emoji, agentRef].filter(Boolean).join(" ") : "-";
     const instructions = step.instructions || step.description || "-";
     // Escape pipes in table cells
     const safeInstructions = instructions.replace(/\|/g, "\\|");

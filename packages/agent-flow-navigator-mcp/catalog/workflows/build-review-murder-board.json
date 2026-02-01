@@ -13,6 +13,7 @@
       "name": "Build",
       "description": "Implement or revise the changes based on requirements or review feedback",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "review": {
@@ -20,6 +21,7 @@
       "name": "Murder Board Review",
       "description": "Independent high-scrutiny review. Reviewer must be a fresh agent with no prior context of this build. Approval requires confidence score >= 80.",
       "agent": "Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 3,
       "config": {
@@ -33,6 +35,7 @@
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -41,6 +44,7 @@
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the work done",
       "agent": "Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

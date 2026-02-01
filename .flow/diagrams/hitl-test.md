@@ -7,17 +7,17 @@ Minimal workflow for testing HITL recovery: work, gate, escalate, human resumes.
 ```mermaid
 flowchart TD
     start(("Start"))
-    work["Do Work<br/><small>Developer</small>"]
-    check{"Check"}
+    work["Do Work<br/><small>🔧 Developer</small>"]
+    check{"Check<br/><small>👀 Reviewer</small>"}
     end_success[["Done"]]
-    hitl_blocked{{"Blocked"}}
+    hitl_blocked{{"✋ Blocked"}}
 
     start --> work
     work --> check
     check -->|passed| end_success
-    check -->|failed| work
-    check -->|failed| hitl_blocked
-    hitl_blocked -->|passed| work
+    check -->|Retry| work
+    check -->|Escalate| hitl_blocked
+    hitl_blocked -->|Human fixed it, resume| work
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -35,5 +35,5 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| development | work | Do Work | flow:Developer | Do the thing |
-| verification | check | Check | flow:Reviewer | Pass or fail |
+| development | work | Do Work | 🔧 flow:Developer | Do the thing |
+| verification | check | Check | 👀 flow:Reviewer | Pass or fail |

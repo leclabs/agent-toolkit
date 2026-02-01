@@ -7,29 +7,29 @@ Workflow for optimizing agent context, instructions, and integration points. Use
 ```mermaid
 flowchart TD
     start(("Start"))
-    map_connections["Map Connections<br/><small>Context Engineer</small>"]
-    identify_pathologies["Identify Pathologies<br/><small>Context Engineer</small>"]
-    design_improvements["Design Improvements<br/><small>Context Engineer</small>"]
-    review_design{"Review Design"}
-    implement["Implement<br/><small>Developer</small>"]
-    verify["Verify<br/><small>Tester</small>"]
+    map_connections["Map Connections<br/><small>🧠 Context Engineer</small>"]
+    identify_pathologies["Identify Pathologies<br/><small>🧠 Context Engineer</small>"]
+    design_improvements["Design Improvements<br/><small>🧠 Context Engineer</small>"]
+    review_design{"Review Design<br/><small>👀 Reviewer</small>"}
+    implement["Implement<br/><small>🔧 Developer</small>"]
+    verify["Verify<br/><small>🧪 Tester</small>"]
     end_success[["Complete"]]
-    hitl_design_failed{{"Design Needs Help"}}
-    hitl_verify_failed{{"Verification Needs Help"}}
+    hitl_design_failed{{"✋ Design Needs Help"}}
+    hitl_verify_failed{{"✋ Verification Needs Help"}}
 
     start --> map_connections
     map_connections --> identify_pathologies
     identify_pathologies --> design_improvements
     design_improvements --> review_design
-    review_design -->|failed| design_improvements
-    review_design -->|failed| hitl_design_failed
-    review_design -->|passed| implement
+    review_design -->|Revise optimizations| design_improvements
+    review_design -->|Design needs human input| hitl_design_failed
+    review_design -->|Design approved| implement
     implement --> verify
-    verify -->|failed| implement
-    verify -->|failed| hitl_verify_failed
-    verify -->|passed| end_success
-    hitl_design_failed -->|passed| design_improvements
-    hitl_verify_failed -->|passed| implement
+    verify -->|Fix issues| implement
+    verify -->|Verification failed| hitl_verify_failed
+    verify -->|Optimization verified| end_success
+    hitl_design_failed -->|Human resolved design issue, resume| design_improvements
+    hitl_verify_failed -->|Human resolved verification issue, resume| implement
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -47,9 +47,9 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| analysis | map_connections | Map Connections | flow:Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents) |
-| analysis | identify_pathologies | Identify Pathologies | flow:Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing |
-| design | design_improvements | Design Improvements | flow:Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
-| design | review_design | Review Design | flow:Reviewer | Verify improvements don't sacrifice meaning for brevity |
-| implementation | implement | Implement | flow:Developer | Apply the optimizations to actual files and configurations |
-| verification | verify | Verify | flow:Tester | Test that agents still function correctly with optimized context |
+| analysis | map_connections | Map Connections | 🧠 flow:Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents) |
+| analysis | identify_pathologies | Identify Pathologies | 🧠 flow:Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing |
+| design | design_improvements | Design Improvements | 🧠 flow:Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
+| design | review_design | Review Design | 👀 flow:Reviewer | Verify improvements don't sacrifice meaning for brevity |
+| implementation | implement | Implement | 🔧 flow:Developer | Apply the optimizations to actual files and configurations |
+| verification | verify | Verify | 🧪 flow:Tester | Test that agents still function correctly with optimized context |
