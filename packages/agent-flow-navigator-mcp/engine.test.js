@@ -3027,3 +3027,113 @@ describe("fork/join", () => {
     }
   });
 });
+
+describe("external plugin agent pass-through", () => {
+  let store, engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+
+    // Simulate a workflow from an external "ipsum" plugin
+    store.loadDefinition("ipsum-blog", {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        draft: { type: "task", name: "Draft Copy", agent: "ipsum:Copywriter", stage: "writing" },
+        review: {
+          type: "gate",
+          name: "Editorial Review",
+          agent: "ipsum:Editor",
+          stage: "review",
+          maxRetries: 2,
+        },
+        publish: { type: "task", name: "Publish", agent: "ipsum:Publisher", stage: "delivery" },
+        end_success: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "draft" },
+        { from: "draft", to: "review", on: "passed" },
+        { from: "review", to: "publish", on: "passed" },
+        { from: "review", to: "draft", on: "failed" },
+        { from: "publish", to: "end_success", on: "passed" },
+      ],
+    });
+  });
+
+  it("should pass external plugin agent through on start", () => {
+    const result = engine.navigate({ workflowType: "ipsum-blog" });
+
+    assert.strictEqual(result.currentStep, "draft");
+    assert.strictEqual(result.subagent, "ipsum:Copywriter");
+  });
+
+  it("should pass external plugin agent through on advance", () => {
+    const taskDir = join(tmpdir(), "ipsum-test-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+
+    try {
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "task",
+          subject: "Test",
+          metadata: { workflowType: "ipsum-blog", currentStep: "draft", retryCount: 0 },
+        }),
+      );
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "review");
+      assert.strictEqual(result.subagent, "ipsum:Editor");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should pass external plugin agent through gate to next step", () => {
+    const taskDir = join(tmpdir(), "ipsum-test-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+
+    try {
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "task",
+          subject: "Test",
+          metadata: { workflowType: "ipsum-blog", currentStep: "review", retryCount: 0 },
+        }),
+      );
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "publish");
+      assert.strictEqual(result.subagent, "ipsum:Publisher");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should include external plugin agent in orchestrator instructions", () => {
+    const result = engine.navigate({ workflowType: "ipsum-blog" });
+
+    assert.ok(result.orchestratorInstructions.includes("ipsum:Copywriter"));
+  });
+
+  it("should pass bare project agent through without modification", () => {
+    store.loadDefinition("custom-wf", {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        work: { type: "task", name: "Work", agent: "SecurityAuditor", stage: "analysis" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "work" },
+        { from: "work", to: "end", on: "passed" },
+      ],
+    });
+
+    const result = engine.navigate({ workflowType: "custom-wf" });
+
+    assert.strictEqual(result.subagent, "SecurityAuditor");
+  });
+});
