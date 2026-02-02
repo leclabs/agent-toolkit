@@ -12,28 +12,32 @@
       "type": "task",
       "name": "Analyze Coverage",
       "description": "Run coverage tools and identify untested code paths",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "analysis"
     },
     "identify_gaps": {
       "type": "task",
       "name": "Identify Gaps",
       "description": "Prioritize coverage gaps by risk and importance",
-      "agent": "Planner",
+      "agent": "flow:Planner",
+      "emoji": "📋",
       "stage": "analysis"
     },
     "write_tests": {
       "type": "task",
       "name": "Write Tests",
       "description": "Write tests for identified gaps",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "run_tests": {
       "type": "task",
       "name": "Run Tests",
       "description": "Execute test suite and verify new tests pass",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 2
     },
@@ -41,7 +45,8 @@
       "type": "gate",
       "name": "Review",
       "description": "Review test quality and coverage improvement",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 1,
       "config": {
@@ -52,7 +57,8 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -60,7 +66,8 @@
       "type": "task",
       "name": "Commit Tests",
       "description": "Commit new tests with coverage metrics",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

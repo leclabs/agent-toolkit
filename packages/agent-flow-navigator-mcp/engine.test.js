@@ -267,7 +267,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -282,7 +282,7 @@ describe("WorkflowEngine", () => {
       assert.strictEqual(result.currentStep, "analyze");
       assert.strictEqual(result.action, "start");
       assert.strictEqual(result.stage, "planning");
-      assert.strictEqual(result.subagent, "planner");
+      assert.strictEqual(result.subagent, "flow:Planner");
       assert.strictEqual(result.terminal, null);
       assert.ok(result.stepInstructions);
       assert.strictEqual(result.stepInstructions.name, "Analyze");
@@ -563,7 +563,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -577,7 +577,7 @@ describe("WorkflowEngine", () => {
 
       assert.strictEqual(result.action, "start");
       assert.ok(result.orchestratorInstructions);
-      assert.ok(result.orchestratorInstructions.includes("planner"));
+      assert.ok(result.orchestratorInstructions.includes("flow:Planner"));
     });
 
     it("should include description in orchestratorInstructions when provided", () => {
@@ -894,11 +894,11 @@ describe("WorkflowEngine", () => {
           lint: {
             type: "gate",
             name: "Lint",
-            agent: "Developer",
+            agent: "flow:Developer",
             stage: "delivery",
             maxRetries: 3,
           },
-          commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+          commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
           end: { type: "end", result: "success" },
           hitl: { type: "end", result: "blocked", escalation: "hitl" },
         },
@@ -1037,9 +1037,9 @@ describe("WorkflowEngine", () => {
         return {
           nodes: {
             start: { type: "start", name: "Start" },
-            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
-            implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
-            review: { type: "gate", name: "Review", stage: "verification", agent: "Reviewer", maxRetries: 2 },
+            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
+            implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
+            review: { type: "gate", name: "Review", stage: "verification", agent: "flow:Reviewer", maxRetries: 2 },
             fork_impl: {
               type: "fork",
               name: "Fork Impl",
@@ -1049,8 +1049,8 @@ describe("WorkflowEngine", () => {
               },
               join: "join_impl",
             },
-            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "Developer" },
-            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "Developer" },
+            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "flow:Developer" },
+            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "flow:Developer" },
             join_impl: { type: "join", name: "Join Impl", fork: "fork_impl", strategy: "all-pass" },
             end: { type: "end", result: "success" },
           },
@@ -1077,7 +1077,7 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "implement");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "development");
-        assert.strictEqual(result.subagent, "Developer");
+        assert.strictEqual(result.subagent, "flow:Developer");
         assert.strictEqual(result.terminal, null);
         assert.ok(result.stepInstructions);
         assert.strictEqual(result.metadata.currentStep, "implement");
@@ -1092,11 +1092,11 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "review");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "verification");
-        assert.strictEqual(result.subagent, "Reviewer");
+        assert.strictEqual(result.subagent, "flow:Reviewer");
         assert.strictEqual(result.maxRetries, 2);
       });
 
-      it("should start at a fork step and return fork response", () => {
+      it("should start at a fork step and return enriched fork response", () => {
         store.loadDefinition("mid-wf", createMidFlowWorkflow());
 
         const result = engine.navigate({ workflowType: "mid-wf", stepId: "fork_impl" });
@@ -1105,8 +1105,15 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.action, "fork");
         assert.ok(result.fork);
         assert.strictEqual(result.fork.joinStep, "join_impl");
+        assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+        // Enriched branch data
         assert.ok(result.fork.branches.frontend);
+        assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+        assert.strictEqual(result.fork.branches.frontend.stage, "development");
+        assert.ok(result.fork.branches.frontend.stepInstructions);
         assert.ok(result.fork.branches.backend);
+        assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
       });
 
       it("should throw for non-existent step", () => {
@@ -1584,7 +1591,7 @@ describe("lint_format gate behavior", () => {
           type: "gate",
           name: "Lint & Format",
           description: "Run lint and format checks. Auto-fix issues where possible.",
-          agent: "Developer",
+          agent: "flow:Developer",
           stage: "delivery",
           maxRetries: 3,
         },
@@ -1881,11 +1888,11 @@ describe("autonomy mode", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        plan: { type: "task", name: "Plan", stage: "planning", agent: "Planner" },
+        plan: { type: "task", name: "Plan", stage: "planning", agent: "flow:Planner" },
         end_planning: { type: "end", result: "success", name: "Planning Complete" },
-        implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
+        implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
         end_dev: { type: "end", result: "success", name: "Development Complete" },
-        test: { type: "task", name: "Test", stage: "verification", agent: "Tester" },
+        test: { type: "task", name: "Test", stage: "verification", agent: "flow:Tester" },
         end_success: { type: "end", result: "success", name: "All Done" },
       },
       edges: [
@@ -2204,21 +2211,16 @@ describe("Helper functions", () => {
   });
 
   describe("toSubagentRef", () => {
-    it("should pass through agent ID as-is", () => {
+    it("should return agent ID exactly as provided", () => {
+      assert.strictEqual(toSubagentRef("flow:Developer"), "flow:Developer");
       assert.strictEqual(toSubagentRef("Developer"), "Developer");
-    });
-
-    it("should pass through prefixed IDs as-is", () => {
-      assert.strictEqual(toSubagentRef("@flow:developer"), "@flow:developer");
+      assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
+      assert.strictEqual(toSubagentRef("SecurityAuditor"), "SecurityAuditor");
     });
 
     it("should return null for falsy input", () => {
       assert.strictEqual(toSubagentRef(null), null);
       assert.strictEqual(toSubagentRef(""), null);
-    });
-
-    it("should pass through namespaced IDs as-is", () => {
-      assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
     });
   });
 
@@ -2261,10 +2263,10 @@ describe("HITL resume behavior", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        implement: { type: "task", name: "Implement", agent: "Developer", stage: "development" },
-        review: { type: "gate", name: "Review", agent: "Reviewer", stage: "verification", maxRetries: 2 },
-        lint_format: { type: "gate", name: "Lint & Format", agent: "Developer", stage: "delivery", maxRetries: 3 },
-        commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+        implement: { type: "task", name: "Implement", agent: "flow:Developer", stage: "development" },
+        review: { type: "gate", name: "Review", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
+        lint_format: { type: "gate", name: "Lint & Format", agent: "flow:Developer", stage: "delivery", maxRetries: 3 },
+        commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: {
           type: "end",
@@ -2432,8 +2434,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 1 },
+        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 1 },
         end_success: { type: "end", result: "success", name: "Done" },
         hitl: { type: "end", result: "blocked", escalation: "hitl", name: "Blocked" },
       },
@@ -2493,8 +2495,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 2 },
+        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
         end_success: { type: "end", result: "success", name: "Done" },
       },
       edges: [
@@ -2596,7 +2598,7 @@ describe("fork/join", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
+        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
         fork_impl: {
           type: "fork",
           name: "Fork Implementation",
@@ -2606,17 +2608,17 @@ describe("fork/join", () => {
           },
           join: "join_impl",
         },
-        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "Developer" },
-        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "Tester" },
-        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "Developer" },
-        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "Tester" },
+        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "flow:Developer" },
+        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "flow:Tester" },
+        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "flow:Developer" },
+        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "flow:Tester" },
         join_impl: {
           type: "join",
           name: "Join Implementation",
           fork: "fork_impl",
           strategy: "all-pass",
         },
-        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "Tester" },
+        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "flow:Tester" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: { type: "end", result: "blocked", escalation: "hitl", name: "Needs Help" },
       },
@@ -2636,7 +2638,7 @@ describe("fork/join", () => {
     };
   }
 
-  it("should return action 'fork' with branch metadata when navigating to fork node", () => {
+  it("should return action 'fork' with enriched branch metadata when navigating to fork node", () => {
     const def = createForkJoinWorkflow();
     store.loadDefinition("fork-wf", def);
 
@@ -2659,10 +2661,30 @@ describe("fork/join", () => {
       assert.strictEqual(result.action, "fork");
       assert.ok(result.fork);
       assert.strictEqual(result.fork.joinStep, "join_impl");
-      assert.ok(result.fork.branches.frontend);
-      assert.strictEqual(result.fork.branches.frontend.entryStep, "impl_frontend");
-      assert.ok(result.fork.branches.backend);
-      assert.strictEqual(result.fork.branches.backend.entryStep, "impl_backend");
+      assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+      // Frontend branch — enriched fields
+      const frontend = result.fork.branches.frontend;
+      assert.ok(frontend);
+      assert.strictEqual(frontend.entryStep, "impl_frontend");
+      assert.strictEqual(frontend.description, "Build UI");
+      assert.strictEqual(frontend.subagent, "flow:Developer");
+      assert.strictEqual(frontend.stage, "development");
+      assert.ok(frontend.stepInstructions);
+      assert.strictEqual(frontend.stepInstructions.name, "Implement Frontend");
+      assert.ok(frontend.orchestratorInstructions);
+      assert.strictEqual(frontend.multiStep, true); // impl_frontend → test_frontend → join
+      assert.strictEqual(frontend.maxRetries, 0);
+      assert.ok(frontend.metadata);
+      assert.strictEqual(frontend.metadata.workflowType, "fork-wf");
+      assert.strictEqual(frontend.metadata.currentStep, "impl_frontend");
+
+      // Backend branch — enriched fields
+      const backend = result.fork.branches.backend;
+      assert.ok(backend);
+      assert.strictEqual(backend.entryStep, "impl_backend");
+      assert.strictEqual(backend.subagent, "flow:Developer");
+      assert.strictEqual(backend.multiStep, true); // impl_backend → test_backend → join
     } finally {
       rmSync(taskDir, { recursive: true });
     }
@@ -2833,5 +2855,285 @@ describe("fork/join", () => {
     } finally {
       rmSync(taskDir, { recursive: true });
     }
+  });
+
+  it("should mark single-step branches as multiStep=false", () => {
+    // Workflow where branches go directly to join (no intermediate steps)
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_gather: {
+          type: "fork",
+          name: "Fork Gather",
+          branches: {
+            alpha: { entryStep: "gather_alpha", description: "Gather alpha data" },
+            beta: { entryStep: "gather_beta", description: "Gather beta data" },
+          },
+          join: "join_gather",
+        },
+        gather_alpha: { type: "task", name: "Gather Alpha", agent: "flow:Investigator", stage: "investigation" },
+        gather_beta: { type: "task", name: "Gather Beta", agent: "flow:Investigator", stage: "investigation" },
+        join_gather: { type: "join", name: "Join Gather", fork: "fork_gather", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_gather" },
+        { from: "fork_gather", to: "gather_alpha" },
+        { from: "fork_gather", to: "gather_beta" },
+        { from: "gather_alpha", to: "join_gather", on: "passed" },
+        { from: "gather_beta", to: "join_gather", on: "passed" },
+        { from: "join_gather", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("single-step-fork", def);
+
+    const result = engine.navigate({ workflowType: "single-step-fork" });
+
+    assert.strictEqual(result.currentStep, "fork_gather");
+    assert.strictEqual(result.action, "fork");
+
+    // Both branches should be single-step (entry step edges only go to join)
+    assert.strictEqual(result.fork.branches.alpha.multiStep, false);
+    assert.strictEqual(result.fork.branches.beta.multiStep, false);
+    assert.strictEqual(result.fork.branches.alpha.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.branches.beta.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+  });
+
+  it("should include enriched fork data on mid-flow start with stepId", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf", def);
+
+    const result = engine.navigate({ workflowType: "fork-wf", stepId: "fork_impl" });
+
+    assert.strictEqual(result.currentStep, "fork_impl");
+    assert.strictEqual(result.action, "fork");
+    assert.ok(result.fork);
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+    // Branches should have enriched data
+    assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+    assert.ok(result.fork.branches.frontend.stepInstructions);
+    assert.ok(result.fork.branches.frontend.orchestratorInstructions);
+    assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
+  });
+
+  it("should return error info when branch entry step is not found", () => {
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_bad: {
+          type: "fork",
+          name: "Bad Fork",
+          branches: {
+            good: { entryStep: "step_a", description: "Valid branch" },
+            bad: { entryStep: "nonexistent", description: "Invalid branch" },
+          },
+          join: "join_bad",
+        },
+        step_a: { type: "task", name: "Step A", agent: "flow:Developer", stage: "dev" },
+        join_bad: { type: "join", name: "Join", fork: "fork_bad", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_bad" },
+        { from: "fork_bad", to: "step_a" },
+        { from: "step_a", to: "join_bad" },
+        { from: "join_bad", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("bad-branch-wf", def);
+
+    const result = engine.navigate({ workflowType: "bad-branch-wf" });
+
+    assert.strictEqual(result.action, "fork");
+    // Good branch is enriched normally
+    assert.strictEqual(result.fork.branches.good.subagent, "flow:Developer");
+    assert.ok(result.fork.branches.good.stepInstructions);
+    // Bad branch has error
+    assert.ok(result.fork.branches.bad.error);
+    assert.ok(result.fork.branches.bad.error.includes("nonexistent"));
+  });
+
+  it("should detect multiStep only against the fork's own join node", () => {
+    // Workflow with two fork/join pairs — branch edges to a different join should be multiStep
+    const def = {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        fork_a: {
+          type: "fork",
+          name: "Fork A",
+          branches: { x: { entryStep: "step_x", description: "Branch X" } },
+          join: "join_a",
+        },
+        step_x: { type: "task", name: "Step X", agent: "flow:Developer" },
+        step_y: { type: "task", name: "Step Y", agent: "flow:Developer" },
+        join_a: { type: "join", name: "Join A", fork: "fork_a", strategy: "all-pass" },
+        join_b: { type: "join", name: "Join B", fork: "fork_a", strategy: "all-pass" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_a" },
+        { from: "fork_a", to: "step_x" },
+        // step_x goes to step_y (not join_a), so it's multi-step
+        { from: "step_x", to: "step_y", on: "passed" },
+        { from: "step_y", to: "join_a" },
+        { from: "join_a", to: "end", on: "passed" },
+      ],
+    };
+    store.loadDefinition("multi-join-wf", def);
+
+    const result = engine.navigate({ workflowType: "multi-join-wf" });
+
+    assert.strictEqual(result.action, "fork");
+    // step_x → step_y (not join_a), so multiStep must be true
+    assert.strictEqual(result.fork.branches.x.multiStep, true);
+  });
+
+  it("should persist autonomy flag to task file on fork/join write-through", () => {
+    const def = createForkJoinWorkflow();
+    store.loadDefinition("fork-wf-auto", def);
+
+    const taskDir = join(tmpdir(), "flow-fork-autonomy-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "task",
+        subject: "Test autonomy persistence",
+        metadata: {
+          workflowType: "fork-wf-auto",
+          currentStep: "analyze",
+          retryCount: 0,
+        },
+      })
+    );
+
+    try {
+      // Advance with autonomy=true — should hit fork_impl (a fork node)
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed", autonomy: true });
+
+      assert.strictEqual(result.currentStep, "fork_impl");
+      assert.strictEqual(result.action, "fork");
+      assert.strictEqual(result.metadata.autonomy, true);
+
+      // Task file on disk must also have autonomy persisted
+      const updated = readTaskFile(taskFile);
+      assert.strictEqual(updated.metadata.autonomy, true);
+      assert.strictEqual(updated.metadata.currentStep, "fork_impl");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+});
+
+describe("external plugin agent pass-through", () => {
+  let store, engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+
+    // Simulate a workflow from an external "ipsum" plugin
+    store.loadDefinition("ipsum-blog", {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        draft: { type: "task", name: "Draft Copy", agent: "ipsum:Copywriter", stage: "writing" },
+        review: {
+          type: "gate",
+          name: "Editorial Review",
+          agent: "ipsum:Editor",
+          stage: "review",
+          maxRetries: 2,
+        },
+        publish: { type: "task", name: "Publish", agent: "ipsum:Publisher", stage: "delivery" },
+        end_success: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "draft" },
+        { from: "draft", to: "review", on: "passed" },
+        { from: "review", to: "publish", on: "passed" },
+        { from: "review", to: "draft", on: "failed" },
+        { from: "publish", to: "end_success", on: "passed" },
+      ],
+    });
+  });
+
+  it("should pass external plugin agent through on start", () => {
+    const result = engine.navigate({ workflowType: "ipsum-blog" });
+
+    assert.strictEqual(result.currentStep, "draft");
+    assert.strictEqual(result.subagent, "ipsum:Copywriter");
+  });
+
+  it("should pass external plugin agent through on advance", () => {
+    const taskDir = join(tmpdir(), "ipsum-test-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+
+    try {
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "task",
+          subject: "Test",
+          metadata: { workflowType: "ipsum-blog", currentStep: "draft", retryCount: 0 },
+        })
+      );
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "review");
+      assert.strictEqual(result.subagent, "ipsum:Editor");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should pass external plugin agent through gate to next step", () => {
+    const taskDir = join(tmpdir(), "ipsum-test-" + Date.now());
+    mkdirSync(taskDir, { recursive: true });
+    const taskFile = join(taskDir, "task.json");
+
+    try {
+      writeFileSync(
+        taskFile,
+        JSON.stringify({
+          id: "task",
+          subject: "Test",
+          metadata: { workflowType: "ipsum-blog", currentStep: "review", retryCount: 0 },
+        })
+      );
+      const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+      assert.strictEqual(result.currentStep, "publish");
+      assert.strictEqual(result.subagent, "ipsum:Publisher");
+    } finally {
+      rmSync(taskDir, { recursive: true });
+    }
+  });
+
+  it("should include external plugin agent in orchestrator instructions", () => {
+    const result = engine.navigate({ workflowType: "ipsum-blog" });
+
+    assert.ok(result.orchestratorInstructions.includes("ipsum:Copywriter"));
+  });
+
+  it("should pass bare project agent through without modification", () => {
+    store.loadDefinition("custom-wf", {
+      nodes: {
+        start: { type: "start", name: "Start" },
+        work: { type: "task", name: "Work", agent: "SecurityAuditor", stage: "analysis" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "work" },
+        { from: "work", to: "end", on: "passed" },
+      ],
+    });
+
+    const result = engine.navigate({ workflowType: "custom-wf" });
+
+    assert.strictEqual(result.subagent, "SecurityAuditor");
   });
 });

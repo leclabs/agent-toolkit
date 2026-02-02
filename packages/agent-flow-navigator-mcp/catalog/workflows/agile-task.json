@@ -12,28 +12,32 @@
       "type": "task",
       "name": "Analyze",
       "description": "Understand requirements and plan approach",
-      "agent": "Planner",
+      "agent": "flow:Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "implement": {
       "type": "task",
       "name": "Implement",
       "description": "Write the code or make changes",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "test": {
       "type": "task",
       "name": "Test",
       "description": "Verify the implementation works correctly",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "verification"
     },
     "review": {
       "type": "gate",
       "name": "Review",
       "description": "Review code quality and correctness",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
       "config": {
@@ -44,7 +48,8 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -52,7 +57,8 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

@@ -131,10 +131,9 @@ export function isValidWorkflowForCopy(content) {
 /**
  * Compute which workflow IDs to copy
  * @param {string[]} requestedIds - Specifically requested workflow IDs (may be empty)
- * @param {string[]} availableIds - All available workflow IDs in catalog
  * @returns {string[]} IDs to copy
  */
-export function computeWorkflowsToCopy(requestedIds, availableIds) {
+export function computeWorkflowsToCopy(requestedIds) {
   if (!requestedIds || requestedIds.length === 0) {
     throw new Error("workflowIds is required. Use ListCatalog to see available workflows, then pass specific IDs.");
   }

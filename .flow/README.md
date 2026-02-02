@@ -1,71 +1,37 @@
 # Flow Plugin
 
-DAG-based workflow orchestration for Claude Code.
-
-## Overview
-
-Flow provides structured workflows that guide tasks through defined stages (planning → development → verification → delivery). Each step can be delegated to specialized subagents.
+Graph-based workflow orchestration for AI agents.
 
 ## Quick Start
 
-Workflows work immediately from the built-in catalog - no setup required:
-
 ```bash
-# Create a task with workflow tracking
-/flow:task-create "Add user authentication" [workflow] feature-development
+# Load the orchestrator at session start
+/flow:prime
 
-# Or use prefix shortcuts
-feat: Add user authentication    # → feature-development workflow
-bug: Fix login error             # → bug-fix workflow
-task: Update config file         # → quick-task workflow
+# Create a task using a command
+/flow:feat "add user authentication"
 
-# Run the task autonomously
-/flow:run
+# Execute all pending tasks
+/flow:go
 ```
 
 ## Commands
 
-| Command              | Description                                          |
-| -------------------- | ---------------------------------------------------- | ------------------------------ |
-| `/flow:list`         | List available workflows                             |
-| `/flow:task-create`  | Create a new task with workflow tracking             |
-| `/flow:task-list`    | List all flow tasks with current status              |
-| `/flow:task-get`     | Get detailed task info including workflow diagram    |
-| `/flow:task-advance` | Advance task: `<taskId> <passed                      | failed> <navigator> [summary]` |
-| `/flow:run`          | Execute flow tasks autonomously                      |
-| `/flow:init`         | Copy workflows to .flow/workflows/ for customization |
-| `/flow:load`         | Reload workflows after editing .flow/workflows/      |
+| Command      | Workflow             | Description                        |
+| ------------ | -------------------- | ---------------------------------- |
+| `/flow:feat` | feature-development  | New feature with planning + review |
+| `/flow:bug`  | bug-fix              | Bug investigation and fix          |
+| `/flow:task` | agile-task           | General development task           |
+| `/flow:fix`  | quick-task           | Quick fix, minimal ceremony        |
+| `/flow:spec` | test-coverage        | Analyze and improve test coverage  |
+| `/flow:ctx`  | context-optimization | Optimize agent context and prompts |
+| `/flow:ui`   | ui-reconstruction    | Reconstruct UI from reference      |
+| `/flow:go`   | _(runs queue)_       | Execute all pending tasks          |
+
+Use `/flow:task-create "description" <workflow-id>` for workflows without command shortcuts.
 
 ## Available Workflows
 
-- **quick-task** - Minimal: understand → execute → verify (best for simple tasks)
-- **agile-task** - Simple: analyze → implement → test → review
-- **feature-development** - Full lifecycle: requirements → planning → implementation → testing → PR
-- **bug-fix** - Bug workflow: reproduce → investigate → fix → verify → PR
-- **context-optimization** - Optimize agent context and instructions
+Workflows are defined in `.flow/workflows/`. Edit `workflow.json` to customize, then run `/flow:load` to reload.
 
-## Customization (Optional)
-
-Flow's workflows work directly from the catalog in the flow->navigator mcp. If you want to create custom workflows you can run `/flow:init` to select a workflow from the catalog to customize for your project, your agents, and your tools.
-
-```bash
-# Copy catalog workflows to .flow/workflows/ for editing
-/flow:init
-
-# Edit .flow/workflows/{workflow}/workflow.json
-# Then reload
-/flow:load
-```
-
-**Customization options:**
-
-- Modify step definitions in workflow.json
-- Add custom `instructions` to steps for project-specific guidance
-- Create new workflows by adding new directories
-
-## How It Works
-
-1. **Navigate API** - Stateless MCP server computes next step based on workflow DAG
-2. **Task Metadata** - Workflow state stored in Claude Code task metadata
-3. **Subagent Delegation** - Steps delegated to specialized agents (planner, developer, tester, reviewer)
-4. **Retry Logic** - Failed steps retry with configurable limits, escalate to HITL if exceeded
+See [Flow Plugin docs](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) for the full workflow catalog.

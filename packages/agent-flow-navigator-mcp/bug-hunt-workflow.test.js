@@ -1,7 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { readFileSync } from "fs";
+import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "fs";
 import { join, dirname } from "path";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { WorkflowEngine } from "./engine.js";
 import { WorkflowStore, validateWorkflow } from "./store.js";
@@ -132,16 +133,16 @@ describe("bug-hunt workflow JSON structure", () => {
   });
 
   it("should assign correct agents to nodes", () => {
-    assert.strictEqual(workflow.nodes.triage.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.reproduce.agent, "Tester");
-    assert.strictEqual(workflow.nodes.code_archaeology.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.git_forensics.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.synthesize.agent, "Architect");
-    assert.strictEqual(workflow.nodes.write_fix.agent, "Developer");
-    assert.strictEqual(workflow.nodes.add_regression_test.agent, "Tester");
-    assert.strictEqual(workflow.nodes.verify_fix.agent, "Tester");
-    assert.strictEqual(workflow.nodes.lint_format.agent, "Developer");
-    assert.strictEqual(workflow.nodes.commit.agent, "Developer");
+    assert.strictEqual(workflow.nodes.triage.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.reproduce.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.code_archaeology.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.git_forensics.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.synthesize.agent, "flow:Architect");
+    assert.strictEqual(workflow.nodes.write_fix.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.add_regression_test.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.verify_fix.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.lint_format.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.commit.agent, "flow:Developer");
   });
 });
 
@@ -279,6 +280,131 @@ describe("bug-hunt workflow fork/join behavior", () => {
     assert.strictEqual(joinNode.fork, "fork_investigate");
     assert.strictEqual(joinNode.strategy, "all-pass");
   });
+
+  it("should advance from fork node with passed result to post-join step (synthesize)", () => {
+    // Simulate: parent task is at fork_investigate, orchestrator completed all branches
+    // Calling navigate with result should route through the join to synthesize
+    const tmpDir = mkdtempSync(join(tmpdir(), "nav-fork-"));
+    const taskFile = join(tmpDir, "1.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "test",
+        description: "test",
+        activeForm: "test",
+        status: "in_progress",
+        metadata: { workflowType: "bug-hunt", currentStep: "fork_investigate", retryCount: 0 },
+      })
+    );
+
+    const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+    assert.strictEqual(result.currentStep, "synthesize");
+    assert.strictEqual(result.action, "advance");
+    assert.strictEqual(result.subagent, "flow:Architect");
+    assert.strictEqual(result.terminal, null);
+
+    rmSync(tmpDir, { recursive: true });
+  });
+
+  it("should advance from fork node with failed result to hitl_inconclusive", () => {
+    // Simulate: parent task at fork, one branch failed, all-pass strategy → failed
+    const tmpDir = mkdtempSync(join(tmpdir(), "nav-fork-"));
+    const taskFile = join(tmpDir, "1.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "test",
+        description: "test",
+        activeForm: "test",
+        status: "in_progress",
+        metadata: { workflowType: "bug-hunt", currentStep: "fork_investigate", retryCount: 0 },
+      })
+    );
+
+    const result = engine.navigate({ taskFilePath: taskFile, result: "failed" });
+
+    assert.strictEqual(result.currentStep, "hitl_inconclusive");
+    assert.strictEqual(result.terminal, "hitl");
+
+    rmSync(tmpDir, { recursive: true });
+  });
+
+  it("should return enriched fork response with per-branch step info", () => {
+    // Navigate to fork_investigate via triage → fork
+    const tmpDir = mkdtempSync(join(tmpdir(), "nav-fork-enriched-"));
+    const taskFile = join(tmpDir, "1.json");
+    writeFileSync(
+      taskFile,
+      JSON.stringify({
+        id: "1",
+        subject: "test",
+        description: "test",
+        activeForm: "test",
+        status: "in_progress",
+        metadata: { workflowType: "bug-hunt", currentStep: "triage", retryCount: 0 },
+      })
+    );
+
+    const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
+
+    assert.strictEqual(result.currentStep, "fork_investigate");
+    assert.strictEqual(result.action, "fork");
+    assert.ok(result.fork);
+    assert.strictEqual(result.fork.joinStep, "join_investigate");
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+    // Reproduce branch
+    const reproduce = result.fork.branches.reproduce;
+    assert.strictEqual(reproduce.entryStep, "reproduce");
+    assert.strictEqual(reproduce.subagent, "flow:Tester");
+    assert.strictEqual(reproduce.stage, "investigation");
+    assert.ok(reproduce.stepInstructions);
+    assert.strictEqual(reproduce.stepInstructions.name, "Reproduce Bug");
+    assert.ok(reproduce.orchestratorInstructions);
+    assert.strictEqual(reproduce.multiStep, false); // reproduce → join_investigate directly
+    assert.strictEqual(reproduce.maxRetries, 0);
+    assert.ok(reproduce.metadata);
+    assert.strictEqual(reproduce.metadata.workflowType, "bug-hunt");
+    assert.strictEqual(reproduce.metadata.currentStep, "reproduce");
+
+    // Code archaeology branch
+    const archaeology = result.fork.branches.code_archaeology;
+    assert.strictEqual(archaeology.entryStep, "code_archaeology");
+    assert.strictEqual(archaeology.subagent, "flow:Investigator");
+    assert.strictEqual(archaeology.stage, "investigation");
+    assert.strictEqual(archaeology.multiStep, false); // code_archaeology → join_investigate directly
+
+    // Git forensics branch
+    const forensics = result.fork.branches.git_forensics;
+    assert.strictEqual(forensics.entryStep, "git_forensics");
+    assert.strictEqual(forensics.subagent, "flow:Investigator");
+    assert.strictEqual(forensics.stage, "investigation");
+    assert.strictEqual(forensics.multiStep, false); // git_forensics → join_investigate directly
+
+    rmSync(tmpDir, { recursive: true });
+  });
+
+  it("should return enriched fork response at start with stepId", () => {
+    const result = engine.navigate({ workflowType: "bug-hunt", stepId: "fork_investigate" });
+
+    assert.strictEqual(result.currentStep, "fork_investigate");
+    assert.strictEqual(result.action, "fork");
+    assert.strictEqual(result.fork.joinStrategy, "all-pass");
+
+    // All 3 branches should have enriched data
+    for (const branchName of ["reproduce", "code_archaeology", "git_forensics"]) {
+      const branch = result.fork.branches[branchName];
+      assert.ok(branch.subagent, `${branchName} should have subagent`);
+      assert.ok(branch.stage, `${branchName} should have stage`);
+      assert.ok(branch.stepInstructions, `${branchName} should have stepInstructions`);
+      assert.ok(branch.orchestratorInstructions, `${branchName} should have orchestratorInstructions`);
+      assert.strictEqual(branch.multiStep, false, `${branchName} should be single-step`);
+      assert.ok(branch.metadata, `${branchName} should have metadata`);
+    }
+  });
 });
 
 // =============================================================================
@@ -377,8 +503,8 @@ describe("bug-hunt workflow diagram generation", () => {
     const workflow = loadBugHuntWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('verify_fix{"Verify Fix"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 flow:Tester</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {
@@ -421,7 +547,7 @@ describe("bug-hunt workflow mid-flow start", () => {
     assert.strictEqual(result.currentStep, "write_fix");
     assert.strictEqual(result.action, "start");
     assert.strictEqual(result.stage, "development");
-    assert.strictEqual(result.subagent, "Developer");
+    assert.strictEqual(result.subagent, "flow:Developer");
     assert.strictEqual(result.terminal, null);
     assert.ok(result.stepInstructions);
     assert.strictEqual(result.metadata.retryCount, 0);
@@ -433,7 +559,7 @@ describe("bug-hunt workflow mid-flow start", () => {
     assert.strictEqual(result.currentStep, "synthesize");
     assert.strictEqual(result.action, "start");
     assert.strictEqual(result.stage, "planning");
-    assert.strictEqual(result.subagent, "Architect");
+    assert.strictEqual(result.subagent, "flow:Architect");
   });
 
   it("should start at fork_investigate and return fork response", () => {
@@ -605,5 +731,48 @@ describe("bug-hunt workflow HITL resume", () => {
     // Continue happy path from write_fix
     const regTest = engine.evaluateEdge("bug-hunt", "write_fix", "passed", 0);
     assert.strictEqual(regTest.nextStep, "add_regression_test");
+  });
+});
+
+// =============================================================================
+// Context-gather workflow - failure edge and multi-step validation
+// =============================================================================
+
+const CONTEXT_GATHER_PATH = join(__dirname, "catalog", "workflows", "context-gather.json");
+
+function loadContextGatherWorkflow() {
+  return JSON.parse(readFileSync(CONTEXT_GATHER_PATH, "utf-8"));
+}
+
+describe("context-gather workflow edge coverage", () => {
+  let store, engine;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("context-gather", loadContextGatherWorkflow());
+  });
+
+  it("should have failure edge from repo_info to join_gather", () => {
+    const result = engine.evaluateEdge("context-gather", "repo_info", "failed", 0);
+    assert.strictEqual(result.nextStep, "join_gather");
+  });
+
+  it("should advance repo_info to repo_analyze on passed", () => {
+    const result = engine.evaluateEdge("context-gather", "repo_info", "passed", 0);
+    assert.strictEqual(result.nextStep, "repo_analyze");
+  });
+
+  it("should mark repo branch as multiStep and system/weather as single-step", () => {
+    const result = engine.navigate({ workflowType: "context-gather" });
+    assert.strictEqual(result.action, "fork");
+    assert.strictEqual(result.fork.branches.repo.multiStep, true);
+    assert.strictEqual(result.fork.branches.system.multiStep, false);
+    assert.strictEqual(result.fork.branches.weather.multiStep, false);
+  });
+
+  it("should use Investigator for system_info branch", () => {
+    const result = engine.navigate({ workflowType: "context-gather" });
+    assert.strictEqual(result.fork.branches.system.subagent, "flow:Investigator");
   });
 });

@@ -122,18 +122,18 @@ describe("refactor workflow JSON structure", () => {
   });
 
   it("should assign correct agents to nodes", () => {
-    assert.strictEqual(workflow.nodes.analyze_structure.agent, "Planner");
-    assert.strictEqual(workflow.nodes.identify_debt.agent, "Planner");
-    assert.strictEqual(workflow.nodes.classify_components.agent, "Planner");
-    assert.strictEqual(workflow.nodes.design_refactor.agent, "Planner");
-    assert.strictEqual(workflow.nodes.plan_review.agent, "Reviewer");
-    assert.strictEqual(workflow.nodes.extract_core.agent, "Developer");
-    assert.strictEqual(workflow.nodes.isolate_shell.agent, "Developer");
-    assert.strictEqual(workflow.nodes.write_tests.agent, "Tester");
-    assert.strictEqual(workflow.nodes.run_tests.agent, "Tester");
-    assert.strictEqual(workflow.nodes.code_review.agent, "Reviewer");
-    assert.strictEqual(workflow.nodes.lint_format.agent, "Developer");
-    assert.strictEqual(workflow.nodes.commit.agent, "Developer");
+    assert.strictEqual(workflow.nodes.analyze_structure.agent, "flow:Planner");
+    assert.strictEqual(workflow.nodes.identify_debt.agent, "flow:Planner");
+    assert.strictEqual(workflow.nodes.classify_components.agent, "flow:Planner");
+    assert.strictEqual(workflow.nodes.design_refactor.agent, "flow:Planner");
+    assert.strictEqual(workflow.nodes.plan_review.agent, "flow:Reviewer");
+    assert.strictEqual(workflow.nodes.extract_core.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.isolate_shell.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.write_tests.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.run_tests.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.code_review.agent, "flow:Reviewer");
+    assert.strictEqual(workflow.nodes.lint_format.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.commit.agent, "flow:Developer");
   });
 });
 
@@ -351,10 +351,10 @@ describe("refactor workflow diagram generation", () => {
     const workflow = loadRefactorWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('plan_review{"Review Plan"}'));
-    assert.ok(diagram.includes('run_tests{"Run Tests"}'));
-    assert.ok(diagram.includes('code_review{"Code Review"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format"}'));
+    assert.ok(diagram.includes('plan_review{"Review Plan<br/><small>👀 flow:Reviewer</small>"}'));
+    assert.ok(diagram.includes('run_tests{"Run Tests<br/><small>🧪 flow:Tester</small>"}'));
+    assert.ok(diagram.includes('code_review{"Code Review<br/><small>👀 flow:Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {

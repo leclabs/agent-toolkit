@@ -12,28 +12,32 @@
       "type": "task",
       "name": "Map Connections",
       "description": "Identify all connection points between components (MCP, skills, agents, subagents)",
-      "agent": "Context Engineer",
+      "agent": "flow:Context Engineer",
+      "emoji": "🧠",
       "stage": "analysis"
     },
     "identify_pathologies": {
       "type": "task",
       "name": "Identify Pathologies",
       "description": "Find context pathologies: specification bloat, attention dilution, redundant framing",
-      "agent": "Context Engineer",
+      "agent": "flow:Context Engineer",
+      "emoji": "🧠",
       "stage": "analysis"
     },
     "design_improvements": {
       "type": "task",
       "name": "Design Improvements",
       "description": "Apply compression techniques: lead with conclusions, causal chains, precise terminology",
-      "agent": "Context Engineer",
+      "agent": "flow:Context Engineer",
+      "emoji": "🧠",
       "stage": "design"
     },
     "review_design": {
       "type": "gate",
       "name": "Review Design",
       "description": "Verify improvements don't sacrifice meaning for brevity",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
+      "emoji": "👀",
       "stage": "design",
       "maxRetries": 2,
       "config": {
@@ -44,14 +48,16 @@
       "type": "task",
       "name": "Implement",
       "description": "Apply the optimizations to actual files and configurations",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "implementation"
     },
     "verify": {
       "type": "task",
       "name": "Verify",
       "description": "Test that agents still function correctly with optimized context",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 2
     },

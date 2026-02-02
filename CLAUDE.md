@@ -76,6 +76,10 @@ npm run release
   - `packages/agent-flow-navigator-mcp/package.json`
 - `npm run release` — runs `npm whoami` to verify auth, then publishes both `@leclabs/agent-toolkit` and `@leclabs/agent-flow-navigator-mcp`. If auth fails, prints instructions to set the npm token.
 
+## MCP Server Restart
+
+After modifying files in `packages/agent-flow-navigator-mcp/` or `plugins/flow/`, **ask the user to restart the MCP server** before using any `/flow:*` skills (like `/flow:diagram`). The running server will have stale code until restarted.
+
 ## Naming Hierarchy
 
 ```
@@ -84,10 +88,10 @@ agent-toolkit (marketplace)
     └── navigator (mcp)
 ```
 
-| Component              | Name                                | Purpose                          |
-| ---------------------- | ----------------------------------- | -------------------------------- |
-| Marketplace            | `agent-toolkit`                     | Collection of agent tools        |
-| Plugin                 | `flow`                              | DAG-based workflow orchestration |
-| MCP Server flow config | `navigator`                         | Navigates through workflow DAGs  |
-| MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package          |
-| Skills                 | `/flow:*`                           | User-facing commands             |
+| Component              | Name                                | Purpose                     |
+| ---------------------- | ----------------------------------- | --------------------------- |
+| Marketplace            | `agent-toolkit`                     | Collection of agent tools   |
+| Plugin                 | `flow`                              | Workflow orchestration      |
+| MCP Server flow config | `navigator`                         | Navigates through workflows |
+| MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package     |
+| Skills                 | `/flow:*`                           | User-facing commands        |

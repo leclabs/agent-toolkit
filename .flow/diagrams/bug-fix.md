@@ -7,32 +7,32 @@ Workflow for fixing bugs: reproduce, investigate, fix, verify, and create PR.
 ```mermaid
 flowchart TD
     start(("Start"))
-    reproduce["Reproduce Bug<br/><small>Investigator</small>"]
-    investigate["Investigate<br/><small>Investigator</small>"]
-    write_fix["Write Fix<br/><small>Developer</small>"]
-    add_regression_test["Add Regression Test<br/><small>Tester</small>"]
-    verify_fix["Verify Fix<br/><small>Tester</small>"]
-    lint_format{"Lint and Format"}
-    commit["Commit Changes<br/><small>Developer</small>"]
+    reproduce["Reproduce Bug<br/><small>🔍 Investigator</small>"]
+    investigate["Investigate<br/><small>🔍 Investigator</small>"]
+    write_fix["Write Fix<br/><small>🔧 Developer</small>"]
+    add_regression_test["Add Regression Test<br/><small>🧪 Tester</small>"]
+    verify_fix["Verify Fix<br/><small>🧪 Tester</small>"]
+    lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}
+    commit["Commit Changes<br/><small>🔧 Developer</small>"]
     end_success[["Fixed"]]
-    hitl_cannot_reproduce{{"Cannot Reproduce"}}
-    hitl_fix_failed{{"Fix Failed"}}
+    hitl_cannot_reproduce{{"✋ Cannot Reproduce"}}
+    hitl_fix_failed{{"✋ Fix Failed"}}
 
     start --> reproduce
-    reproduce -->|passed| investigate
-    reproduce -->|failed| hitl_cannot_reproduce
+    reproduce -->|Bug reproduced successfully| investigate
+    reproduce -->|Could not reproduce bug| hitl_cannot_reproduce
     investigate --> write_fix
     write_fix --> add_regression_test
     add_regression_test --> verify_fix
-    verify_fix -->|failed| write_fix
-    verify_fix -->|failed| hitl_fix_failed
-    verify_fix -->|passed| lint_format
-    lint_format -->|passed| commit
-    lint_format -->|failed| write_fix
-    lint_format -->|failed| hitl_fix_failed
+    verify_fix -->|Fix didn't work, try again| write_fix
+    verify_fix -->|Cannot fix the bug| hitl_fix_failed
+    verify_fix -->|Bug verified fixed, run lint checks| lint_format
+    lint_format -->|Lint passes, commit changes| commit
+    lint_format -->|Fix lint/format issues| write_fix
+    lint_format -->|Lint issues persist| hitl_fix_failed
     commit --> end_success
-    hitl_cannot_reproduce -->|passed| reproduce
-    hitl_fix_failed -->|passed| write_fix
+    hitl_cannot_reproduce -->|Human provided reproduction info, resume| reproduce
+    hitl_fix_failed -->|Human resolved fix issue, resume| write_fix
 
     classDef startStep fill:#90EE90,stroke:#228B22
     classDef successStep fill:#87CEEB,stroke:#4169E1
@@ -48,12 +48,12 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| investigation | reproduce | Reproduce Bug | Investigator | Understand the bug and create a reliable reproduction case |
-| investigation | investigate | Investigate | Investigator | Find root cause by tracing code paths and debugging |
-| development | write_fix | Write Fix | Developer | Implement the fix with minimal changes |
-| development | add_regression_test | Add Regression Test | Tester | Write a test that would have caught this bug |
-| verification | verify_fix | Verify Fix | Tester | Run all tests and verify the bug is fixed |
-| delivery | lint_format | Lint & Format | Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | Developer | Commit the fix and regression test with a descriptive message |
+| Stage         | Step                | Name                | Agent                | Instructions                                                  |
+| ------------- | ------------------- | ------------------- | -------------------- | ------------------------------------------------------------- |
+| investigation | reproduce           | Reproduce Bug       | 🔍 flow:Investigator | Understand the bug and create a reliable reproduction case    |
+| investigation | investigate         | Investigate         | 🔍 flow:Investigator | Find root cause by tracing code paths and debugging           |
+| development   | write_fix           | Write Fix           | 🔧 flow:Developer    | Implement the fix with minimal changes                        |
+| development   | add_regression_test | Add Regression Test | 🧪 flow:Tester       | Write a test that would have caught this bug                  |
+| verification  | verify_fix          | Verify Fix          | 🧪 flow:Tester       | Run all tests and verify the bug is fixed                     |
+| delivery      | lint_format         | Lint & Format       | 🔧 flow:Developer    | Run lint and format checks. Auto-fix issues where possible.   |
+| delivery      | commit              | Commit Changes      | 🔧 flow:Developer    | Commit the fix and regression test with a descriptive message |

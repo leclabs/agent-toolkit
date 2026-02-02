@@ -165,15 +165,15 @@ Response includes `subagent`, `stepInstructions`, `terminal`, `metadata`, etc.
 
 ### 6. Delegation Protocol
 
-**If subagent is set (e.g., `@flow:Developer`):**
+**If subagent is set (e.g., `flow:Developer`):**
 
-Use the Task tool to delegate the step to the subagent.
+Use the Task tool to delegate the step to the subagent. The `subagent` value from Navigate is already in `subagent_type` format — use it directly.
 
 Example:
 
 ```
 Task(
-  subagent_type: "flow:Developer",
+  subagent_type: "{subagent}",
   prompt: """
     Execute the '{stepName}' step for task {taskId}.
 
@@ -214,20 +214,20 @@ Parse subagent response:
 
 Navigate returns:
 
-| Field                      | Purpose                                                     |
-| -------------------------- | ----------------------------------------------------------- |
-| `currentStep`              | The new step                                                |
-| `stage`                    | Workflow stage (e.g., `"planning"`)                         |
-| `subagent`                 | Who executes next step                                      |
-| `stepInstructions`         | `{name, description, guidance}`                             |
-| `terminal`                 | `"success"` or `"hitl"` if done                             |
-| `orchestratorInstructions` | Updated task description                                    |
-| `metadata`                 | `{ workflowType, currentStep, retryCount }`                 |
-| `action`                   | `"advance"`, `"retry"`, `"escalate"`, `"fork"`, or `"join"` |
-| `retriesIncremented`       | `true` if retry count increased                             |
-| `autonomyContinued`        | `true` if auto-continued through stage boundary             |
-| `fork`                     | `{ branches, joinStep }` when action is `"fork"`            |
-| `join`                     | `{ forkStep, strategy }` when action is `"join"`            |
+| Field                      | Purpose                                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `currentStep`              | The new step                                                                                                                                                                    |
+| `stage`                    | Workflow stage (e.g., `"planning"`)                                                                                                                                             |
+| `subagent`                 | Who executes next step                                                                                                                                                          |
+| `stepInstructions`         | `{name, description, guidance}`                                                                                                                                                 |
+| `terminal`                 | `"success"` or `"hitl"` if done                                                                                                                                                 |
+| `orchestratorInstructions` | Updated task description                                                                                                                                                        |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }`                                                                                                                                     |
+| `action`                   | `"advance"`, `"retry"`, `"escalate"`, `"fork"`, or `"join"`                                                                                                                     |
+| `retriesIncremented`       | `true` if retry count increased                                                                                                                                                 |
+| `autonomyContinued`        | `true` if auto-continued through stage boundary                                                                                                                                 |
+| `fork`                     | `{ branches, joinStep, joinStrategy }` when action is `"fork"` — branches are enriched with `subagent`, `stepInstructions`, `orchestratorInstructions`, `multiStep`, `metadata` |
+| `join`                     | `{ forkStep, strategy }` when action is `"join"`                                                                                                                                |
 
 Then call TaskUpdate to sync status (Navigator's write-through has already updated subject, activeForm, description, and metadata in the task file):
 
@@ -243,70 +243,161 @@ Then call TaskUpdate to sync status (Navigator's write-through has already updat
 After each step, show brief progress:
 
 ```
-✓ parse_requirements (@flow:Planner) → passed
-✓ implement (@flow:Developer) → passed
-⟳ test (@flow:Tester) → in progress...
+✓ parse_requirements (flow:Planner) → passed
+✓ implement (flow:Developer) → passed
+⟳ test (flow:Tester) → in progress...
 ```
 
 ### Fork/Join Handling
 
-When Navigate returns `action: "fork"`, the workflow has branched into parallel work.
+When Navigate returns `action: "fork"`, the workflow has branched into parallel work. The fork response includes **enriched per-branch data** — subagent, stepInstructions, orchestratorInstructions, metadata, and multiStep flag — so the orchestrator can create child tasks and launch agents without additional Navigate calls.
 
-**Fork handling** (when `action === "fork"`):
+**Fork** (when `action === "fork"`):
 
-1. Read `fork.branches` and `fork.joinStep` from Navigate response
-2. For each branch, use `TaskCreate` to create a child task with metadata:
-   ```json
-   {
-     "workflowType": "{same workflowType}",
-     "currentStep": "{branch.entryStep}",
-     "retryCount": 0,
-     "parentTaskId": "{current taskId}",
-     "forkStep": "{fork step id}",
-     "branchName": "{branch name}",
-     "userDescription": "{original task description}"
-   }
-   ```
-3. Record child task IDs in parent's metadata as `forkState`:
-   ```json
-   {
-     "forkStep": "fork_impl",
-     "joinStep": "join_impl",
-     "branches": {
-       "frontend": { "status": "running", "childTaskId": "42" },
-       "backend": { "status": "running", "childTaskId": "43" }
-     }
-   }
-   ```
-4. Execute each child sequentially using the Task tool (Claude Code runs subagents one at a time)
-5. After each child completes, update its branch status in parent's `forkState`
+**Step 1 — Read enriched fork data:**
 
-**Child execution**: Each child runs the normal `/flow:run` loop starting from its `currentStep`. When Navigate returns `action: "join"` (child reached the join node), the child's loop exits — the branch is done. Mark the branch as `"passed"` or `"failed"` based on whether the child reached the join node successfully.
+Extract from Navigate response:
 
-**Join evaluation** (after all children finish):
+- `fork.branches` — map of branch name → enriched branch info
+- `fork.joinStep` — the join node ID
+- `fork.joinStrategy` — `"all-pass"` or `"any-pass"`
 
-1. Check all branch statuses in parent's `forkState`
-2. Apply strategy from the join node:
-   - `all-pass`: all branches must have status `"passed"` → advance with `"passed"`, otherwise `"failed"`
-   - `any-pass`: at least one branch passed → advance with `"passed"`, otherwise `"failed"`
-3. Call `Navigate` on parent with `taskFilePath` and `result: "passed"` or `"failed"` to advance through the join node
-4. Clear `forkState` from parent metadata
-5. Resume normal execution loop
+Each branch object includes:
+
+- `entryStep` — first step ID for the branch
+- `description` — branch description
+- `subagent` — Task tool `subagent_type` value (e.g., `"flow:Developer"`)
+- `stage` — workflow stage
+- `stepInstructions` — `{ name, description, guidance }`
+- `orchestratorInstructions` — ready-to-use task description
+- `maxRetries` — entry step retry count
+- `multiStep` — `true` if branch has steps beyond the entry step before the join
+- `metadata` — `{ workflowType, currentStep, retryCount }` ready for task creation
+
+**Step 2 — Create all child tasks in parallel:**
+
+Use multiple `TaskCreate` calls in a **single message**. Each uses branch data directly (no Navigate calls needed):
+
+```
+TaskCreate(
+  subject: "#{parentId}/{branchName} {userDescription}
+→ {workflowType} · {entryStep} ({subagent})",
+  activeForm: "{stepInstructions.name} ({subagent})",
+  description: "{orchestratorInstructions}",
+  metadata: {
+    ...branchInfo.metadata,
+    userDescription,
+    parentTaskId: "{current taskId}",
+    forkStep: "{fork step id}",
+    branchName: "{branch name}"
+  }
+)
+```
+
+**Step 3 — Record forkState:**
+
+Update parent task via `TaskUpdate` with `forkState`:
+
+```json
+{
+  "forkStep": "fork_impl",
+  "joinStep": "join_impl",
+  "joinStrategy": "all-pass",
+  "branches": {
+    "frontend": { "status": "running", "childTaskId": "42" },
+    "backend": { "status": "running", "childTaskId": "43" }
+  }
+}
+```
+
+**Step 4 — Start child tasks:**
+
+Mark all child tasks as `in_progress` in a **single message** (parallel `TaskUpdate` calls):
+
+```
+TaskUpdate(taskId: "{childTaskId}", status: "in_progress")
+```
+
+**Step 5 — Execute all branches in parallel:**
+
+Launch multiple `Task` tool calls in a **single message** (one per branch). The prompt varies by `multiStep`:
+
+- **Single-step** (`multiStep: false`): Standard delegation prompt. The agent executes the step using the enriched `orchestratorInstructions` and returns a result. No Navigate calls needed within the branch.
+
+  ```
+  Task(
+    subagent_type: "{branch.subagent}",
+    prompt: """
+      Execute the '{stepInstructions.name}' step for branch '{branchName}'.
+
+      ## Task
+      {userDescription}
+
+      ## Current Step
+      {stepInstructions.name}: {stepInstructions.description}
+
+      ## Guidance
+      {stepInstructions.guidance}
+
+      ## Response Format
+      Return JSON: {"success": true|false, "summary": "brief description"}
+    """
+  )
+  ```
+
+- **Multi-step** (`multiStep: true`): The agent runs a Navigate-advance loop within the branch. It starts at `entryStep`, delegates each step, advances via Navigate with the child's `taskFilePath`, and continues until `action === "join"` (branch reached the join node).
+
+  ```
+  Task(
+    subagent_type: "{branch.subagent}",
+    prompt: """
+      Execute multi-step branch '{branchName}' starting at '{entryStep}'.
+
+      Task file: {childTaskFilePath}
+
+      Run the Navigate-advance loop:
+      1. Execute the current step using orchestratorInstructions
+      2. Call Navigate with taskFilePath and result ("passed"/"failed")
+      3. If action === "join", exit — branch is complete
+      4. Otherwise delegate the next step and repeat
+
+      ## Task
+      {userDescription}
+
+      ## First Step
+      {stepInstructions.name}: {stepInstructions.description}
+
+      ## Guidance
+      {stepInstructions.guidance}
+
+      ## Response Format
+      Return JSON: {"success": true|false, "summary": "brief description"}
+    """
+  )
+  ```
+
+**Step 6 — Collect & join:**
+
+After all branch Task calls complete:
+
+1. Parse each branch result (`"passed"` or `"failed"`)
+2. Apply `fork.joinStrategy`:
+   - `all-pass`: all branches passed → `"passed"`, otherwise `"failed"`
+   - `any-pass`: at least one branch passed → `"passed"`, otherwise `"failed"`
+3. Call `Navigate` on parent with `taskFilePath` and the computed result to advance through the join
+4. Delete child tasks via `TaskUpdate({ status: "deleted" })`
+5. Clear `forkState` from parent metadata via `TaskUpdate`
+6. Resume the normal execution loop
 
 **Progress reporting for fork/join:**
 
 ```
-⑂ Fork: fork_impl → 2 branches
-  ├─ frontend (impl_frontend): running...
-  │  ✓ impl_frontend → passed
-  │  ✓ test_frontend → passed
-  │  → branch complete
-  └─ backend (impl_backend): running...
-     ✓ impl_backend → passed
-     ✓ test_backend → passed
-     → branch complete
-⑃ Join: join_impl (all-pass) → passed
-✓ integration_test → passed
+⑂ Fork: fork_investigate → 3 branches
+  ├─ reproduce (#42): ✓ passed
+  ├─ code_archaeology (#43): ✓ passed
+  └─ git_forensics (#44): ✓ passed
+⑃ Join: join_investigate (all-pass) → passed
+✓ synthesize → passed
 ```
 
 ### 9. Loop Termination
@@ -326,7 +417,7 @@ Note: HITL does **not** automatically exit the loop. The user is given the choic
 **Success:**
 
 ```
-Completed: #1 Add user auth ✨ (@flow:Developer)
+Completed: #1 Add user auth ✨ (flow:Developer)
  → feature-development · end
  → end_success · completed ✓
 

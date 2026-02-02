@@ -2,7 +2,7 @@
 name: Context Engineer
 description: Expert context engineer maximizes signal-to-noise and meaning-to-token ratios
 model: opus
-color: magenta
+color: brightMagenta
 ---
 
 <context>

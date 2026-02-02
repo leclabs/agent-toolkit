@@ -14,17 +14,17 @@ Create a new flow task from issues, requirements, or descriptions.
 - `workflowType` - workflow type
 - `--run` - autorun after creation
 
-**Signiture:** `/flow:task-create <description> [<workflowType>] [<stepId>] [--run]`
+**Signature:** `/flow:task-create <description> [<workflowType>] [<stepId>] [--run]`
 
-| Command | Description |
-| --------------------------------------------------------------------------- | ------------------------------------------------------- |
-| /flow:task-create | Interactive multi-panel workflowType selection |
-| /flow:task-create "Make a cup of coffee" | Infer workflowType → create task |
-| /flow:task-create "Make a cup of coffee" --run | Infer workflowType → create task → execute |
-| /flow:task-create "Make a coffee machine" feature-development | Create task with feature-development workflowType |
-| /flow:task-create "Replace coffee filter" agile-task --run | Create task with agile-task workflowType → execute |
-| /flow:task-create "Fix auth" bug-fix write_fix | Create task starting at write_fix step (mid-flow) |
-| /flow:task-create "Fix auth" bug-fix write_fix --run | Mid-flow start → execute |
+| Command                                                       | Description                                        |
+| ------------------------------------------------------------- | -------------------------------------------------- |
+| /flow:task-create                                             | Interactive multi-panel workflowType selection     |
+| /flow:task-create "Make a cup of coffee"                      | Infer workflowType → create task                   |
+| /flow:task-create "Make a cup of coffee" --run                | Infer workflowType → create task → execute         |
+| /flow:task-create "Make a coffee machine" feature-development | Create task with feature-development workflowType  |
+| /flow:task-create "Replace coffee filter" agile-task --run    | Create task with agile-task workflowType → execute |
+| /flow:task-create "Fix auth" bug-fix write_fix                | Create task starting at write_fix step (mid-flow)  |
+| /flow:task-create "Fix auth" bug-fix write_fix --run          | Mid-flow start → execute                           |
 
 </usage>
 
@@ -58,20 +58,21 @@ Response includes:
 
 ## 2. Create Task with Metadata
 
-Call `TaskCreate` with subject formatted to show workflow position:
+Call `TaskCreate` with subject formatted to show workflow position. The subject is two lines separated by a **real newline** (not a literal `\n`):
 
-```json
-{
-  "subject": "#1 Add user authentication ✨\n→ feature-development · parse_requirements (@flow:Planner)",
-  "activeForm": "Parse Requirements (@flow:Planner)",
-  "description": "{response.orchestratorInstructions}",
-  "metadata": {
-    "userDescription": "Add user authentication",
-    "workflowType": "{response.metadata.workflowType}",
-    "currentStep": "{response.metadata.currentStep}",
-    "retryCount": 0
+```
+TaskCreate(
+  subject: "#1 Add user authentication ✨
+→ feature-development · parse_requirements (flow:Planner)",
+  activeForm: "Parse Requirements (flow:Planner)",
+  description: "{response.orchestratorInstructions}",
+  metadata: {
+    userDescription: "Add user authentication",
+    workflowType: "{response.metadata.workflowType}",
+    currentStep: "{response.metadata.currentStep}",
+    retryCount: 0
   }
-}
+)
 ```
 
 **Key points:**
@@ -109,10 +110,10 @@ Examples:
 
 ```
 #1 Add user auth ✨
-→ feature-development · parse_requirements (@flow:Planner)
+→ feature-development · parse_requirements (flow:Planner)
 
 #3 Add user auth ✨
-→ feature-development · code_review (@flow:Reviewer) · retries: 0/2
+→ feature-development · code_review (flow:Reviewer) · retries: 0/2
 
 #7 Fix login bug 🐛
 → bug-fix · verify (direct)
@@ -126,6 +127,7 @@ Append emoji after task subject based on workflowType:
 | ---------------------- | ------ |
 | `feature-development`  | ✨     |
 | `bug-fix`              | 🐛     |
+| `bug-hunt`             | 🔍     |
 | `agile-task`           | 📋     |
 | `context-optimization` | 🔧     |
 | `quick-task`           | ⚡     |

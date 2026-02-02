@@ -47,6 +47,7 @@ export interface TaskNode {
   name: string;
   description?: string;
   agent?: string;
+  emoji?: string;
   stage?: Stage;
   outputs?: string[];
   maxRetries?: number;
@@ -63,6 +64,7 @@ export interface GateNode {
   name: string;
   description?: string;
   agent?: string;
+  emoji?: string;
   stage?: Stage;
   outputs?: string[];
   maxRetries?: number;

@@ -12,28 +12,32 @@
       "type": "task",
       "name": "Parse Requirements",
       "description": "Extract acceptance criteria and requirements from the issue or request",
-      "agent": "Planner",
+      "agent": "flow:Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "explore_codebase": {
       "type": "task",
       "name": "Explore Codebase",
       "description": "Find relevant files, understand patterns, identify where changes are needed",
-      "agent": "Planner",
+      "agent": "flow:Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "create_plan": {
       "type": "task",
       "name": "Create Plan",
       "description": "Write implementation plan with specific files and changes needed",
-      "agent": "Planner",
+      "agent": "flow:Planner",
+      "emoji": "📋",
       "stage": "planning"
     },
     "plan_review": {
       "type": "gate",
       "name": "Review Plan",
       "description": "Verify plan is complete and feasible",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
+      "emoji": "👀",
       "stage": "planning",
       "maxRetries": 2,
       "config": {
@@ -44,21 +48,24 @@
       "type": "task",
       "name": "Implement",
       "description": "Write the code following the plan",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "development"
     },
     "write_tests": {
       "type": "task",
       "name": "Write Tests",
       "description": "Add unit and integration tests for the new feature",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "development"
     },
     "run_tests": {
       "type": "task",
       "name": "Run Tests",
       "description": "Execute test suite and verify all tests pass",
-      "agent": "Tester",
+      "agent": "flow:Tester",
+      "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
     },
@@ -66,7 +73,8 @@
       "type": "gate",
       "name": "Code Review",
       "description": "Review code quality, patterns, and correctness",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
+      "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
       "config": {
@@ -77,7 +85,8 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
     },
@@ -85,14 +94,16 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the work done",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "create_pr": {
       "type": "task",
       "name": "Create PR",
       "description": "Create pull request with summary and test plan",
-      "agent": "Developer",
+      "agent": "flow:Developer",
+      "emoji": "🔧",
       "stage": "delivery"
     },
     "end_success": {

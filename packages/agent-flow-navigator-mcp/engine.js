@@ -62,8 +62,9 @@ export function getTerminalType(node) {
 }
 
 /**
- * Return agent ID as-is from workflow definition.
- * Prefixing (e.g., @flow:) is the caller's responsibility.
+ * Return agent ID exactly as specified in the workflow definition.
+ * The workflow author is responsible for providing the correct subagent_type value
+ * (e.g., "flow:Developer" for flow agents, "MyProjectAgent" for project agents).
  */
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
@@ -264,17 +265,75 @@ ${description || "{task description}"}`;
 }
 
 /**
+ * Build enriched branch info for a single fork branch.
+ * Produces the same data buildNavigateResponse() would for the entry step,
+ * so the orchestrator can create child tasks without extra Navigate calls.
+ */
+function buildBranchInfo(workflowType, branchDef, nodes, edges, description, projectRoot, sourceRoot, joinNodeId) {
+  const entryStepId = branchDef.entryStep;
+  const entryStepDef = nodes[entryStepId];
+  if (!entryStepDef) return { ...branchDef, error: `Entry step '${entryStepId}' not found` };
+
+  const subagent = entryStepDef.agent ? toSubagentRef(entryStepDef.agent) : null;
+  const stage = entryStepDef.stage || null;
+  const stepInstructions = {
+    name: entryStepDef.name || entryStepId,
+    description: resolveProseRefs(entryStepDef.description, sourceRoot) || null,
+    guidance:
+      resolveProseRefs(entryStepDef.instructions, sourceRoot) ||
+      getBaselineInstructions(entryStepId, entryStepDef.name),
+  };
+  const contextBlock = buildContextInstructions({
+    contextFiles: entryStepDef.context_files,
+    projectRoot,
+    sourceRoot,
+  });
+  const orchestratorInstructions = buildOrchestratorInstructions(
+    workflowType,
+    entryStepId,
+    stage,
+    subagent,
+    stepInstructions,
+    description,
+    contextBlock
+  );
+
+  // Single-step branch = all outgoing edges lead to this fork's join node
+  const outgoing = edges.filter((e) => e.from === entryStepId);
+  const multiStep = outgoing.some((e) => e.to !== joinNodeId);
+
+  return {
+    entryStep: entryStepId,
+    description: branchDef.description,
+    subagent,
+    stage,
+    stepInstructions,
+    orchestratorInstructions,
+    maxRetries: entryStepDef.maxRetries || 0,
+    multiStep,
+    metadata: { workflowType, currentStep: entryStepId, retryCount: 0 },
+  };
+}
+
+/**
  * Build response for fork/join control-flow nodes.
  * These nodes are declarative — the engine returns metadata for the orchestrator to act on.
+ * Fork responses include enriched per-branch info so the orchestrator can create
+ * child tasks without additional Navigate calls.
  */
-function buildForkJoinResponse(workflowType, stepId, stepDef, action, retryCount = 0, sourceRoot = null) {
+function buildForkJoinResponse(
+  workflowType,
+  stepId,
+  stepDef,
+  { retryCount = 0, sourceRoot = null, nodes = null, edges = null, description = null, projectRoot = null } = {}
+) {
   const base = {
     currentStep: stepId,
     stage: null,
     subagent: null,
     stepInstructions: null,
     terminal: null,
-    action,
+    action: null,
     retriesIncremented: false,
     autonomyContinued: false,
     maxRetries: 0,
@@ -289,9 +348,34 @@ function buildForkJoinResponse(workflowType, stepId, stepDef, action, retryCount
 
   if (stepDef.type === "fork") {
     base.action = "fork";
+
+    // Enrich branches with per-branch step info when nodes/edges available
+    let enrichedBranches;
+    if (nodes && edges) {
+      enrichedBranches = {};
+      for (const [branchName, branchDef] of Object.entries(stepDef.branches)) {
+        enrichedBranches[branchName] = buildBranchInfo(
+          workflowType,
+          branchDef,
+          nodes,
+          edges,
+          description,
+          projectRoot,
+          sourceRoot,
+          stepDef.join
+        );
+      }
+    } else {
+      enrichedBranches = stepDef.branches;
+    }
+
+    // Look up join strategy from the join node
+    const joinStrategy = nodes?.[stepDef.join]?.strategy || "all-pass";
+
     base.fork = {
-      branches: stepDef.branches,
+      branches: enrichedBranches,
       joinStep: stepDef.join,
+      joinStrategy,
     };
   } else if (stepDef.type === "join") {
     base.action = "join";
@@ -367,6 +451,54 @@ function buildNavigateResponse(
     metadata,
     sourceRoot,
   };
+}
+
+/**
+ * Write-through: persist Navigate response state to a task file.
+ * Handles id correction, metadata merge, and optional subject/activeForm/description updates.
+ *
+ * @param {string} taskFilePath - Path to the task JSON file
+ * @param {Object} response - Navigate response object
+ * @param {Object} [opts]
+ * @param {boolean} [opts.metadataOnly=false] - Only merge metadata (skip subject/activeForm/description)
+ */
+function writeThrough(taskFilePath, response, { metadataOnly = false } = {}) {
+  const task = readTaskFile(taskFilePath);
+  if (!task) return;
+
+  const filenameId = basename(taskFilePath, ".json");
+  if (task.id !== filenameId) {
+    console.error(
+      `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
+    );
+  }
+
+  task.metadata = { ...task.metadata, ...response.metadata };
+  task.id = filenameId;
+
+  if (!metadataOnly) {
+    const userDesc = task.metadata?.userDescription || "";
+    task.subject = buildTaskSubject(
+      filenameId,
+      userDesc,
+      response.metadata.workflowType,
+      response.currentStep,
+      response.subagent,
+      response.terminal,
+      response.maxRetries,
+      response.metadata.retryCount
+    );
+    task.activeForm = buildTaskActiveForm(
+      response.stepInstructions?.name || response.currentStep,
+      response.subagent,
+      response.terminal
+    );
+    if (response.orchestratorInstructions) {
+      task.description = response.orchestratorInstructions;
+    }
+  }
+
+  writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
 }
 
 export class WorkflowEngine {
@@ -624,7 +756,13 @@ export class WorkflowEngine {
 
       // Fork/join at start position — return control-flow response
       if (isForkJoinNode(targetStepDef)) {
-        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, "start", 0, sourceRoot);
+        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, {
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
       }
 
       return buildNavigateResponse(
@@ -650,7 +788,14 @@ export class WorkflowEngine {
 
       // Fork/join — return control-flow response
       if (isForkJoinNode(stepDef)) {
-        return buildForkJoinResponse(workflowType, currentStep, stepDef, "current", retryCount, sourceRoot);
+        return buildForkJoinResponse(workflowType, currentStep, stepDef, {
+          retryCount,
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
       }
 
       return buildNavigateResponse(
@@ -668,6 +813,68 @@ export class WorkflowEngine {
     }
 
     // Case 3: currentStep and result - advance to next step
+
+    // Fork node with result → orchestrator completed all branches, advance through join
+    const forkCheckDef = nodes[currentStep];
+    if (forkCheckDef && forkCheckDef.type === "fork" && forkCheckDef.join) {
+      const joinStepId = forkCheckDef.join;
+      const joinStepDef = nodes[joinStepId];
+      if (!joinStepDef) {
+        throw new Error(`Join step '${joinStepId}' not found in workflow '${workflowType}'`);
+      }
+
+      // Evaluate edges from the join node (e.g., on:"passed" → synthesize, on:"failed" → hitl)
+      const joinEvaluation = this.evaluateEdge(workflowType, joinStepId, result, 0);
+
+      if (!joinEvaluation.nextStep) {
+        return {
+          error: `No matching edge from join '${joinStepId}' with result '${result}'`,
+          currentStep: joinStepId,
+          evaluation: joinEvaluation,
+        };
+      }
+
+      const postJoinStepDef = nodes[joinEvaluation.nextStep];
+      if (!postJoinStepDef) {
+        throw new Error(`Post-join step '${joinEvaluation.nextStep}' not found in workflow`);
+      }
+
+      // If post-join step is another fork/join, return control-flow response
+      if (isForkJoinNode(postJoinStepDef)) {
+        const forkJoinResponse = buildForkJoinResponse(workflowType, joinEvaluation.nextStep, postJoinStepDef, {
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
+
+        if (autonomy) forkJoinResponse.metadata.autonomy = true;
+        if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });
+
+        return forkJoinResponse;
+      }
+
+      // Normal post-join step — build standard response
+      let postJoinResponse = buildNavigateResponse(
+        workflowType,
+        joinEvaluation.nextStep,
+        postJoinStepDef,
+        "advance",
+        false,
+        0,
+        description,
+        true,
+        projectRoot,
+        sourceRoot
+      );
+
+      if (autonomy) postJoinResponse.metadata.autonomy = true;
+      if (taskFilePath) writeThrough(taskFilePath, postJoinResponse);
+
+      return postJoinResponse;
+    }
+
     const evaluation = this.evaluateEdge(workflowType, currentStep, result, retryCount);
 
     if (!evaluation.nextStep) {
@@ -685,36 +892,16 @@ export class WorkflowEngine {
 
     // Fork/join on advance — return control-flow response
     if (isForkJoinNode(nextStepDef)) {
-      const forkJoinResponse = buildForkJoinResponse(
-        workflowType,
-        evaluation.nextStep,
-        nextStepDef,
-        nextStepDef.type, // "fork" or "join"
-        0,
-        sourceRoot
-      );
+      const forkJoinResponse = buildForkJoinResponse(workflowType, evaluation.nextStep, nextStepDef, {
+        sourceRoot,
+        nodes,
+        edges: wfDef.edges,
+        description,
+        projectRoot,
+      });
 
-      // Write-through for fork/join advance
-      if (taskFilePath) {
-        const task = readTaskFile(taskFilePath);
-        if (task) {
-          const filenameId = basename(taskFilePath, ".json");
-          if (task.id !== filenameId) {
-            console.error(
-              `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-            );
-          }
-          const canonicalId = filenameId;
-          task.metadata = { ...task.metadata, ...forkJoinResponse.metadata };
-          task.id = canonicalId;
-          writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-        }
-      }
-
-      // Persist autonomy in metadata
-      if (autonomy) {
-        forkJoinResponse.metadata.autonomy = true;
-      }
+      if (autonomy) forkJoinResponse.metadata.autonomy = true;
+      if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });
 
       return forkJoinResponse;
     }
@@ -784,44 +971,7 @@ export class WorkflowEngine {
     }
 
     // Write-through: persist state transition and presentation to task file
-    // IMPORTANT: preserve task.id — Claude Code's task system requires filename
-    // and id field to match ({id}.json must contain "id": "{id}")
-    if (taskFilePath) {
-      const task = readTaskFile(taskFilePath);
-      if (task) {
-        // Derive canonical ID from filename — this is the source of truth.
-        // Auto-corrects if task.id was corrupted by an external write.
-        const filenameId = basename(taskFilePath, ".json");
-        if (task.id !== filenameId) {
-          console.error(
-            `[Navigator] WARNING: task.id "${task.id}" does not match filename "${filenameId}.json" — auto-correcting`
-          );
-        }
-        const canonicalId = filenameId;
-        const userDesc = task.metadata?.userDescription || "";
-        task.metadata = { ...task.metadata, ...response.metadata };
-        task.subject = buildTaskSubject(
-          canonicalId,
-          userDesc,
-          response.metadata.workflowType,
-          response.currentStep,
-          response.subagent,
-          response.terminal,
-          response.maxRetries,
-          response.metadata.retryCount
-        );
-        task.activeForm = buildTaskActiveForm(
-          response.stepInstructions?.name || response.currentStep,
-          response.subagent,
-          response.terminal
-        );
-        if (response.orchestratorInstructions) {
-          task.description = response.orchestratorInstructions;
-        }
-        task.id = canonicalId;
-        writeFileSync(taskFilePath, JSON.stringify(task, null, 2));
-      }
-    }
+    if (taskFilePath) writeThrough(taskFilePath, response);
 
     return response;
   }

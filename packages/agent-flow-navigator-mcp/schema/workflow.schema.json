@@ -90,6 +90,10 @@
         "name": { "type": "string" },
         "description": { "type": "string" },
         "agent": { "type": "string", "description": "Agent type to perform this task" },
+        "emoji": {
+          "type": "string",
+          "description": "Emoji to visually indicate the agent type for this step (e.g. 🔧, 📋, 👀)"
+        },
         "stage": {
           "type": "string",
           "description": "Workflow phase this task belongs to (e.g. planning, development, verification, delivery, analysis, investigation, design)"
@@ -133,6 +137,10 @@
         "name": { "type": "string" },
         "description": { "type": "string" },
         "agent": { "type": "string" },
+        "emoji": {
+          "type": "string",
+          "description": "Emoji to visually indicate the agent type for this step (e.g. 👀, 🧪)"
+        },
         "stage": {
           "type": "string",
           "description": "Workflow phase this node belongs to (e.g. planning, development, verification, delivery, analysis, investigation, design)"
