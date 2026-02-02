@@ -16,15 +16,7 @@
       "author": {
         "name": "Lance Caraccioli"
       },
-      "keywords": [
-        "flow",
-        "workflow",
-        "agents",
-        "skills",
-        "multi-agent",
-        "orchestration",
-        "navigator"
-      ],
+      "keywords": ["flow", "workflow", "agents", "skills", "multi-agent", "orchestration", "navigator"],
       "category": "orchestration"
     }
   ]

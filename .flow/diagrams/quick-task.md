@@ -41,10 +41,10 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| planning | understand | Understand | 🔧 flow:Developer | Clarify what needs to be done and identify the approach |
-| development | execute | Execute | 🔧 flow:Developer | Make the changes or complete the work |
-| verification | verify | Verify | 🔧 flow:Developer | Confirm the work is correct and complete |
-| delivery | lint_format | Lint & Format | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message |
+| Stage        | Step        | Name           | Agent             | Instructions                                                |
+| ------------ | ----------- | -------------- | ----------------- | ----------------------------------------------------------- |
+| planning     | understand  | Understand     | 🔧 flow:Developer | Clarify what needs to be done and identify the approach     |
+| development  | execute     | Execute        | 🔧 flow:Developer | Make the changes or complete the work                       |
+| verification | verify      | Verify         | 🔧 flow:Developer | Confirm the work is correct and complete                    |
+| delivery     | lint_format | Lint & Format  | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery     | commit      | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message               |

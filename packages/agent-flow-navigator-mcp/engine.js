@@ -279,19 +279,28 @@ function buildBranchInfo(workflowType, branchDef, nodes, edges, description, pro
   const stepInstructions = {
     name: entryStepDef.name || entryStepId,
     description: resolveProseRefs(entryStepDef.description, sourceRoot) || null,
-    guidance: resolveProseRefs(entryStepDef.instructions, sourceRoot)
-              || getBaselineInstructions(entryStepId, entryStepDef.name),
+    guidance:
+      resolveProseRefs(entryStepDef.instructions, sourceRoot) ||
+      getBaselineInstructions(entryStepId, entryStepDef.name),
   };
   const contextBlock = buildContextInstructions({
-    contextFiles: entryStepDef.context_files, projectRoot, sourceRoot,
+    contextFiles: entryStepDef.context_files,
+    projectRoot,
+    sourceRoot,
   });
   const orchestratorInstructions = buildOrchestratorInstructions(
-    workflowType, entryStepId, stage, subagent, stepInstructions, description, contextBlock
+    workflowType,
+    entryStepId,
+    stage,
+    subagent,
+    stepInstructions,
+    description,
+    contextBlock
   );
 
   // Single-step branch = all outgoing edges lead to this fork's join node
-  const outgoing = edges.filter(e => e.from === entryStepId);
-  const multiStep = outgoing.some(e => e.to !== joinNodeId);
+  const outgoing = edges.filter((e) => e.from === entryStepId);
+  const multiStep = outgoing.some((e) => e.to !== joinNodeId);
 
   return {
     entryStep: entryStepId,
@@ -312,7 +321,12 @@ function buildBranchInfo(workflowType, branchDef, nodes, edges, description, pro
  * Fork responses include enriched per-branch info so the orchestrator can create
  * child tasks without additional Navigate calls.
  */
-function buildForkJoinResponse(workflowType, stepId, stepDef, { retryCount = 0, sourceRoot = null, nodes = null, edges = null, description = null, projectRoot = null } = {}) {
+function buildForkJoinResponse(
+  workflowType,
+  stepId,
+  stepDef,
+  { retryCount = 0, sourceRoot = null, nodes = null, edges = null, description = null, projectRoot = null } = {}
+) {
   const base = {
     currentStep: stepId,
     stage: null,
@@ -341,7 +355,14 @@ function buildForkJoinResponse(workflowType, stepId, stepDef, { retryCount = 0, 
       enrichedBranches = {};
       for (const [branchName, branchDef] of Object.entries(stepDef.branches)) {
         enrichedBranches[branchName] = buildBranchInfo(
-          workflowType, branchDef, nodes, edges, description, projectRoot, sourceRoot, stepDef.join
+          workflowType,
+          branchDef,
+          nodes,
+          edges,
+          description,
+          projectRoot,
+          sourceRoot,
+          stepDef.join
         );
       }
     } else {
@@ -735,7 +756,13 @@ export class WorkflowEngine {
 
       // Fork/join at start position — return control-flow response
       if (isForkJoinNode(targetStepDef)) {
-        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot });
+        return buildForkJoinResponse(workflowType, targetStepId, targetStepDef, {
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
       }
 
       return buildNavigateResponse(
@@ -761,7 +788,14 @@ export class WorkflowEngine {
 
       // Fork/join — return control-flow response
       if (isForkJoinNode(stepDef)) {
-        return buildForkJoinResponse(workflowType, currentStep, stepDef, { retryCount, sourceRoot, nodes, edges: wfDef.edges, description, projectRoot });
+        return buildForkJoinResponse(workflowType, currentStep, stepDef, {
+          retryCount,
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
       }
 
       return buildNavigateResponse(
@@ -807,10 +841,13 @@ export class WorkflowEngine {
 
       // If post-join step is another fork/join, return control-flow response
       if (isForkJoinNode(postJoinStepDef)) {
-        const forkJoinResponse = buildForkJoinResponse(
-          workflowType, joinEvaluation.nextStep, postJoinStepDef,
-          { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot }
-        );
+        const forkJoinResponse = buildForkJoinResponse(workflowType, joinEvaluation.nextStep, postJoinStepDef, {
+          sourceRoot,
+          nodes,
+          edges: wfDef.edges,
+          description,
+          projectRoot,
+        });
 
         if (autonomy) forkJoinResponse.metadata.autonomy = true;
         if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });
@@ -820,8 +857,16 @@ export class WorkflowEngine {
 
       // Normal post-join step — build standard response
       let postJoinResponse = buildNavigateResponse(
-        workflowType, joinEvaluation.nextStep, postJoinStepDef, "advance",
-        false, 0, description, true, projectRoot, sourceRoot
+        workflowType,
+        joinEvaluation.nextStep,
+        postJoinStepDef,
+        "advance",
+        false,
+        0,
+        description,
+        true,
+        projectRoot,
+        sourceRoot
       );
 
       if (autonomy) postJoinResponse.metadata.autonomy = true;
@@ -847,10 +892,13 @@ export class WorkflowEngine {
 
     // Fork/join on advance — return control-flow response
     if (isForkJoinNode(nextStepDef)) {
-      const forkJoinResponse = buildForkJoinResponse(
-        workflowType, evaluation.nextStep, nextStepDef,
-        { sourceRoot, nodes, edges: wfDef.edges, description, projectRoot }
-      );
+      const forkJoinResponse = buildForkJoinResponse(workflowType, evaluation.nextStep, nextStepDef, {
+        sourceRoot,
+        nodes,
+        edges: wfDef.edges,
+        description,
+        projectRoot,
+      });
 
       if (autonomy) forkJoinResponse.metadata.autonomy = true;
       if (taskFilePath) writeThrough(taskFilePath, forkJoinResponse, { metadataOnly: true });

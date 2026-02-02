@@ -33,7 +33,7 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| development | work | Do Work | 🔧 flow:Developer | Do the thing |
-| verification | check | Check | 👀 flow:Reviewer | Pass or fail |
+| Stage        | Step  | Name    | Agent             | Instructions |
+| ------------ | ----- | ------- | ----------------- | ------------ |
+| development  | work  | Do Work | 🔧 flow:Developer | Do the thing |
+| verification | check | Check   | 👀 flow:Reviewer  | Pass or fail |

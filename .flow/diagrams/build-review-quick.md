@@ -39,9 +39,9 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| development | build | Build | 🔧 flow:Developer | Implement or revise the changes based on requirements or review feedback |
-| verification | review | Quick Review | 👀 flow:Reviewer | Lightweight review checking basic correctness and completeness |
-| delivery | lint_format | Lint & Format | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the work done |
+| Stage        | Step        | Name           | Agent             | Instructions                                                             |
+| ------------ | ----------- | -------------- | ----------------- | ------------------------------------------------------------------------ |
+| development  | build       | Build          | 🔧 flow:Developer | Implement or revise the changes based on requirements or review feedback |
+| verification | review      | Quick Review   | 👀 flow:Reviewer  | Lightweight review checking basic correctness and completeness           |
+| delivery     | lint_format | Lint & Format  | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible.              |
+| delivery     | commit      | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the work done  |

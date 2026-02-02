@@ -59,16 +59,16 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| planning | parse_requirements | Parse Requirements | 📋 flow:Planner | Extract acceptance criteria and requirements from the issue or request |
-| planning | explore_codebase | Explore Codebase | 📋 flow:Planner | Find relevant files, understand patterns, identify where changes are needed |
-| planning | create_plan | Create Plan | 📋 flow:Planner | Write implementation plan with specific files and changes needed |
-| planning | plan_review | Review Plan | 👀 flow:Reviewer | Verify plan is complete and feasible |
-| development | implement | Implement | 🔧 flow:Developer | Write the code following the plan |
-| development | write_tests | Write Tests | 🧪 flow:Tester | Add unit and integration tests for the new feature |
-| verification | run_tests | Run Tests | 🧪 flow:Tester | Execute test suite and verify all tests pass |
-| verification | code_review | Code Review | 👀 flow:Reviewer | Review code quality, patterns, and correctness |
-| delivery | lint_format | Lint & Format | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the work done |
-| delivery | create_pr | Create PR | 🔧 flow:Developer | Create pull request with summary and test plan |
+| Stage        | Step               | Name               | Agent             | Instructions                                                                |
+| ------------ | ------------------ | ------------------ | ----------------- | --------------------------------------------------------------------------- |
+| planning     | parse_requirements | Parse Requirements | 📋 flow:Planner   | Extract acceptance criteria and requirements from the issue or request      |
+| planning     | explore_codebase   | Explore Codebase   | 📋 flow:Planner   | Find relevant files, understand patterns, identify where changes are needed |
+| planning     | create_plan        | Create Plan        | 📋 flow:Planner   | Write implementation plan with specific files and changes needed            |
+| planning     | plan_review        | Review Plan        | 👀 flow:Reviewer  | Verify plan is complete and feasible                                        |
+| development  | implement          | Implement          | 🔧 flow:Developer | Write the code following the plan                                           |
+| development  | write_tests        | Write Tests        | 🧪 flow:Tester    | Add unit and integration tests for the new feature                          |
+| verification | run_tests          | Run Tests          | 🧪 flow:Tester    | Execute test suite and verify all tests pass                                |
+| verification | code_review        | Code Review        | 👀 flow:Reviewer  | Review code quality, patterns, and correctness                              |
+| delivery     | lint_format        | Lint & Format      | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible.                 |
+| delivery     | commit             | Commit Changes     | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the work done     |
+| delivery     | create_pr          | Create PR          | 🔧 flow:Developer | Create pull request with summary and test plan                              |

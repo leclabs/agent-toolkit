@@ -17,16 +17,16 @@ Graph-based workflow orchestration for AI agents.
 
 ## Commands
 
-| Command | Workflow | Description |
-| --- | --- | --- |
-| `/flow:feat` | feature-development | New feature with planning + review |
-| `/flow:bug` | bug-fix | Bug investigation and fix |
-| `/flow:task` | agile-task | General development task |
-| `/flow:fix` | quick-task | Quick fix, minimal ceremony |
-| `/flow:spec` | test-coverage | Analyze and improve test coverage |
-| `/flow:ctx` | context-optimization | Optimize agent context and prompts |
-| `/flow:ui` | ui-reconstruction | Reconstruct UI from reference |
-| `/flow:go` | _(runs queue)_ | Execute all pending tasks |
+| Command      | Workflow             | Description                        |
+| ------------ | -------------------- | ---------------------------------- |
+| `/flow:feat` | feature-development  | New feature with planning + review |
+| `/flow:bug`  | bug-fix              | Bug investigation and fix          |
+| `/flow:task` | agile-task           | General development task           |
+| `/flow:fix`  | quick-task           | Quick fix, minimal ceremony        |
+| `/flow:spec` | test-coverage        | Analyze and improve test coverage  |
+| `/flow:ctx`  | context-optimization | Optimize agent context and prompts |
+| `/flow:ui`   | ui-reconstruction    | Reconstruct UI from reference      |
+| `/flow:go`   | _(runs queue)_       | Execute all pending tasks          |
 
 Use `/flow:task-create "description" <workflow-id>` for workflows without command shortcuts.
 

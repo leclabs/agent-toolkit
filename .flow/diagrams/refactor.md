@@ -61,17 +61,17 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| analysis | analyze_structure | Analyze Structure | 📋 flow:Planner | Map current architecture: modules, dependencies, entry points. Identify coupling and cohesion issues. |
-| analysis | identify_debt | Identify Technical Debt | 📋 flow:Planner | Find code smells, anti-patterns, outdated practices. Document violations of SOLID, DRY, and separation of concerns. |
-| analysis | classify_components | Classify Components | 📋 flow:Planner | Categorize code into Functional Core (pure logic, no side effects) vs Imperative Shell (I/O, state, external calls). |
-| planning | design_refactor | Design Refactor Plan | 📋 flow:Planner | Create transformation plan: define functional core boundaries, shell interfaces, and migration sequence. |
-| planning | plan_review | Review Plan | 👀 flow:Reviewer | Verify refactor plan maintains behavioral equivalence while achieving architectural goals. |
-| development | extract_core | Extract Functional Core | 🔧 flow:Developer | Refactor pure business logic into functional core: no side effects, deterministic, testable in isolation. |
-| development | isolate_shell | Isolate Imperative Shell | 🔧 flow:Developer | Wrap side effects (I/O, state, external services) in thin imperative shell that coordinates functional core. |
-| development | write_tests | Write Tests | 🧪 flow:Tester | Add tests verifying behavioral equivalence. Unit tests for functional core, integration tests for shell. |
-| verification | run_tests | Run Tests | 🧪 flow:Tester | Execute test suite. Verify refactored code produces identical behavior to original. |
-| verification | code_review | Code Review | 👀 flow:Reviewer | Review architecture: clean functional/shell separation, no hidden side effects in core, shell is minimal. |
-| delivery | lint_format | Lint & Format | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the refactoring |
+| Stage        | Step                | Name                     | Agent             | Instructions                                                                                                         |
+| ------------ | ------------------- | ------------------------ | ----------------- | -------------------------------------------------------------------------------------------------------------------- |
+| analysis     | analyze_structure   | Analyze Structure        | 📋 flow:Planner   | Map current architecture: modules, dependencies, entry points. Identify coupling and cohesion issues.                |
+| analysis     | identify_debt       | Identify Technical Debt  | 📋 flow:Planner   | Find code smells, anti-patterns, outdated practices. Document violations of SOLID, DRY, and separation of concerns.  |
+| analysis     | classify_components | Classify Components      | 📋 flow:Planner   | Categorize code into Functional Core (pure logic, no side effects) vs Imperative Shell (I/O, state, external calls). |
+| planning     | design_refactor     | Design Refactor Plan     | 📋 flow:Planner   | Create transformation plan: define functional core boundaries, shell interfaces, and migration sequence.             |
+| planning     | plan_review         | Review Plan              | 👀 flow:Reviewer  | Verify refactor plan maintains behavioral equivalence while achieving architectural goals.                           |
+| development  | extract_core        | Extract Functional Core  | 🔧 flow:Developer | Refactor pure business logic into functional core: no side effects, deterministic, testable in isolation.            |
+| development  | isolate_shell       | Isolate Imperative Shell | 🔧 flow:Developer | Wrap side effects (I/O, state, external services) in thin imperative shell that coordinates functional core.         |
+| development  | write_tests         | Write Tests              | 🧪 flow:Tester    | Add tests verifying behavioral equivalence. Unit tests for functional core, integration tests for shell.             |
+| verification | run_tests           | Run Tests                | 🧪 flow:Tester    | Execute test suite. Verify refactored code produces identical behavior to original.                                  |
+| verification | code_review         | Code Review              | 👀 flow:Reviewer  | Review architecture: clean functional/shell separation, no hidden side effects in core, shell is minimal.            |
+| delivery     | lint_format         | Lint & Format            | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible.                                                          |
+| delivery     | commit              | Commit Changes           | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the refactoring                                            |

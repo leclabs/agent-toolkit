@@ -2961,7 +2961,8 @@ describe("fork/join", () => {
       nodes: {
         start: { type: "start", name: "Start" },
         fork_a: {
-          type: "fork", name: "Fork A",
+          type: "fork",
+          name: "Fork A",
           branches: { x: { entryStep: "step_x", description: "Branch X" } },
           join: "join_a",
         },

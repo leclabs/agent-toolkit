@@ -88,10 +88,10 @@ agent-toolkit (marketplace)
     └── navigator (mcp)
 ```
 
-| Component              | Name                                | Purpose                          |
-| ---------------------- | ----------------------------------- | -------------------------------- |
-| Marketplace            | `agent-toolkit`                     | Collection of agent tools        |
-| Plugin                 | `flow`                              | Workflow orchestration           |
-| MCP Server flow config | `navigator`                         | Navigates through workflows      |
-| MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package          |
-| Skills                 | `/flow:*`                           | User-facing commands             |
+| Component              | Name                                | Purpose                     |
+| ---------------------- | ----------------------------------- | --------------------------- |
+| Marketplace            | `agent-toolkit`                     | Collection of agent tools   |
+| Plugin                 | `flow`                              | Workflow orchestration      |
+| MCP Server flow config | `navigator`                         | Navigates through workflows |
+| MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package     |
+| Skills                 | `/flow:*`                           | User-facing commands        |

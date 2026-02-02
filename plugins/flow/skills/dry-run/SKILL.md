@@ -347,17 +347,17 @@ Write a markdown report to `.cruft/dry-run/<workflowId>/report.md`:
 
 ## Step Trace
 
-| #   | Branch | Step               | Result | Action  | Next Step        | Retries | Write-Through |
-| --- | ------ | ------------------ | ------ | ------- | ---------------- | ------- | ------------- |
-| 0   |        | parse_requirements | passed | advance | explore_codebase | 0/0     | pass          |
-| 1   |        | explore_codebase   | passed | advance | fork_investigate | 0/0     | pass          |
-| 2   |        | fork_investigate   | —      | fork    | (3 branches)     | —       | skip          |
-| 3   | reproduce       | reproduce          | passed | advance | join_investigate | 0/0  | pass          |
-| 4   | code_archaeology | code_archaeology  | passed | advance | join_investigate | 0/0  | pass          |
-| 5   | git_forensics   | git_forensics      | passed | advance | join_investigate | 0/0  | pass          |
-| 6   |        | join_investigate   | passed | join    | synthesize       | —       | skip          |
-| 7   |        | synthesize         | passed | advance | write_fix        | 0/0     | pass          |
-| ... |        |                    |        |         |                  |         |               |
+| #   | Branch           | Step               | Result | Action  | Next Step        | Retries | Write-Through |
+| --- | ---------------- | ------------------ | ------ | ------- | ---------------- | ------- | ------------- |
+| 0   |                  | parse_requirements | passed | advance | explore_codebase | 0/0     | pass          |
+| 1   |                  | explore_codebase   | passed | advance | fork_investigate | 0/0     | pass          |
+| 2   |                  | fork_investigate   | —      | fork    | (3 branches)     | —       | skip          |
+| 3   | reproduce        | reproduce          | passed | advance | join_investigate | 0/0     | pass          |
+| 4   | code_archaeology | code_archaeology   | passed | advance | join_investigate | 0/0     | pass          |
+| 5   | git_forensics    | git_forensics      | passed | advance | join_investigate | 0/0     | pass          |
+| 6   |                  | join_investigate   | passed | join    | synthesize       | —       | skip          |
+| 7   |                  | synthesize         | passed | advance | write_fix        | 0/0     | pass          |
+| ... |                  |                    |        |         |                  |         |               |
 
 ## Path Taken
 ```

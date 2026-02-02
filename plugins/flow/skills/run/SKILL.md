@@ -214,20 +214,20 @@ Parse subagent response:
 
 Navigate returns:
 
-| Field                      | Purpose                                                     |
-| -------------------------- | ----------------------------------------------------------- |
-| `currentStep`              | The new step                                                |
-| `stage`                    | Workflow stage (e.g., `"planning"`)                         |
-| `subagent`                 | Who executes next step                                      |
-| `stepInstructions`         | `{name, description, guidance}`                             |
-| `terminal`                 | `"success"` or `"hitl"` if done                             |
-| `orchestratorInstructions` | Updated task description                                    |
-| `metadata`                 | `{ workflowType, currentStep, retryCount }`                 |
-| `action`                   | `"advance"`, `"retry"`, `"escalate"`, `"fork"`, or `"join"` |
-| `retriesIncremented`       | `true` if retry count increased                             |
-| `autonomyContinued`        | `true` if auto-continued through stage boundary             |
+| Field                      | Purpose                                                                                                                                                                         |
+| -------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `currentStep`              | The new step                                                                                                                                                                    |
+| `stage`                    | Workflow stage (e.g., `"planning"`)                                                                                                                                             |
+| `subagent`                 | Who executes next step                                                                                                                                                          |
+| `stepInstructions`         | `{name, description, guidance}`                                                                                                                                                 |
+| `terminal`                 | `"success"` or `"hitl"` if done                                                                                                                                                 |
+| `orchestratorInstructions` | Updated task description                                                                                                                                                        |
+| `metadata`                 | `{ workflowType, currentStep, retryCount }`                                                                                                                                     |
+| `action`                   | `"advance"`, `"retry"`, `"escalate"`, `"fork"`, or `"join"`                                                                                                                     |
+| `retriesIncremented`       | `true` if retry count increased                                                                                                                                                 |
+| `autonomyContinued`        | `true` if auto-continued through stage boundary                                                                                                                                 |
 | `fork`                     | `{ branches, joinStep, joinStrategy }` when action is `"fork"` — branches are enriched with `subagent`, `stepInstructions`, `orchestratorInstructions`, `multiStep`, `metadata` |
-| `join`                     | `{ forkStep, strategy }` when action is `"join"`            |
+| `join`                     | `{ forkStep, strategy }` when action is `"join"`                                                                                                                                |
 
 Then call TaskUpdate to sync status (Navigator's write-through has already updated subject, activeForm, description, and metadata in the task file):
 
@@ -257,11 +257,13 @@ When Navigate returns `action: "fork"`, the workflow has branched into parallel 
 **Step 1 — Read enriched fork data:**
 
 Extract from Navigate response:
+
 - `fork.branches` — map of branch name → enriched branch info
 - `fork.joinStep` — the join node ID
 - `fork.joinStrategy` — `"all-pass"` or `"any-pass"`
 
 Each branch object includes:
+
 - `entryStep` — first step ID for the branch
 - `description` — branch description
 - `subagent` — Task tool `subagent_type` value (e.g., `"flow:Developer"`)
