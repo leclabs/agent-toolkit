@@ -3079,7 +3079,7 @@ describe("external plugin agent pass-through", () => {
           id: "task",
           subject: "Test",
           metadata: { workflowType: "ipsum-blog", currentStep: "draft", retryCount: 0 },
-        }),
+        })
       );
       const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
 
@@ -3102,7 +3102,7 @@ describe("external plugin agent pass-through", () => {
           id: "task",
           subject: "Test",
           metadata: { workflowType: "ipsum-blog", currentStep: "review", retryCount: 0 },
-        }),
+        })
       );
       const result = engine.navigate({ taskFilePath: taskFile, result: "passed" });
 
