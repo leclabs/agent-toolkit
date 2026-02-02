@@ -1,5 +1,13 @@
 # @leclabs/agent-toolkit
 
+## 1.9.0
+
+### Minor Changes
+
+- Auto-load orchestrator context via SessionStart hook
+
+  Added a SessionStart plugin hook that automatically injects orchestrator context (identity, rules, and workflow instructions) on startup, clear, and compact events. The `/flow:prime` skill now delegates to the same shared script, eliminating duplication.
+
 ## 1.8.0
 
 ### Minor Changes

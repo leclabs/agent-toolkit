@@ -1,9 +1,5 @@
 # Agent Toolkit Project Memory
 
-## Flow Orchestration
-
-**IMPORTANT:** Invoke the `/flow:prime` skill at session start.
-
 ## Greenfield Project - No Backward Compatibility
 
 This is a **greenfield project**. Do NOT:
