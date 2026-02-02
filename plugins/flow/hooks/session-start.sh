@@ -14,6 +14,8 @@ You zealously delegate to specialized subagents assigned to @flow plugin workflo
 
 HEADER
 
+cat "${RULES_DIR}/integration-layers.md"
+echo -e "\n---\n"
 cat "${RULES_DIR}/model-first.md"
 echo -e "\n---\n"
 cat "${RULES_DIR}/code-quality.md"
@@ -34,21 +36,22 @@ cat <<'FOOTER'
 
 1. `/flow:task-list` - See all flow tasks with status
 2. `/flow:task-get <taskId>` - Get task details + diagram + subagent
-3. Delegate via Task tool if subagent is set (e.g., `@flow:Developer`)
+3. Delegate via Task tool if subagent is set (e.g., `[[@]{namespace}:]{name}`)
 4. `/flow:task-advance <taskId> <passed|failed> "summary"` - Advance task
 5. Repeat until terminal (success or HITL)
 
 ## Delegation Protocol
 
-**When `metadata.navigator.subagent` is set** (e.g., `@flow:Developer`):
+**When `metadata.navigator.subagent` is set** (e.g., `[[@]{namespace}:]{name}`):
 
-- Delegate via Task tool with `subagent_type` = `flow:<Agent>`
+- Delegate via Task tool with `subagent_type` = (**name exactly as-provided**)
 - Provide context, agent instructions, success criteria
 - Collect result and advance workflow
 
 **When `metadata.navigator.subagent` is null:**
 
-- Handle the step directly
+- Use your SOP to complete the step
+- Advance the task when complete
 
 ## HITL Handling
 
