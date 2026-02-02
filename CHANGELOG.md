@@ -1,5 +1,11 @@
 # @leclabs/agent-toolkit
 
+## 1.9.1
+
+### Patch Changes
+
+- Add integration-layers rule and improve delegation protocol in session-start hook
+
 ## 1.9.0
 
 ### Minor Changes
