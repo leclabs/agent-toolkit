@@ -12,7 +12,7 @@
       "type": "task",
       "name": "Build",
       "description": "Implement or revise the changes based on requirements or review feedback",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -20,7 +20,7 @@
       "type": "gate",
       "name": "Murder Board Review",
       "description": "Independent high-scrutiny review. Reviewer must be a fresh agent with no prior context of this build. Approval requires confidence score >= 80.",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "verification",
       "maxRetries": 3,
@@ -34,7 +34,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -43,7 +43,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the work done",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery"
     },

@@ -11,7 +11,7 @@
       "type": "task",
       "name": "Do Work",
       "description": "Do the thing",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -19,7 +19,7 @@
       "type": "gate",
       "name": "Check",
       "description": "Pass or fail",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "verification",
       "maxRetries": 1

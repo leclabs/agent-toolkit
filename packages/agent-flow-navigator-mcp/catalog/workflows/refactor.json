@@ -12,7 +12,7 @@
       "type": "task",
       "name": "Analyze Structure",
       "description": "Map current architecture: modules, dependencies, entry points. Identify coupling and cohesion issues.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "analysis"
     },
@@ -20,7 +20,7 @@
       "type": "task",
       "name": "Identify Technical Debt",
       "description": "Find code smells, anti-patterns, outdated practices. Document violations of SOLID, DRY, and separation of concerns.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "analysis"
     },
@@ -28,7 +28,7 @@
       "type": "task",
       "name": "Classify Components",
       "description": "Categorize code into Functional Core (pure logic, no side effects) vs Imperative Shell (I/O, state, external calls).",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "analysis"
     },
@@ -36,7 +36,7 @@
       "type": "task",
       "name": "Design Refactor Plan",
       "description": "Create transformation plan: define functional core boundaries, shell interfaces, and migration sequence.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "planning"
     },
@@ -44,7 +44,7 @@
       "type": "gate",
       "name": "Review Plan",
       "description": "Verify refactor plan maintains behavioral equivalence while achieving architectural goals.",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "planning",
       "maxRetries": 2,
@@ -56,7 +56,7 @@
       "type": "task",
       "name": "Extract Functional Core",
       "description": "Refactor pure business logic into functional core: no side effects, deterministic, testable in isolation.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -64,7 +64,7 @@
       "type": "task",
       "name": "Isolate Imperative Shell",
       "description": "Wrap side effects (I/O, state, external services) in thin imperative shell that coordinates functional core.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -72,7 +72,7 @@
       "type": "task",
       "name": "Write Tests",
       "description": "Add tests verifying behavioral equivalence. Unit tests for functional core, integration tests for shell.",
-      "agent": "Tester",
+      "agent": "flow:Tester",
       "emoji": "🧪",
       "stage": "development"
     },
@@ -80,7 +80,7 @@
       "type": "gate",
       "name": "Run Tests",
       "description": "Execute test suite. Verify refactored code produces identical behavior to original.",
-      "agent": "Tester",
+      "agent": "flow:Tester",
       "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
@@ -89,7 +89,7 @@
       "type": "gate",
       "name": "Code Review",
       "description": "Review architecture: clean functional/shell separation, no hidden side effects in core, shell is minimal.",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
@@ -101,7 +101,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -110,7 +110,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the refactoring",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery"
     },

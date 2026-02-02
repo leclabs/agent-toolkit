@@ -62,24 +62,13 @@ export function getTerminalType(node) {
 }
 
 /**
- * Normalize agent ID from workflow definition to Task-tool-ready format.
- *
- * Workflow JSON may use bare names ("Developer"), display notation
- * ("@flow:Developer"), or already-prefixed ("flow:Developer").
- * All are normalized to "flow:BareAgentName".
- *
- * Non-flow namespaces (e.g., "myorg:developer") pass through as-is.
+ * Return agent ID exactly as specified in the workflow definition.
+ * The workflow author is responsible for providing the correct subagent_type value
+ * (e.g., "flow:Developer" for flow agents, "MyProjectAgent" for project agents).
  */
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
-  // Strip leading @ if present (display notation)
-  let id = agentId.startsWith("@") ? agentId.slice(1) : agentId;
-  // Already has flow: prefix → return as-is (after @ strip)
-  if (id.startsWith("flow:")) return id;
-  // Has a different namespace prefix → pass through
-  if (id.includes(":")) return id;
-  // Bare agent name → add flow: prefix
-  return `flow:${id}`;
+  return agentId;
 }
 
 /**

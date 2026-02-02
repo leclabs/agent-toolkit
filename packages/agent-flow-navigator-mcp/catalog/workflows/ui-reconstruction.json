@@ -11,7 +11,7 @@
       "type": "task",
       "name": "ir_component_tree",
       "description": "Extract UI component hierarchy with element types, nesting, and framework imports. Output: Component tree with semantic roles.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -19,7 +19,7 @@
       "type": "task",
       "name": "ir_feature_boundary",
       "description": "Determine logical groupings of components that form discrete features. Output: Feature map with parent-child relationships.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -27,7 +27,7 @@
       "type": "task",
       "name": "ir_interactivity",
       "description": "Document user interactions: click handlers, form submissions, state mutations, and data flow. Output: Interaction inventory.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -35,7 +35,7 @@
       "type": "task",
       "name": "ir_business_object",
       "description": "Identify domain entities displayed or manipulated by the UI and their CRUD operations. Output: Business object catalog.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -43,7 +43,7 @@
       "type": "task",
       "name": "ir_annotate",
       "description": "Overlay visual markers on screenshot identifying components, features, and interactions. Output: Annotated screenshot.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -51,7 +51,7 @@
       "type": "task",
       "name": "ir_ascii",
       "description": "Create text-based diagrams showing UI state transitions and user flows. Output: ASCII state machine diagram.",
-      "agent": "Planner",
+      "agent": "flow:Planner",
       "emoji": "📋",
       "stage": "semantic-ir-extraction"
     },
@@ -59,7 +59,7 @@
       "type": "gate",
       "name": "Review",
       "description": "Validate completeness and accuracy of Semantic IR against source UI. Criteria: All visible elements mapped, interactions documented.",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "semantic-ir-extraction",
       "maxRetries": 3,
@@ -71,7 +71,7 @@
       "type": "task",
       "name": "uiRebuild_build",
       "description": "Implement UI from Semantic IR specification, matching visual layout and behavior. Preserve semantic structure over visual mimicry.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "ui-build-from-ir"
     },
@@ -79,7 +79,7 @@
       "type": "gate",
       "name": "Review",
       "description": "Compare rebuilt UI against original screenshot and Semantic IR. Verify functional equivalence and semantic fidelity.",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "ui-build-from-ir",
       "maxRetries": 3,
@@ -91,7 +91,7 @@
       "type": "gate",
       "name": "Review",
       "description": "Verify rebuilt UI captures essential purpose (Platonic Form) not just appearance. Test: Could this IR reconstruct the UI in a different framework?",
-      "agent": "Reviewer",
+      "agent": "flow:Reviewer",
       "emoji": "👀",
       "stage": "unbiased-review",
       "maxRetries": 1,
@@ -126,7 +126,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -135,7 +135,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery"
     }

@@ -168,7 +168,7 @@ describe("generateDiagram", () => {
     const result = generateDiagram(testWorkflow);
     assert.ok(result.includes("### Step Instructions"));
     assert.ok(result.includes("| Stage | Step | Name | Agent | Instructions |"));
-    assert.ok(result.includes("| dev | task_a | Task A | flow:Developer | Do something |"));
+    assert.ok(result.includes("| dev | task_a | Task A | Developer | Do something |"));
   });
 
   it("should highlight currentStep when provided", () => {
@@ -231,7 +231,7 @@ describe("generateDiagram", () => {
       },
     };
     const result = generateDiagram(wf);
-    assert.ok(result.includes("| dev | task_b | Build | 🔧 flow:Developer | Build it |"));
+    assert.ok(result.includes("| dev | task_b | Build | 🔧 Developer | Build it |"));
   });
 
   it("should render gate node with emoji and agent", () => {

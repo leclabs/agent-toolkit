@@ -267,7 +267,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -282,7 +282,7 @@ describe("WorkflowEngine", () => {
       assert.strictEqual(result.currentStep, "analyze");
       assert.strictEqual(result.action, "start");
       assert.strictEqual(result.stage, "planning");
-      assert.strictEqual(result.subagent, "flow:planner");
+      assert.strictEqual(result.subagent, "flow:Planner");
       assert.strictEqual(result.terminal, null);
       assert.ok(result.stepInstructions);
       assert.strictEqual(result.stepInstructions.name, "Analyze");
@@ -563,7 +563,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -577,7 +577,7 @@ describe("WorkflowEngine", () => {
 
       assert.strictEqual(result.action, "start");
       assert.ok(result.orchestratorInstructions);
-      assert.ok(result.orchestratorInstructions.includes("planner"));
+      assert.ok(result.orchestratorInstructions.includes("flow:Planner"));
     });
 
     it("should include description in orchestratorInstructions when provided", () => {
@@ -894,11 +894,11 @@ describe("WorkflowEngine", () => {
           lint: {
             type: "gate",
             name: "Lint",
-            agent: "Developer",
+            agent: "flow:Developer",
             stage: "delivery",
             maxRetries: 3,
           },
-          commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+          commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
           end: { type: "end", result: "success" },
           hitl: { type: "end", result: "blocked", escalation: "hitl" },
         },
@@ -1037,9 +1037,9 @@ describe("WorkflowEngine", () => {
         return {
           nodes: {
             start: { type: "start", name: "Start" },
-            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
-            implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
-            review: { type: "gate", name: "Review", stage: "verification", agent: "Reviewer", maxRetries: 2 },
+            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
+            implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
+            review: { type: "gate", name: "Review", stage: "verification", agent: "flow:Reviewer", maxRetries: 2 },
             fork_impl: {
               type: "fork",
               name: "Fork Impl",
@@ -1049,8 +1049,8 @@ describe("WorkflowEngine", () => {
               },
               join: "join_impl",
             },
-            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "Developer" },
-            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "Developer" },
+            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "flow:Developer" },
+            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "flow:Developer" },
             join_impl: { type: "join", name: "Join Impl", fork: "fork_impl", strategy: "all-pass" },
             end: { type: "end", result: "success" },
           },
@@ -1591,7 +1591,7 @@ describe("lint_format gate behavior", () => {
           type: "gate",
           name: "Lint & Format",
           description: "Run lint and format checks. Auto-fix issues where possible.",
-          agent: "Developer",
+          agent: "flow:Developer",
           stage: "delivery",
           maxRetries: 3,
         },
@@ -1888,11 +1888,11 @@ describe("autonomy mode", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        plan: { type: "task", name: "Plan", stage: "planning", agent: "Planner" },
+        plan: { type: "task", name: "Plan", stage: "planning", agent: "flow:Planner" },
         end_planning: { type: "end", result: "success", name: "Planning Complete" },
-        implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
+        implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
         end_dev: { type: "end", result: "success", name: "Development Complete" },
-        test: { type: "task", name: "Test", stage: "verification", agent: "Tester" },
+        test: { type: "task", name: "Test", stage: "verification", agent: "flow:Tester" },
         end_success: { type: "end", result: "success", name: "All Done" },
       },
       edges: [
@@ -2211,25 +2211,16 @@ describe("Helper functions", () => {
   });
 
   describe("toSubagentRef", () => {
-    it("should prefix bare agent names with flow:", () => {
-      assert.strictEqual(toSubagentRef("Developer"), "flow:Developer");
-    });
-
-    it("should normalize @flow: display notation to flow:", () => {
-      assert.strictEqual(toSubagentRef("@flow:Developer"), "flow:Developer");
-    });
-
-    it("should keep flow: prefix as-is", () => {
+    it("should return agent ID exactly as provided", () => {
       assert.strictEqual(toSubagentRef("flow:Developer"), "flow:Developer");
+      assert.strictEqual(toSubagentRef("Developer"), "Developer");
+      assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
+      assert.strictEqual(toSubagentRef("SecurityAuditor"), "SecurityAuditor");
     });
 
     it("should return null for falsy input", () => {
       assert.strictEqual(toSubagentRef(null), null);
       assert.strictEqual(toSubagentRef(""), null);
-    });
-
-    it("should pass through non-flow namespaced IDs as-is", () => {
-      assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
     });
   });
 
@@ -2272,10 +2263,10 @@ describe("HITL resume behavior", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        implement: { type: "task", name: "Implement", agent: "Developer", stage: "development" },
-        review: { type: "gate", name: "Review", agent: "Reviewer", stage: "verification", maxRetries: 2 },
-        lint_format: { type: "gate", name: "Lint & Format", agent: "Developer", stage: "delivery", maxRetries: 3 },
-        commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
+        implement: { type: "task", name: "Implement", agent: "flow:Developer", stage: "development" },
+        review: { type: "gate", name: "Review", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
+        lint_format: { type: "gate", name: "Lint & Format", agent: "flow:Developer", stage: "delivery", maxRetries: 3 },
+        commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: {
           type: "end",
@@ -2443,8 +2434,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 1 },
+        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 1 },
         end_success: { type: "end", result: "success", name: "Done" },
         hitl: { type: "end", result: "blocked", escalation: "hitl", name: "Blocked" },
       },
@@ -2504,8 +2495,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 2 },
+        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
         end_success: { type: "end", result: "success", name: "Done" },
       },
       edges: [
@@ -2607,7 +2598,7 @@ describe("fork/join", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
+        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
         fork_impl: {
           type: "fork",
           name: "Fork Implementation",
@@ -2617,17 +2608,17 @@ describe("fork/join", () => {
           },
           join: "join_impl",
         },
-        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "Developer" },
-        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "Tester" },
-        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "Developer" },
-        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "Tester" },
+        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "flow:Developer" },
+        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "flow:Tester" },
+        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "flow:Developer" },
+        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "flow:Tester" },
         join_impl: {
           type: "join",
           name: "Join Implementation",
           fork: "fork_impl",
           strategy: "all-pass",
         },
-        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "Tester" },
+        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "flow:Tester" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: { type: "end", result: "blocked", escalation: "hitl", name: "Needs Help" },
       },
@@ -2880,8 +2871,8 @@ describe("fork/join", () => {
           },
           join: "join_gather",
         },
-        gather_alpha: { type: "task", name: "Gather Alpha", agent: "Investigator", stage: "investigation" },
-        gather_beta: { type: "task", name: "Gather Beta", agent: "Investigator", stage: "investigation" },
+        gather_alpha: { type: "task", name: "Gather Alpha", agent: "flow:Investigator", stage: "investigation" },
+        gather_beta: { type: "task", name: "Gather Beta", agent: "flow:Investigator", stage: "investigation" },
         join_gather: { type: "join", name: "Join Gather", fork: "fork_gather", strategy: "all-pass" },
         end: { type: "end", result: "success" },
       },
@@ -2940,7 +2931,7 @@ describe("fork/join", () => {
           },
           join: "join_bad",
         },
-        step_a: { type: "task", name: "Step A", agent: "Developer", stage: "dev" },
+        step_a: { type: "task", name: "Step A", agent: "flow:Developer", stage: "dev" },
         join_bad: { type: "join", name: "Join", fork: "fork_bad", strategy: "all-pass" },
         end: { type: "end", result: "success" },
       },
@@ -2974,8 +2965,8 @@ describe("fork/join", () => {
           branches: { x: { entryStep: "step_x", description: "Branch X" } },
           join: "join_a",
         },
-        step_x: { type: "task", name: "Step X", agent: "Developer" },
-        step_y: { type: "task", name: "Step Y", agent: "Developer" },
+        step_x: { type: "task", name: "Step X", agent: "flow:Developer" },
+        step_y: { type: "task", name: "Step Y", agent: "flow:Developer" },
         join_a: { type: "join", name: "Join A", fork: "fork_a", strategy: "all-pass" },
         join_b: { type: "join", name: "Join B", fork: "fork_a", strategy: "all-pass" },
         end: { type: "end", result: "success" },

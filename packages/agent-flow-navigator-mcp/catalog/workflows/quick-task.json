@@ -12,7 +12,7 @@
       "type": "task",
       "name": "Understand",
       "description": "Clarify what needs to be done and identify the approach",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "planning"
     },
@@ -20,7 +20,7 @@
       "type": "task",
       "name": "Execute",
       "description": "Make the changes or complete the work",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -28,7 +28,7 @@
       "type": "task",
       "name": "Verify",
       "description": "Confirm the work is correct and complete",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "verification",
       "maxRetries": 1
@@ -37,7 +37,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -46,7 +46,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message",
-      "agent": "Developer",
+      "agent": "flow:Developer",
       "emoji": "🔧",
       "stage": "delivery"
     },

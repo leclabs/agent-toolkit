@@ -105,10 +105,10 @@ describe("build-review-murder-board workflow JSON structure", () => {
   });
 
   it("should assign correct agents to nodes", () => {
-    assert.strictEqual(workflow.nodes.build.agent, "Developer");
-    assert.strictEqual(workflow.nodes.review.agent, "Reviewer");
-    assert.strictEqual(workflow.nodes.lint_format.agent, "Developer");
-    assert.strictEqual(workflow.nodes.commit.agent, "Developer");
+    assert.strictEqual(workflow.nodes.build.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.review.agent, "flow:Reviewer");
+    assert.strictEqual(workflow.nodes.lint_format.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.commit.agent, "flow:Developer");
   });
 
   it("should have murder board config with scrutinyLevel 5, blindShot true, approvalThreshold 80", () => {
@@ -552,8 +552,8 @@ describe("build-review-murder-board diagram generation", () => {
     const workflow = loadMurderBoardWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('review{"Murder Board Review<br/><small>👀 Reviewer</small>"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
+    assert.ok(diagram.includes('review{"Murder Board Review<br/><small>👀 flow:Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {
@@ -589,8 +589,8 @@ describe("build-review-quick diagram generation", () => {
     const workflow = loadQuickWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('review{"Quick Review<br/><small>👀 Reviewer</small>"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
+    assert.ok(diagram.includes('review{"Quick Review<br/><small>👀 flow:Reviewer</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {

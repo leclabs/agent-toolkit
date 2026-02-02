@@ -133,16 +133,16 @@ describe("bug-hunt workflow JSON structure", () => {
   });
 
   it("should assign correct agents to nodes", () => {
-    assert.strictEqual(workflow.nodes.triage.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.reproduce.agent, "Tester");
-    assert.strictEqual(workflow.nodes.code_archaeology.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.git_forensics.agent, "Investigator");
-    assert.strictEqual(workflow.nodes.synthesize.agent, "Architect");
-    assert.strictEqual(workflow.nodes.write_fix.agent, "Developer");
-    assert.strictEqual(workflow.nodes.add_regression_test.agent, "Tester");
-    assert.strictEqual(workflow.nodes.verify_fix.agent, "Tester");
-    assert.strictEqual(workflow.nodes.lint_format.agent, "Developer");
-    assert.strictEqual(workflow.nodes.commit.agent, "Developer");
+    assert.strictEqual(workflow.nodes.triage.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.reproduce.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.code_archaeology.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.git_forensics.agent, "flow:Investigator");
+    assert.strictEqual(workflow.nodes.synthesize.agent, "flow:Architect");
+    assert.strictEqual(workflow.nodes.write_fix.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.add_regression_test.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.verify_fix.agent, "flow:Tester");
+    assert.strictEqual(workflow.nodes.lint_format.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.commit.agent, "flow:Developer");
   });
 });
 
@@ -503,8 +503,8 @@ describe("bug-hunt workflow diagram generation", () => {
     const workflow = loadBugHuntWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 Tester</small>"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}'));
+    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 flow:Tester</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {
