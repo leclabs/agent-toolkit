@@ -1,5 +1,13 @@
 # @leclabs/agent-toolkit
 
+## 2.1.0
+
+### Minor Changes
+
+- Add /replicate-flow skill for developer environment cloning
+
+  Adds a project-level skill to replicate the complete flow development environment (plugin + navigator MCP source) to another marketplace, enabling other teams to develop, customize, and publish flow under their own namespace.
+
 ## 2.0.0
 
 ### Major Changes
