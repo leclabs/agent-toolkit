@@ -10,14 +10,14 @@ Load workflows into Navigator. Reloads project workflows by default, or loads ex
 
 ```
 /flow:load                                    # Reload project workflows
-/flow:load <path>                             # Load external workflows (sourceRoot = path)
-/flow:load <path> --source-root <sourceRoot>  # Load external workflows with separate sourceRoot
+/flow:load <path>                             # Load external workflows from <path>/.flow/workflows/
+/flow:load <path> --source-root <sourceRoot>  # Load from <path> directly (non-standard layout)
 ```
 
 **Arguments:**
 
-- `path` (optional): Directory containing `{id}.json` workflow files. Omit to reload project workflows from `.flow/workflows/`.
-- `--source-root` (optional): Root path for resolving `./` prefixed `context_files` entries. Defaults to `path` when loading external workflows, or the project root when reloading project workflows.
+- `path` (optional): Source root of an external plugin. Workflows are loaded from `<path>/.flow/workflows/`. Omit to reload project workflows from `.flow/workflows/`.
+- `--source-root` (optional): Root path for resolving `./` prefixed `context_files` entries. When provided, `path` is treated as a direct directory of workflow files instead of a source root. Use this for non-standard layouts where workflows aren't in `.flow/workflows/`.
 
 ## When To Use
 
@@ -38,7 +38,7 @@ If `.flow/workflows/` does not exist or has no workflows:
 
 ```
 No workflows found in .flow/workflows/
-Run /flow:init to set up workflows, or /flow:scaffold to create a custom one.
+Run /flow:setup to set up workflows.
 ```
 
 If workflows are available, present them to the user via `AskUserQuestion` and let them choose which to load. Then call `Navigator.LoadWorkflows` with the selected IDs:
@@ -55,12 +55,22 @@ Call `Navigator.LoadWorkflows` with:
 
 ```json
 {
-  "path": "<path argument>",
-  "sourceRoot": "<--source-root argument, or path if omitted>"
+  "path": "<path argument>"
 }
 ```
 
-This loads `{id}.json` files from the directory, tags them as `source: "external"`, and stores the `sourceRoot` for resolving `./` prefixed `context_files` entries against the plugin's root rather than the project root.
+This loads workflows from `<path>/.flow/workflows/`, tags them as `source: "external"`, and uses `<path>` as `sourceRoot` for resolving `./` prefixed `context_files` entries.
+
+**Non-standard layout** (path + --source-root):
+
+```json
+{
+  "path": "<path argument>",
+  "sourceRoot": "<--source-root argument>"
+}
+```
+
+When `--source-root` is provided, `path` is treated as a direct directory of workflow files (not a source root). Use this when workflows aren't in the standard `.flow/workflows/` location.
 
 ### 2. Report Results
 

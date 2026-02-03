@@ -10,8 +10,8 @@ flowchart TD
     analyze["Analyze<br/><small>📋 Planner</small>"]
     implement["Implement<br/><small>🔧 Developer</small>"]
     test["Test<br/><small>🧪 Tester</small>"]
-    review{"Review<br/><small>👀 Reviewer</small>"}
-    lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}
+    review{"Review<br/><small>👀 Reviewer ↻2</small>"}
+    lint_format{"Lint and Format<br/><small>🔧 Developer ↻3</small>"}
     commit["Commit Changes<br/><small>🔧 Developer</small>"]
     end_success[["Complete"]]
     hitl_failed{{"✋ Needs Help"}}
@@ -43,11 +43,11 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step        | Name           | Agent             | Instructions                                                |
-| ------------ | ----------- | -------------- | ----------------- | ----------------------------------------------------------- |
-| planning     | analyze     | Analyze        | 📋 flow:Planner   | Understand requirements and plan approach                   |
-| development  | implement   | Implement      | 🔧 flow:Developer | Write the code or make changes                              |
-| verification | test        | Test           | 🧪 flow:Tester    | Verify the implementation works correctly                   |
-| verification | review      | Review         | 👀 flow:Reviewer  | Review code quality and correctness                         |
-| delivery     | lint_format | Lint & Format  | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery     | commit      | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message               |
+| Stage        | Step        | Name           | Agent        | Instructions                                                |
+| ------------ | ----------- | -------------- | ------------ | ----------------------------------------------------------- |
+| planning     | analyze     | Analyze        | 📋 Planner   | Understand requirements and plan approach                   |
+| development  | implement   | Implement      | 🔧 Developer | Write the code or make changes                              |
+| verification | test        | Test           | 🧪 Tester    | Verify the implementation works correctly                   |
+| verification | review      | Review         | 👀 Reviewer  | Review code quality and correctness                         |
+| delivery     | lint_format | Lint & Format  | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery     | commit      | Commit Changes | 🔧 Developer | Commit all changes with a descriptive message               |

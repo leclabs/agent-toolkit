@@ -8,7 +8,7 @@ Minimal workflow for testing HITL recovery: work, gate, escalate, human resumes.
 flowchart TD
     start(("Start"))
     work["Do Work<br/><small>🔧 Developer</small>"]
-    check{"Check<br/><small>👀 Reviewer</small>"}
+    check{"Check<br/><small>👀 Reviewer ↻1</small>"}
     end_success[["Done"]]
     hitl_blocked{{"✋ Blocked"}}
 
@@ -33,7 +33,7 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step  | Name    | Agent             | Instructions |
-| ------------ | ----- | ------- | ----------------- | ------------ |
-| development  | work  | Do Work | 🔧 flow:Developer | Do the thing |
-| verification | check | Check   | 👀 flow:Reviewer  | Pass or fail |
+| Stage        | Step  | Name    | Agent        | Instructions |
+| ------------ | ----- | ------- | ------------ | ------------ |
+| development  | work  | Do Work | 🔧 Developer | Do the thing |
+| verification | check | Check   | 👀 Reviewer  | Pass or fail |

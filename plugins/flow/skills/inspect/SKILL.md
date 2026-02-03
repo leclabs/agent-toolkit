@@ -99,8 +99,7 @@ Show the full JSON of the node:
 | Type | `gate` |
 | Name | Review Plan |
 | Stage | `planning` |
-| Agent | `Reviewer` → `@flow:Reviewer` |
-| Subagent Ref | `@flow:Reviewer` |
+| Agent | `Reviewer` |
 | maxRetries | 2 |
 ````
 

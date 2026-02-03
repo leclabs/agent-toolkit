@@ -1,7 +1,7 @@
 /**
- * copier.js - Pure workflow copier module
+ * copier.js - Pure copier module for workflows and agents
  *
- * Generates README content and provides helpers for workflow copying.
+ * Generates README content and provides helpers for copying catalog templates.
  * Actual file I/O handled by MCP handler.
  */
 
@@ -17,11 +17,8 @@ Graph-based workflow orchestration for AI agents.
 ## Quick Start
 
 \`\`\`bash
-# Load the orchestrator at session start
-/flow:prime
-
-# Create a task using a command
-/flow:feat "add user authentication"
+# Create a task with workflow selection
+/flow:task "add user authentication"
 
 # Execute all pending tasks
 /flow:go
@@ -29,18 +26,14 @@ Graph-based workflow orchestration for AI agents.
 
 ## Commands
 
-| Command | Workflow | Description |
-| --- | --- | --- |
-| \`/flow:feat\` | feature-development | New feature with planning + review |
-| \`/flow:bug\` | bug-fix | Bug investigation and fix |
-| \`/flow:task\` | agile-task | General development task |
-| \`/flow:fix\` | quick-task | Quick fix, minimal ceremony |
-| \`/flow:spec\` | test-coverage | Analyze and improve test coverage |
-| \`/flow:ctx\` | context-optimization | Optimize agent context and prompts |
-| \`/flow:ui\` | ui-reconstruction | Reconstruct UI from reference |
-| \`/flow:go\` | _(runs queue)_ | Execute all pending tasks |
+| Command | Description |
+| --- | --- |
+| \`/flow:task\` | Create a task with workflow selection |
+| \`/flow:go\` | Execute all pending tasks |
+| \`/flow:recon\` | Deep dive exploration |
+| \`/flow:help\` | Show help |
 
-Use \`/flow:task-create "description" <workflow-id>\` for workflows without command shortcuts.
+Use \`/flow:task-create "description" <workflow-id>\` for direct workflow assignment.
 
 ## Available Workflows
 
@@ -63,9 +56,9 @@ This directory contains workflow definitions for the flow plugin.
 
 \`\`\`
 .flow/workflows/
-├── README.md              # This file
-└── {workflow}/
-    └── workflow.json      # Workflow definition (steps + edges)
+\u251c\u2500\u2500 README.md              # This file
+\u2514\u2500\u2500 {workflow}/
+    \u2514\u2500\u2500 workflow.json      # Workflow definition (steps + edges)
 \`\`\`
 
 ## How Step Instructions Work
@@ -136,6 +129,27 @@ export function isValidWorkflowForCopy(content) {
 export function computeWorkflowsToCopy(requestedIds) {
   if (!requestedIds || requestedIds.length === 0) {
     throw new Error("workflowIds is required. Use ListCatalog to see available workflows, then pass specific IDs.");
+  }
+  return requestedIds;
+}
+
+/**
+ * Validate an agent markdown file has frontmatter
+ * @param {string} content - Markdown file content
+ * @returns {boolean} True if valid for copying
+ */
+export function isValidAgentForCopy(content) {
+  return typeof content === "string" && content.startsWith("---\n");
+}
+
+/**
+ * Compute which agent IDs to copy
+ * @param {string[]} requestedIds - Specifically requested agent IDs
+ * @returns {string[]} IDs to copy
+ */
+export function computeAgentsToCopy(requestedIds) {
+  if (!requestedIds || requestedIds.length === 0) {
+    throw new Error("agentIds is required. Use ListCatalog to see available agents, then pass specific IDs.");
   }
   return requestedIds;
 }

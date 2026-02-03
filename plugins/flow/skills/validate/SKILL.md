@@ -43,30 +43,35 @@ For each workflow, perform these checks. Track results as `{severity, category, 
 
 #### Schema Checks
 
-| Check                                     | Severity | Details                                                      |
-| ----------------------------------------- | -------- | ------------------------------------------------------------ |
-| Has `id` field                            | error    | Workflow must have an id                                     |
-| Has `name` field                          | error    | Workflow must have a name                                    |
-| Has `nodes` object                        | error    | Workflow must have a nodes object                            |
-| Has `edges` array                         | error    | Workflow must have an edges array                            |
-| All nodes have `type`                     | error    | Every node must have a type field                            |
-| Node types are valid                      | error    | Valid types: `start`, `end`, `task`, `gate`. Flag any others |
-| All edges have `from` and `to`            | error    | Every edge must reference source and target                  |
-| Edge `from`/`to` reference existing nodes | error    | No dangling references                                       |
-| Edge `on` values are valid                | warn     | Expected: `"passed"`, `"failed"`, or absent. Flag others     |
+| Check                                     | Severity | Details                                                                                |
+| ----------------------------------------- | -------- | -------------------------------------------------------------------------------------- |
+| Has `id` field                            | error    | Workflow must have an id                                                               |
+| Has `name` field                          | error    | Workflow must have a name                                                              |
+| Has `nodes` object                        | error    | Workflow must have a nodes object                                                      |
+| Has `edges` array                         | error    | Workflow must have an edges array                                                      |
+| All nodes have `type`                     | error    | Every node must have a type field                                                      |
+| Node types are valid                      | error    | Valid types: `start`, `end`, `task`, `gate`, `fork`, `join`. Flag any others           |
+| All edges have `from` and `to`            | error    | Every edge must reference source and target                                            |
+| Edge `from`/`to` reference existing nodes | error    | No dangling references                                                                 |
+| Edge `on` values are valid                | warn     | Expected: `"passed"`, `"failed"`, or absent. Flag others                               |
+| End nodes have `result` field             | warn     | End nodes should have a `result` field (`"success"` or `"blocked"`)                    |
+| End node `result` values are valid        | warn     | Expected: `"success"` or `"blocked"`. Flag others                                      |
+| HITL end nodes have `escalation` field    | warn     | End nodes with `result: "blocked"` should have `escalation: "hitl"` to enable recovery |
 
 #### Topology Checks
 
-| Check                                   | Severity | Details                                                                               |
-| --------------------------------------- | -------- | ------------------------------------------------------------------------------------- |
-| Exactly 1 start node                    | error    | Must have exactly one node with `type: "start"`                                       |
-| At least 1 end node                     | error    | Must have at least one node with `type: "end"`                                        |
-| At least 1 success end                  | warn     | Should have at least one end with `result: "success"`                                 |
-| No orphan nodes                         | warn     | All nodes should be referenced by at least one edge (as `from` or `to`), except start |
-| All nodes reachable from start          | error    | BFS/DFS from start node, following edges. All non-start nodes must be reachable       |
-| All non-terminal nodes can reach an end | warn     | BFS/DFS backward from end nodes. All task/gate nodes should have a path to some end   |
-| No dead-end non-terminals               | error    | Non-end nodes with no outgoing edges                                                  |
-| End nodes have no outgoing edges        | warn     | End nodes should not have outgoing edges                                              |
+| Check                                   | Severity | Details                                                                                              |
+| --------------------------------------- | -------- | ---------------------------------------------------------------------------------------------------- |
+| Exactly 1 start node                    | error    | Must have exactly one node with `type: "start"`                                                      |
+| At least 1 end node                     | error    | Must have at least one node with `type: "end"`                                                       |
+| At least 1 success end                  | warn     | Should have at least one end with `result: "success"`                                                |
+| No orphan nodes                         | warn     | All nodes should be referenced by at least one edge (as `from` or `to`), except start                |
+| All nodes reachable from start          | error    | BFS/DFS from start node, following edges. All non-start nodes must be reachable                      |
+| All non-terminal nodes can reach an end | warn     | BFS/DFS backward from end nodes. All task/gate nodes should have a path to some end                  |
+| No dead-end non-terminals               | error    | Non-end nodes with no outgoing edges                                                                 |
+| HITL end without recovery edge          | warn     | End node has `escalation: "hitl"` but no `on: "passed"` outgoing edge (no recovery path)             |
+| Non-HITL end with outgoing edges        | warn     | End node without `escalation: "hitl"` has outgoing edges                                             |
+| HITL recovery targets end node          | warn     | HITL end's `on: "passed"` recovery edge points to another end node instead of back into the workflow |
 
 **BFS reachability algorithm (forward):**
 
@@ -109,6 +114,20 @@ For each node with `type: "gate"` or `maxRetries > 0`:
 | Gate without `maxRetries` but with dual failed edges | info     | Has retry infrastructure but no retry limit set                                 |
 | Non-gate with `maxRetries`                           | info     | Task node with `maxRetries` acts as implicit gate                               |
 
+#### Fork/Join Checks
+
+For each node with `type: "fork"` or `type: "join"`:
+
+| Check                                            | Severity | Details                                                                                                |
+| ------------------------------------------------ | -------- | ------------------------------------------------------------------------------------------------------ |
+| Fork node has `branches` object                  | error    | Fork nodes must have a `branches` object defining parallel tracks                                      |
+| Fork node has `join` reference                   | error    | Fork nodes must reference their corresponding join node via `join` field                               |
+| Fork `join` references an existing join node     | error    | The `join` field must point to an existing node with `type: "join"`                                    |
+| Each branch has `entryStep`                      | error    | Every branch in `branches` must have an `entryStep` field                                              |
+| Each branch `entryStep` references existing node | error    | The `entryStep` must reference an existing node in the workflow                                        |
+| Join node has `fork` back-reference              | warn     | Join nodes should reference their corresponding fork node via `fork` field                             |
+| Join node has `strategy` field                   | info     | Join nodes should declare a `strategy` (e.g., `"all-pass"`). Engine defaults to `"all-pass"` if absent |
+
 #### Instruction Coverage
 
 For each non-terminal node, classify its instruction source:
@@ -130,6 +149,24 @@ For each non-terminal node:
 | Node without `agent` | info     | Step will run as direct (no subagent delegation) |
 
 List all unique agents referenced across the workflow.
+
+#### Consumer Hygiene
+
+For each non-end node:
+
+| Check                      | Severity | Detection                                                                                                                                                            | Details                                                                                                                       |
+| -------------------------- | -------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| Skill not in context_files | error    | `description` or `instructions` contains a skill-style reference (`/@ns:name` or `/ns:name`) but no `context_files` entry contains that skill name as a path segment | "Skill '{name}' referenced in description/instructions but not in context_files. Subagent won't have the skill file to read." |
+| Double `@@` agent prefix   | warn     | Node `agent` field starts with `@@`                                                                                                                                  | "Agent '{agent}' has double `@@` prefix — likely a typo."                                                                     |
+| Built-in agent type        | warn     | Node `agent` field matches a built-in Claude Code agent type                                                                                                         | "Agent '{agent}' is a built-in Claude Code agent that doesn't follow the subagent response protocol. Use a catalog agent."    |
+
+**Detection details:**
+
+**skill-not-in-context:** Scan both `description` and `instructions` fields for patterns matching `/@?[\w-]+:[\w-]+` (with or without leading `/`). Extract the skill name (the part after `:`). Check if any `context_files` entry contains that skill name as a directory segment (e.g., `./skills/catalog-app-add/SKILL.md` matches `catalog-app-add`). Skip end nodes — skill refs in end nodes are user-facing HITL guidance, not subagent instructions.
+
+**double-at-agent:** Check if `agent` field starts with `@@`. Simple string match. Applies to all node types that have an agent field.
+
+**built-in-agent-type:** Check if `agent` field matches one of the built-in Claude Code agent types: `Explore`, `Plan`, `Bash`, `general-purpose`, `claude-code-guide`, `statusline-setup`. These agents don't follow the subagent response protocol (they can't write to `.cruft/` or return the expected JSON format). Use catalog agents (`Developer`, `Reviewer`, `Planner`, `Tester`, `Investigator`, `Architect`, `Context Engineer`) instead.
 
 ### 3. Generate Gate/Retry Analysis
 
@@ -210,6 +247,20 @@ Passed edge: → implement
 | Reviewer  | plan_review, code_review                          |
 | Tester    | write_tests, run_tests                            |
 | (direct)  | <any steps without agent>                         |
+
+## Consumer Hygiene
+
+| Step             | Check           | Severity | Details                                               |
+| ---------------- | --------------- | -------- | ----------------------------------------------------- |
+| validate_catalog | double-at-agent | warn     | Agent '@@fusion-studio:reviewer' has double @@ prefix |
+```
+
+If no consumer hygiene issues found, the section should instead show:
+
+```markdown
+## Consumer Hygiene
+
+No issues found.
 ```
 
 ### 5. Display Results
@@ -263,5 +314,5 @@ Verify the workflow is loaded: /flow:list
 **No workflows loaded (`--all` mode):**
 
 ```
-No workflows loaded. Run /flow:init to set up workflows.
+No workflows loaded. Run /flow:setup to set up workflows.
 ```

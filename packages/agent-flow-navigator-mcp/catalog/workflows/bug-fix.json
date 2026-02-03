@@ -12,7 +12,7 @@
       "type": "task",
       "name": "Reproduce Bug",
       "description": "Understand the bug and create a reliable reproduction case",
-      "agent": "flow:Investigator",
+      "agent": "Investigator",
       "emoji": "🔍",
       "stage": "investigation"
     },
@@ -20,7 +20,7 @@
       "type": "task",
       "name": "Investigate",
       "description": "Find root cause by tracing code paths and debugging",
-      "agent": "flow:Investigator",
+      "agent": "Investigator",
       "emoji": "🔍",
       "stage": "investigation"
     },
@@ -28,7 +28,7 @@
       "type": "task",
       "name": "Write Fix",
       "description": "Implement the fix with minimal changes",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -36,7 +36,7 @@
       "type": "task",
       "name": "Add Regression Test",
       "description": "Write a test that would have caught this bug",
-      "agent": "flow:Tester",
+      "agent": "Tester",
       "emoji": "🧪",
       "stage": "development"
     },
@@ -44,7 +44,7 @@
       "type": "task",
       "name": "Verify Fix",
       "description": "Run all tests and verify the bug is fixed",
-      "agent": "flow:Tester",
+      "agent": "Tester",
       "emoji": "🧪",
       "stage": "verification",
       "maxRetries": 3
@@ -53,7 +53,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -62,7 +62,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit the fix and regression test with a descriptive message",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "delivery"
     },

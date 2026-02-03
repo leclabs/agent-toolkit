@@ -10,8 +10,9 @@ Show workflows currently loaded in Navigator.
 
 ```
 /flow:list              # Show project workflows (or all if no project workflows)
-/flow:list --catalog    # Include catalog workflows
-/flow:list --all        # Show all workflows (project + catalog)
+/flow:list --catalog    # Show catalog workflows
+/flow:list --external   # Show external workflows (loaded by plugins)
+/flow:list --all        # Show all workflows (project + catalog + external)
 ```
 
 ## What To Do
@@ -22,6 +23,7 @@ Call `Navigator.ListWorkflows` with source filter:
 
 - Default (no flag): Let Navigator decide (project-only if project workflows exist)
 - `--catalog`: `source: "catalog"`
+- `--external`: `source: "external"`
 - `--all`: `source: "all"`
 
 Response includes:
@@ -89,5 +91,5 @@ Use `/flow:task-create <description> <id>` to create a task.
 ```
 No workflows loaded.
 
-Run /flow:init to set up workflows for this project.
+Run /flow:setup to set up workflows for this project.
 ```

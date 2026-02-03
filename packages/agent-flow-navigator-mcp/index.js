@@ -10,8 +10,9 @@
  * - ListWorkflows: List available workflows
  * - Diagram: Generate mermaid diagram for workflow
  * - CopyWorkflows: Copy workflows from catalog to project
+ * - CopyAgents: Copy agent templates from catalog to project
  * - LoadWorkflows: Load workflows from a directory at runtime (external plugins or project reload)
- * - ListCatalog: List workflows available in catalog
+ * - ListCatalog: List workflows and agents available in catalog
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -26,9 +27,17 @@ import {
   generateWorkflowsReadme,
   isValidWorkflowForCopy,
   computeWorkflowsToCopy,
+  isValidAgentForCopy,
+  computeAgentsToCopy,
 } from "./copier.js";
-import { buildWorkflowSummary, buildCatalogResponse, buildEmptyCatalogResponse } from "./catalog.js";
-import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync } from "fs";
+import {
+  buildWorkflowSummary,
+  buildAgentSummary,
+  parseFrontmatter,
+  buildCatalogResponse,
+  buildEmptyCatalogResponse,
+} from "./catalog.js";
+import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync, statSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
 
@@ -46,32 +55,6 @@ const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
 
 /**
- * Load workflows from catalog: flat {id}.json files
- */
-function loadCatalogWorkflows(dirPath) {
-  if (!existsSync(dirPath)) return [];
-
-  const loaded = [];
-  const files = readdirSync(dirPath).filter((f) => f.endsWith(".json"));
-
-  for (const file of files) {
-    const id = file.replace(".json", "");
-
-    try {
-      const content = JSON.parse(readFileSync(join(dirPath, file), "utf-8"));
-      if (validateWorkflow(id, content)) {
-        store.loadDefinition(id, content, "catalog");
-        loaded.push(id);
-      }
-    } catch (e) {
-      console.error(`Error loading catalog workflow ${id}: ${e.message}`);
-    }
-  }
-
-  return loaded;
-}
-
-/**
  * Load external workflows from a directory: flat {id}.json files
  * Used by the LoadWorkflows tool at runtime.
  * @param {string} dirPath - Directory containing {id}.json workflow files
@@ -82,14 +65,22 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
   if (!existsSync(dirPath)) return [];
 
   const loaded = [];
-  const entries = readdirSync(dirPath, { withFileTypes: true });
+  const names = readdirSync(dirPath);
 
-  for (const entry of entries) {
+  for (const name of names) {
+    const fullPath = join(dirPath, name);
+    let stat;
+    try {
+      stat = statSync(fullPath);
+    } catch {
+      continue;
+    }
+
     // Flat format: {id}.json
-    if (entry.isFile() && entry.name.endsWith(".json")) {
-      const id = entry.name.replace(".json", "");
+    if (stat.isFile() && name.endsWith(".json")) {
+      const id = name.replace(".json", "");
       try {
-        const content = JSON.parse(readFileSync(join(dirPath, entry.name), "utf-8"));
+        const content = JSON.parse(readFileSync(fullPath, "utf-8"));
         if (validateWorkflow(id, content)) {
           store.loadDefinition(id, content, "external", sourceRoot);
           loaded.push(id);
@@ -101,10 +92,10 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
     }
 
     // Directory format: {id}/workflow.json
-    if (entry.isDirectory()) {
-      const wfFile = join(dirPath, entry.name, "workflow.json");
+    if (stat.isDirectory()) {
+      const wfFile = join(fullPath, "workflow.json");
       if (!existsSync(wfFile)) continue;
-      const id = entry.name;
+      const id = name;
       try {
         const content = JSON.parse(readFileSync(wfFile, "utf-8"));
         if (validateWorkflow(id, content)) {
@@ -118,19 +109,6 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
   }
 
   return loaded;
-}
-
-/**
- * Load workflows: catalog first, then project overwrites (project takes precedence)
- */
-function loadWorkflows() {
-  const catalogPath = join(CATALOG_PATH, "workflows");
-  const catalogLoaded = loadCatalogWorkflows(catalogPath);
-
-  return {
-    catalog: catalogLoaded,
-    loaded: catalogLoaded,
-  };
 }
 
 // Initialize server
@@ -185,7 +163,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             source: {
               type: "string",
-              enum: ["all", "project", "catalog"],
+              enum: ["all", "project", "catalog", "external"],
               description: "Filter by source. Default: 'project' if project workflows exist, else 'all'.",
             },
           },
@@ -232,6 +210,24 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
         },
       },
       {
+        name: "CopyAgents",
+        description: "Copy agent templates from catalog to project.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            agentIds: {
+              type: "array",
+              items: { type: "string" },
+              description: "Agent IDs to copy. Required. Use ListCatalog to see available agents.",
+            },
+            targetDir: {
+              type: "string",
+              description: "Target directory for agent files. Defaults to .claude/agents/",
+            },
+          },
+        },
+      },
+      {
         name: "LoadWorkflows",
         description:
           "Load workflows at runtime. External plugins pass path + sourceRoot. For project workflows, pass workflowIds to load specific workflows from .flow/workflows/.",
@@ -240,12 +236,13 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
           properties: {
             path: {
               type: "string",
-              description: "Directory containing {id}.json workflow files. For external plugins only.",
+              description:
+                "Source root of an external plugin. Workflows are loaded from <path>/.flow/workflows/. When combined with sourceRoot, path is treated as a direct directory of workflow files instead.",
             },
             sourceRoot: {
               type: "string",
               description:
-                "Root path for resolving ./ context_files entries. Defaults to path. For external plugins only.",
+                "Root path for resolving ./ context_files entries. Defaults to path. When provided, path is treated as a direct workflow directory instead of a source root.",
             },
             workflowIds: {
               type: "array",
@@ -258,7 +255,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "ListCatalog",
-        description: "List workflows available in the catalog.",
+        description: "List workflows and agents available in the catalog.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -386,11 +383,61 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         });
       }
 
+      case "CopyAgents": {
+        const catalogAgentsPath = join(CATALOG_PATH, "agents");
+        if (!existsSync(catalogAgentsPath)) {
+          throw new Error("Catalog agents directory not found");
+        }
+
+        const targetDir = args.targetDir ? resolve(args.targetDir) : join(PROJECT_ROOT, ".claude", "agents");
+        if (!existsSync(targetDir)) {
+          mkdirSync(targetDir, { recursive: true });
+        }
+
+        const catalogAgentFiles = readdirSync(catalogAgentsPath).filter((f) => f.endsWith(".md"));
+        const availableIds = catalogAgentFiles.map((f) => f.replace(".md", ""));
+        const agentIds = computeAgentsToCopy(args.agentIds, availableIds);
+
+        const copied = [];
+        const errors = [];
+
+        for (const id of agentIds) {
+          const srcFile = join(catalogAgentsPath, `${id}.md`);
+
+          if (!existsSync(srcFile)) {
+            errors.push({ id, error: "not found in catalog" });
+            continue;
+          }
+
+          try {
+            const content = readFileSync(srcFile, "utf-8");
+            if (!isValidAgentForCopy(content)) {
+              errors.push({ id, error: "invalid agent template (missing frontmatter)" });
+              continue;
+            }
+
+            writeFileSync(join(targetDir, `${id}.md`), content);
+            copied.push(id);
+          } catch (e) {
+            errors.push({ id, error: e.message });
+          }
+        }
+
+        return jsonResponse({
+          schemaVersion: 3,
+          copied,
+          errors: errors.length > 0 ? errors : undefined,
+          path: targetDir,
+        });
+      }
+
       case "LoadWorkflows": {
         if (args.path) {
-          // External plugin: load all from provided path
-          const dirPath = resolve(args.path);
-          const root = args.sourceRoot ? resolve(args.sourceRoot) : dirPath;
+          const pathArg = resolve(args.path);
+          // With --source-root: path is a direct workflow directory (non-standard layout)
+          // Without: path is a source root, workflows in <path>/.flow/workflows/
+          const dirPath = args.sourceRoot ? pathArg : join(pathArg, ".flow", "workflows");
+          const root = args.sourceRoot ? resolve(args.sourceRoot) : pathArg;
           const loaded = loadExternalWorkflows(dirPath, root);
           return jsonResponse({
             schemaVersion: 2,
@@ -409,13 +456,36 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
             loaded: [],
             source: "project",
             path: WORKFLOWS_PATH,
-            hint: "No .flow/workflows/ directory found. Use /flow:init to set up workflows.",
+            hint: "No .flow/workflows/ directory found. Use /flow:setup to set up workflows.",
           });
         }
 
-        const available = readdirSync(WORKFLOWS_PATH, { withFileTypes: true })
-          .filter((e) => e.isDirectory() && existsSync(join(WORKFLOWS_PATH, e.name, "workflow.json")))
-          .map((e) => e.name);
+        // Discover available workflows in both flat and directory formats
+        // Uses statSync to follow symlinks
+        const availableMap = new Map();
+        const names = readdirSync(WORKFLOWS_PATH);
+        for (const name of names) {
+          const fullPath = join(WORKFLOWS_PATH, name);
+          let stat;
+          try {
+            stat = statSync(fullPath);
+          } catch {
+            continue;
+          }
+          // Flat format: {id}.json
+          if (stat.isFile() && name.endsWith(".json")) {
+            availableMap.set(name.replace(".json", ""), fullPath);
+            continue;
+          }
+          // Directory format: {id}/workflow.json
+          if (stat.isDirectory()) {
+            const wfFile = join(fullPath, "workflow.json");
+            if (existsSync(wfFile)) {
+              availableMap.set(name, wfFile);
+            }
+          }
+        }
+        const available = [...availableMap.keys()];
 
         if (!args.workflowIds || args.workflowIds.length === 0) {
           // List only — don't load
@@ -433,11 +503,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const loaded = [];
         const errors = [];
         for (const id of args.workflowIds) {
-          if (!available.includes(id)) {
+          const wfFile = availableMap.get(id);
+          if (!wfFile) {
             errors.push({ id, error: "not found in .flow/workflows/" });
             continue;
           }
-          const wfFile = join(WORKFLOWS_PATH, id, "workflow.json");
           try {
             const content = JSON.parse(readFileSync(wfFile, "utf-8"));
             if (validateWorkflow(id, content)) {
@@ -462,24 +532,41 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       }
 
       case "ListCatalog": {
-        const catalogPath = join(CATALOG_PATH, "workflows");
-        if (!existsSync(catalogPath)) {
-          return jsonResponse(buildEmptyCatalogResponse());
-        }
+        const catalogWorkflowsPath = join(CATALOG_PATH, "workflows");
+        const catalogAgentsPath = join(CATALOG_PATH, "agents");
 
         const workflows = [];
-        const files = readdirSync(catalogPath).filter((f) => f.endsWith(".json"));
-
-        for (const file of files) {
-          try {
-            const content = JSON.parse(readFileSync(join(catalogPath, file), "utf-8"));
-            workflows.push(buildWorkflowSummary(file.replace(".json", ""), content));
-          } catch {
-            // Skip invalid files
+        if (existsSync(catalogWorkflowsPath)) {
+          const files = readdirSync(catalogWorkflowsPath).filter((f) => f.endsWith(".json"));
+          for (const file of files) {
+            try {
+              const content = JSON.parse(readFileSync(join(catalogWorkflowsPath, file), "utf-8"));
+              workflows.push(buildWorkflowSummary(file.replace(".json", ""), content));
+            } catch {
+              // Skip invalid files
+            }
           }
         }
 
-        return jsonResponse(buildCatalogResponse(workflows));
+        const agents = [];
+        if (existsSync(catalogAgentsPath)) {
+          const agentFiles = readdirSync(catalogAgentsPath).filter((f) => f.endsWith(".md"));
+          for (const file of agentFiles) {
+            try {
+              const content = readFileSync(join(catalogAgentsPath, file), "utf-8");
+              const frontmatter = parseFrontmatter(content);
+              agents.push(buildAgentSummary(file.replace(".md", ""), frontmatter));
+            } catch {
+              // Skip invalid files
+            }
+          }
+        }
+
+        if (workflows.length === 0 && agents.length === 0) {
+          return jsonResponse(buildEmptyCatalogResponse());
+        }
+
+        return jsonResponse(buildCatalogResponse(workflows, agents));
       }
 
       default:
@@ -495,13 +582,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   }
 });
 
-// Load catalog workflows and start server
-const workflowInfo = loadWorkflows();
-
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
 console.error(`Navigator MCP Server v2 running (stateless)`);
 console.error(`  Project: ${PROJECT_ROOT}`);
-console.error(`  Catalog: ${workflowInfo.catalog.length} workflows`);
-console.error(`  Project/external workflows: load via LoadWorkflows tool`);
+console.error(`  Catalog: template-only (use ListCatalog to browse, CopyWorkflows to install)`);
+console.error(`  Workflows: load via LoadWorkflows tool`);

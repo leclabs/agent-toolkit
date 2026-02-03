@@ -142,10 +142,8 @@ Setup complete!
 
 Next steps:
   1. Start Claude Code:  claude
-  2. Prime the plugin:   /flow:prime
-  3. Create a task:      feat: "Add user authentication"
-
-Quick prefixes: fix: | feat: | bug:
+  2. Create a task:      /flow:task "Add user authentication"
+  3. Execute tasks:      /flow:go
 `);
 }
 

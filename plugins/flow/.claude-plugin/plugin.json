@@ -1,6 +1,6 @@
 {
   "name": "flow",
-  "version": "1.9.1",
+  "version": "2.0.0",
   "description": "Workflow orchestration for Claude Code.",
   "author": {
     "name": "Lance Caraccioli"

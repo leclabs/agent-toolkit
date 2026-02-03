@@ -64,7 +64,7 @@ export function getTerminalType(node) {
 /**
  * Return agent ID exactly as specified in the workflow definition.
  * The workflow author is responsible for providing the correct subagent_type value
- * (e.g., "flow:Developer" for flow agents, "MyProjectAgent" for project agents).
+ * (e.g., "Developer" for catalog agents, "myorg:Auditor" for namespaced agents).
  */
 export function toSubagentRef(agentId) {
   if (!agentId) return null;
