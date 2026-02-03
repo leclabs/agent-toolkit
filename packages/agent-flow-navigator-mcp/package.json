@@ -9,7 +9,7 @@
     "url": "https://github.com/leclabs/agent-toolkit/issues"
   },
   "bin": {
-    "agent-flow-navigator": "./index.js"
+    "agent-flow-navigator": "index.js"
   },
   "main": "index.js",
   "type": "module",

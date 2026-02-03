@@ -4,7 +4,7 @@
   "description": "The essential Claude Code plugin marketplace for reliable Agent-led workflow orchestration",
   "main": "index.js",
   "bin": {
-    "setup-agent-toolkit": "./bin/setup-agent-toolkit.js"
+    "setup-agent-toolkit": "bin/setup-agent-toolkit.js"
   },
   "files": [
     "bin/"
