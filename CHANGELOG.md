@@ -1,5 +1,18 @@
 # @leclabs/agent-toolkit
 
+## 2.0.0
+
+### Major Changes
+
+- Add consumer hygiene, fork/join, and HITL-aware checks to /flow:validate
+  - Add `fork` and `join` to valid node types (was incorrectly flagging catalog workflows as errors)
+  - Add Fork/Join structural checks: branches, join reference, entryStep existence, strategy
+  - Replace blanket "end nodes have no outgoing edges" warning with HITL-aware checks that distinguish recovery edges from genuinely unexpected outgoing edges
+  - Add end node field validation: `result` field presence/values, `escalation: "hitl"` on blocked ends
+  - Add Consumer Hygiene check category: skill-not-in-context (error) and double-@@ agent prefix (warn)
+  - skill-not-in-context scans both `description` and `instructions` fields
+  - Add Consumer Hygiene section to report template
+
 ## 1.9.1
 
 ### Patch Changes
@@ -93,7 +106,7 @@
   - Build-review workflow variants — `build-review-murder-board` and `build-review-quick` with full test suites.
   - Refactor workflow with analysis, plan review, dev, and code review stages.
   - Loop guards and interactive HITL in `/flow:run` — soft (25) and hard (50) iteration guards.
-  - New skills: `/flow:validate`, `/flow:inspect`, `/flow:dry-run`, `/flow:now`.
+  - New skills: `/flow:validate`, `/flow:inspect`, `/flow:dry-run`.
   - projectRoot plumbing — Navigate resolves `context_files` to absolute paths.
   - Schema additions: `context_files`, `config`, `instructions`, `stage`, `agent`, `maxRetries` on nodes.
 

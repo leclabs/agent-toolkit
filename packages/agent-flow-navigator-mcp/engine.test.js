@@ -267,7 +267,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -282,7 +282,7 @@ describe("WorkflowEngine", () => {
       assert.strictEqual(result.currentStep, "analyze");
       assert.strictEqual(result.action, "start");
       assert.strictEqual(result.stage, "planning");
-      assert.strictEqual(result.subagent, "flow:Planner");
+      assert.strictEqual(result.subagent, "Planner");
       assert.strictEqual(result.terminal, null);
       assert.ok(result.stepInstructions);
       assert.strictEqual(result.stepInstructions.name, "Analyze");
@@ -563,7 +563,7 @@ describe("WorkflowEngine", () => {
       const def = {
         nodes: {
           start: { type: "start", name: "Start" },
-          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
+          analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
           end: { type: "end", result: "success" },
         },
         edges: [
@@ -577,7 +577,7 @@ describe("WorkflowEngine", () => {
 
       assert.strictEqual(result.action, "start");
       assert.ok(result.orchestratorInstructions);
-      assert.ok(result.orchestratorInstructions.includes("flow:Planner"));
+      assert.ok(result.orchestratorInstructions.includes("Planner"));
     });
 
     it("should include description in orchestratorInstructions when provided", () => {
@@ -894,11 +894,11 @@ describe("WorkflowEngine", () => {
           lint: {
             type: "gate",
             name: "Lint",
-            agent: "flow:Developer",
+            agent: "Developer",
             stage: "delivery",
             maxRetries: 3,
           },
-          commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
+          commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
           end: { type: "end", result: "success" },
           hitl: { type: "end", result: "blocked", escalation: "hitl" },
         },
@@ -1037,9 +1037,9 @@ describe("WorkflowEngine", () => {
         return {
           nodes: {
             start: { type: "start", name: "Start" },
-            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
-            implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
-            review: { type: "gate", name: "Review", stage: "verification", agent: "flow:Reviewer", maxRetries: 2 },
+            analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
+            implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
+            review: { type: "gate", name: "Review", stage: "verification", agent: "Reviewer", maxRetries: 2 },
             fork_impl: {
               type: "fork",
               name: "Fork Impl",
@@ -1049,8 +1049,8 @@ describe("WorkflowEngine", () => {
               },
               join: "join_impl",
             },
-            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "flow:Developer" },
-            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "flow:Developer" },
+            impl_frontend: { type: "task", name: "Frontend", stage: "development", agent: "Developer" },
+            impl_backend: { type: "task", name: "Backend", stage: "development", agent: "Developer" },
             join_impl: { type: "join", name: "Join Impl", fork: "fork_impl", strategy: "all-pass" },
             end: { type: "end", result: "success" },
           },
@@ -1077,7 +1077,7 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "implement");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "development");
-        assert.strictEqual(result.subagent, "flow:Developer");
+        assert.strictEqual(result.subagent, "Developer");
         assert.strictEqual(result.terminal, null);
         assert.ok(result.stepInstructions);
         assert.strictEqual(result.metadata.currentStep, "implement");
@@ -1092,7 +1092,7 @@ describe("WorkflowEngine", () => {
         assert.strictEqual(result.currentStep, "review");
         assert.strictEqual(result.action, "start");
         assert.strictEqual(result.stage, "verification");
-        assert.strictEqual(result.subagent, "flow:Reviewer");
+        assert.strictEqual(result.subagent, "Reviewer");
         assert.strictEqual(result.maxRetries, 2);
       });
 
@@ -1109,11 +1109,11 @@ describe("WorkflowEngine", () => {
 
         // Enriched branch data
         assert.ok(result.fork.branches.frontend);
-        assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+        assert.strictEqual(result.fork.branches.frontend.subagent, "Developer");
         assert.strictEqual(result.fork.branches.frontend.stage, "development");
         assert.ok(result.fork.branches.frontend.stepInstructions);
         assert.ok(result.fork.branches.backend);
-        assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
+        assert.strictEqual(result.fork.branches.backend.subagent, "Developer");
       });
 
       it("should throw for non-existent step", () => {
@@ -1591,7 +1591,7 @@ describe("lint_format gate behavior", () => {
           type: "gate",
           name: "Lint & Format",
           description: "Run lint and format checks. Auto-fix issues where possible.",
-          agent: "flow:Developer",
+          agent: "Developer",
           stage: "delivery",
           maxRetries: 3,
         },
@@ -1888,11 +1888,11 @@ describe("autonomy mode", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        plan: { type: "task", name: "Plan", stage: "planning", agent: "flow:Planner" },
+        plan: { type: "task", name: "Plan", stage: "planning", agent: "Planner" },
         end_planning: { type: "end", result: "success", name: "Planning Complete" },
-        implement: { type: "task", name: "Implement", stage: "development", agent: "flow:Developer" },
+        implement: { type: "task", name: "Implement", stage: "development", agent: "Developer" },
         end_dev: { type: "end", result: "success", name: "Development Complete" },
-        test: { type: "task", name: "Test", stage: "verification", agent: "flow:Tester" },
+        test: { type: "task", name: "Test", stage: "verification", agent: "Tester" },
         end_success: { type: "end", result: "success", name: "All Done" },
       },
       edges: [
@@ -2212,7 +2212,6 @@ describe("Helper functions", () => {
 
   describe("toSubagentRef", () => {
     it("should return agent ID exactly as provided", () => {
-      assert.strictEqual(toSubagentRef("flow:Developer"), "flow:Developer");
       assert.strictEqual(toSubagentRef("Developer"), "Developer");
       assert.strictEqual(toSubagentRef("myorg:developer"), "myorg:developer");
       assert.strictEqual(toSubagentRef("SecurityAuditor"), "SecurityAuditor");
@@ -2263,10 +2262,10 @@ describe("HITL resume behavior", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        implement: { type: "task", name: "Implement", agent: "flow:Developer", stage: "development" },
-        review: { type: "gate", name: "Review", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
-        lint_format: { type: "gate", name: "Lint & Format", agent: "flow:Developer", stage: "delivery", maxRetries: 3 },
-        commit: { type: "task", name: "Commit", agent: "flow:Developer", stage: "delivery" },
+        implement: { type: "task", name: "Implement", agent: "Developer", stage: "development" },
+        review: { type: "gate", name: "Review", agent: "Reviewer", stage: "verification", maxRetries: 2 },
+        lint_format: { type: "gate", name: "Lint & Format", agent: "Developer", stage: "delivery", maxRetries: 3 },
+        commit: { type: "task", name: "Commit", agent: "Developer", stage: "delivery" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: {
           type: "end",
@@ -2434,8 +2433,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 1 },
+        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 1 },
         end_success: { type: "end", result: "success", name: "Done" },
         hitl: { type: "end", result: "blocked", escalation: "hitl", name: "Blocked" },
       },
@@ -2495,8 +2494,8 @@ describe("HITL resume behavior", () => {
     const def = {
       nodes: {
         start: { type: "start", name: "Start" },
-        work: { type: "task", name: "Work", agent: "flow:Developer", stage: "development" },
-        gate: { type: "gate", name: "Gate", agent: "flow:Reviewer", stage: "verification", maxRetries: 2 },
+        work: { type: "task", name: "Work", agent: "Developer", stage: "development" },
+        gate: { type: "gate", name: "Gate", agent: "Reviewer", stage: "verification", maxRetries: 2 },
         end_success: { type: "end", result: "success", name: "Done" },
       },
       edges: [
@@ -2598,7 +2597,7 @@ describe("fork/join", () => {
     return {
       nodes: {
         start: { type: "start", name: "Start" },
-        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "flow:Planner" },
+        analyze: { type: "task", name: "Analyze", stage: "planning", agent: "Planner" },
         fork_impl: {
           type: "fork",
           name: "Fork Implementation",
@@ -2608,17 +2607,17 @@ describe("fork/join", () => {
           },
           join: "join_impl",
         },
-        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "flow:Developer" },
-        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "flow:Tester" },
-        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "flow:Developer" },
-        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "flow:Tester" },
+        impl_frontend: { type: "task", name: "Implement Frontend", stage: "development", agent: "Developer" },
+        test_frontend: { type: "task", name: "Test Frontend", stage: "verification", agent: "Tester" },
+        impl_backend: { type: "task", name: "Implement Backend", stage: "development", agent: "Developer" },
+        test_backend: { type: "task", name: "Test Backend", stage: "verification", agent: "Tester" },
         join_impl: {
           type: "join",
           name: "Join Implementation",
           fork: "fork_impl",
           strategy: "all-pass",
         },
-        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "flow:Tester" },
+        integration_test: { type: "task", name: "Integration Test", stage: "verification", agent: "Tester" },
         end_success: { type: "end", result: "success", name: "Complete" },
         hitl_failed: { type: "end", result: "blocked", escalation: "hitl", name: "Needs Help" },
       },
@@ -2668,7 +2667,7 @@ describe("fork/join", () => {
       assert.ok(frontend);
       assert.strictEqual(frontend.entryStep, "impl_frontend");
       assert.strictEqual(frontend.description, "Build UI");
-      assert.strictEqual(frontend.subagent, "flow:Developer");
+      assert.strictEqual(frontend.subagent, "Developer");
       assert.strictEqual(frontend.stage, "development");
       assert.ok(frontend.stepInstructions);
       assert.strictEqual(frontend.stepInstructions.name, "Implement Frontend");
@@ -2683,7 +2682,7 @@ describe("fork/join", () => {
       const backend = result.fork.branches.backend;
       assert.ok(backend);
       assert.strictEqual(backend.entryStep, "impl_backend");
-      assert.strictEqual(backend.subagent, "flow:Developer");
+      assert.strictEqual(backend.subagent, "Developer");
       assert.strictEqual(backend.multiStep, true); // impl_backend → test_backend → join
     } finally {
       rmSync(taskDir, { recursive: true });
@@ -2871,8 +2870,8 @@ describe("fork/join", () => {
           },
           join: "join_gather",
         },
-        gather_alpha: { type: "task", name: "Gather Alpha", agent: "flow:Investigator", stage: "investigation" },
-        gather_beta: { type: "task", name: "Gather Beta", agent: "flow:Investigator", stage: "investigation" },
+        gather_alpha: { type: "task", name: "Gather Alpha", agent: "Investigator", stage: "investigation" },
+        gather_beta: { type: "task", name: "Gather Beta", agent: "Investigator", stage: "investigation" },
         join_gather: { type: "join", name: "Join Gather", fork: "fork_gather", strategy: "all-pass" },
         end: { type: "end", result: "success" },
       },
@@ -2895,8 +2894,8 @@ describe("fork/join", () => {
     // Both branches should be single-step (entry step edges only go to join)
     assert.strictEqual(result.fork.branches.alpha.multiStep, false);
     assert.strictEqual(result.fork.branches.beta.multiStep, false);
-    assert.strictEqual(result.fork.branches.alpha.subagent, "flow:Investigator");
-    assert.strictEqual(result.fork.branches.beta.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.branches.alpha.subagent, "Investigator");
+    assert.strictEqual(result.fork.branches.beta.subagent, "Investigator");
     assert.strictEqual(result.fork.joinStrategy, "all-pass");
   });
 
@@ -2912,10 +2911,10 @@ describe("fork/join", () => {
     assert.strictEqual(result.fork.joinStrategy, "all-pass");
 
     // Branches should have enriched data
-    assert.strictEqual(result.fork.branches.frontend.subagent, "flow:Developer");
+    assert.strictEqual(result.fork.branches.frontend.subagent, "Developer");
     assert.ok(result.fork.branches.frontend.stepInstructions);
     assert.ok(result.fork.branches.frontend.orchestratorInstructions);
-    assert.strictEqual(result.fork.branches.backend.subagent, "flow:Developer");
+    assert.strictEqual(result.fork.branches.backend.subagent, "Developer");
   });
 
   it("should return error info when branch entry step is not found", () => {
@@ -2931,7 +2930,7 @@ describe("fork/join", () => {
           },
           join: "join_bad",
         },
-        step_a: { type: "task", name: "Step A", agent: "flow:Developer", stage: "dev" },
+        step_a: { type: "task", name: "Step A", agent: "Developer", stage: "dev" },
         join_bad: { type: "join", name: "Join", fork: "fork_bad", strategy: "all-pass" },
         end: { type: "end", result: "success" },
       },
@@ -2948,7 +2947,7 @@ describe("fork/join", () => {
 
     assert.strictEqual(result.action, "fork");
     // Good branch is enriched normally
-    assert.strictEqual(result.fork.branches.good.subagent, "flow:Developer");
+    assert.strictEqual(result.fork.branches.good.subagent, "Developer");
     assert.ok(result.fork.branches.good.stepInstructions);
     // Bad branch has error
     assert.ok(result.fork.branches.bad.error);
@@ -2966,8 +2965,8 @@ describe("fork/join", () => {
           branches: { x: { entryStep: "step_x", description: "Branch X" } },
           join: "join_a",
         },
-        step_x: { type: "task", name: "Step X", agent: "flow:Developer" },
-        step_y: { type: "task", name: "Step Y", agent: "flow:Developer" },
+        step_x: { type: "task", name: "Step X", agent: "Developer" },
+        step_y: { type: "task", name: "Step Y", agent: "Developer" },
         join_a: { type: "join", name: "Join A", fork: "fork_a", strategy: "all-pass" },
         join_b: { type: "join", name: "Join B", fork: "fork_a", strategy: "all-pass" },
         end: { type: "end", result: "success" },

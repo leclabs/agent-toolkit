@@ -11,13 +11,11 @@ Flow provides structured workflows that guide tasks through defined stages (plan
 Workflows work immediately from the built-in catalog - no setup required:
 
 ```bash
-# Create a task with workflow tracking
-/flow:task-create "Add user authentication" [workflow] feature-development
+# Create a task with workflow selection
+/flow:task "Add user authentication"
 
-# Or use prefix shortcuts
-feat: Add user authentication    # → feature-development workflow
-bug: Fix login error             # → bug-fix workflow
-task: Update config file         # → quick-task workflow
+# Or specify the workflow directly
+/flow:task-create "Add user authentication" feature-development
 
 # Run the task autonomously
 /flow:run
@@ -25,16 +23,16 @@ task: Update config file         # → quick-task workflow
 
 ## Commands
 
-| Command              | Description                                          |
-| -------------------- | ---------------------------------------------------- | ------------------------------ |
-| `/flow:list`         | List available workflows                             |
-| `/flow:task-create`  | Create a new task with workflow tracking             |
-| `/flow:task-list`    | List all flow tasks with current status              |
-| `/flow:task-get`     | Get detailed task info including workflow diagram    |
-| `/flow:task-advance` | Advance task: `<taskId> <passed                      | failed> <navigator> [summary]` |
-| `/flow:run`          | Execute flow tasks autonomously                      |
-| `/flow:init`         | Copy workflows to .flow/workflows/ for customization |
-| `/flow:load`         | Reload workflows after editing .flow/workflows/      |
+| Command              | Description                                       |
+| -------------------- | ------------------------------------------------- | ------------------------------ |
+| `/flow:list`         | List available workflows                          |
+| `/flow:task-create`  | Create a new task with workflow tracking          |
+| `/flow:task-list`    | List all flow tasks with current status           |
+| `/flow:task-get`     | Get detailed task info including workflow diagram |
+| `/flow:task-advance` | Advance task: `<taskId> <passed                   | failed> <navigator> [summary]` |
+| `/flow:run`          | Execute flow tasks autonomously                   |
+| `/flow:setup`        | Set up workflows and agents for the project       |
+| `/flow:load`         | Reload workflows after editing .flow/workflows/   |
 
 ## Available Workflows
 
@@ -46,11 +44,11 @@ task: Update config file         # → quick-task workflow
 
 ## Customization (Optional)
 
-Flow's workflows work directly from the catalog in the flow->navigator mcp. If you want to create custom workflows you can run `/flow:init` to select a workflow from the catalog to customize for your project, your agents, and your tools.
+Flow's workflows work directly from the catalog in the flow->navigator mcp. If you want to create custom workflows you can run `/flow:setup` to select a workflow from the catalog to customize for your project, your agents, and your tools.
 
 ```bash
 # Copy catalog workflows to .flow/workflows/ for editing
-/flow:init
+/flow:setup
 
 # Edit .flow/workflows/{workflow}/workflow.json
 # Then reload

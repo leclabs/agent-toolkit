@@ -4,9 +4,9 @@ Workflow orchestration for AI agents. Flow provides structured, repeatable workf
 
 ## Overview
 
-Flow turns unstructured agent requests into trackable, multi-step workflows. When you say `/flow:feat add user auth`, Flow:
+Flow turns unstructured agent requests into trackable, multi-step workflows. When you say `/flow:task "add user auth"`, Flow:
 
-1. Selects the appropriate workflow (feature-development)
+1. Presents available workflows for selection
 2. Creates a task with workflow state
 3. Guides agents through planning, implementation, testing, and delivery
 4. Handles failures with retries and escalation
@@ -15,48 +15,43 @@ Flow turns unstructured agent requests into trackable, multi-step workflows. Whe
 
 ```bash
 # At session start, load the orchestrator context
-/flow:prime
+/flow:start
 
 # Create and run a task
-/flow:feat "add a new user profile feature..."
+/flow:task "add a new user profile feature..."
 /flow:go
 ```
 
 ## Commands
 
-Commands are what you type. Each creates a task with the appropriate workflow:
+| Command       | Description                         |
+| ------------- | ----------------------------------- |
+| `/flow:task`  | Create a task and choose a workflow |
+| `/flow:go`    | Execute all pending flow tasks      |
+| `/flow:recon` | Deep project reconnaissance         |
 
-| Command       | Workflow             | Description                              |
-| ------------- | -------------------- | ---------------------------------------- |
-| `/flow:feat`  | feature-development  | New features with planning and review    |
-| `/flow:bug`   | bug-fix              | Bug reproduction, investigation, and fix |
-| `/flow:task`  | agile-task           | General development tasks with review    |
-| `/flow:fix`   | quick-task           | Small, straightforward changes           |
-| `/flow:spec`  | test-coverage        | Analyze and improve test coverage        |
-| `/flow:ctx`   | context-optimization | Optimize agent prompts and context       |
-| `/flow:ui`    | ui-reconstruction    | Reconstruct UI from screenshot or spec   |
-| `/flow:go`    | _(orchestration)_    | Execute all pending flow tasks           |
-| `/flow:recon` | _(exploration)_      | Deep project reconnaissance              |
-
-Seven additional workflows exist in the catalog without command shortcuts: `refactor`, `build-review-murder-board`, `build-review-quick`, `bug-hunt`, `context-gather`, `execute`, and `hitl-test`. Use `/flow:task-create "description" <workflow-id>` to invoke them directly.
+All 14 catalog workflows are available through `/flow:task` (interactive selection) or `/flow:task-create "description" <workflow-id>` (explicit).
 
 ## Skills
 
 Skills are the internal orchestration interface used by the agent system:
 
-| Skill                | Description                                         |
-| -------------------- | --------------------------------------------------- |
-| `/flow:prime`        | Load orchestrator context at session start          |
-| `/flow:task-create`  | Create a new task with workflow tracking            |
-| `/flow:task-list`    | List all flow tasks and their progress              |
-| `/flow:task-get`     | Get detailed task info with workflow diagram        |
-| `/flow:task-advance` | Advance a task to the next step (passed/failed)     |
-| `/flow:run`          | Execute tasks autonomously with subagent delegation |
-| `/flow:init`         | Set up workflows for a project (copy from catalog)  |
-| `/flow:list`         | List available workflows                            |
-| `/flow:load`         | Load workflows (project reload or external plugin)  |
-| `/flow:diagram`      | Generate mermaid diagram for a workflow             |
-| `/flow:analyze`      | Interactive workflow discovery from project         |
+| Skill                | Description                                            |
+| -------------------- | ------------------------------------------------------ |
+| `/flow:start`        | Load flow context; runs automatically at session start |
+| `/flow:task-create`  | Create a new task with workflow tracking               |
+| `/flow:task-list`    | List all flow tasks and their progress                 |
+| `/flow:task-get`     | Get detailed task info with workflow diagram           |
+| `/flow:task-advance` | Advance a task to the next step (passed/failed)        |
+| `/flow:run`          | Execute tasks autonomously with subagent delegation    |
+| `/flow:setup`        | Set up workflows and agents (interactive/intent/bulk)  |
+| `/flow:list`         | List available workflows                               |
+| `/flow:load`         | Load workflows (project reload or external plugin)     |
+| `/flow:diagram`      | Generate mermaid diagram for a workflow                |
+| `/flow:analyze`      | Interactive workflow discovery from project            |
+| `/flow:validate`     | Static validation of workflow definitions              |
+| `/flow:inspect`      | Inspect workflow or step details                       |
+| `/flow:dry-run`      | Simulate workflow execution without side effects       |
 
 ## Workflows
 
@@ -164,7 +159,7 @@ Minimal workflow for testing HITL recovery: work, gate check, escalate if blocke
 Copy workflows to your project for customization:
 
 ```bash
-/flow:init
+/flow:setup
 ```
 
 This creates `.flow/workflows/` with editable workflow definitions. Navigator loads project workflows first, falling back to catalog defaults.
@@ -183,20 +178,30 @@ After editing, reload with `/flow:load`.
 
 ## Architecture
 
-```
-/flow:feat "add dark mode"     ← human types a command
-         │
-         ▼
-┌──────────────────┐         ┌──────────────────┐
-│   Orchestrator   │ ◄─MCP─► │    Navigator     │
-│   (flow:prime)   │         │  (state machine) │
-└──────────────────┘         └──────────────────┘
-         │                            │
-         ▼                            ▼
-┌──────────────────┐         ┌──────────────────┐
-│    Subagents     │         │    Workflows     │
-│  @flow:*         │         │                  │
-└──────────────────┘         └──────────────────┘
+```mermaid
+flowchart TB
+    user["/flow:task 'add dark mode'"]
+
+    subgraph Orchestrator
+        start["flow:start"]
+    end
+
+    subgraph Navigator["Navigator (MCP)"]
+        sm["State Machine"]
+    end
+
+    subgraph Subagents
+        agents["Planner / Developer / Tester / Reviewer"]
+    end
+
+    subgraph Workflows
+        wf["Graph Definitions"]
+    end
+
+    user --> Orchestrator
+    Orchestrator <-->|MCP| Navigator
+    Orchestrator --> Subagents
+    Navigator --> Workflows
 ```
 
 - **Orchestrator**: Coordinates workflow execution, delegates to subagents

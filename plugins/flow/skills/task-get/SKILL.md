@@ -80,7 +80,7 @@ When the current step has `maxRetries > 0` (gate node), show retry budget: `retr
 When `maxRetries` is 0 (task node), omit the retries display.
 
 ````markdown
-#1 Implement feature X ✨ (@flow:Developer)
+#1 Implement feature X ✨ (Developer)
 → feature-development · development
 → implement · in_progress
 
@@ -94,13 +94,13 @@ flowchart TD
 
 **Description:** Add user authentication with OAuth
 
-**Next:** Delegate to @flow:Developer, then `/flow:task-advance {taskId} <passed|failed>`
+**Next:** Delegate to Developer, then `/flow:task-advance {taskId} <passed|failed>`
 ````
 
 **Gate step with retries** (when `maxRetries > 0`):
 
 ````markdown
-#1 Implement feature X ✨ (@flow:Reviewer)
+#1 Implement feature X ✨ (Reviewer)
 → feature-development · verification
 → code_review · in_progress · retries: 1/2
 
@@ -110,7 +110,7 @@ flowchart TD
 
 **Description:** Add user authentication with OAuth
 
-**Next:** Delegate to @flow:Reviewer, then `/flow:task-advance {taskId} <passed|failed>`
+**Next:** Delegate to Reviewer, then `/flow:task-advance {taskId} <passed|failed>`
 ````
 
 ## If No Subagent

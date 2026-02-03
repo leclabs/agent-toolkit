@@ -24,11 +24,11 @@ Discover workflows from your project's existing processes, diagrams, and documen
 
 ### Phase 1: Initial Exploration
 
-Use the Task tool with Explore subagent to scan the project:
+Use the Task tool with Investigator subagent to scan the project:
 
 ````
 Task(
-  subagent_type: "Explore",
+  subagent_type: "Investigator",
   prompt: """
     Scan this project for workflow-related artifacts. Return structured findings.
 
@@ -124,7 +124,7 @@ When mermaid diagrams are selected, parse them for workflow structure:
 
 ````
 Task(
-  subagent_type: "Explore",
+  subagent_type: "Investigator",
   prompt: """
     Parse this mermaid diagram and extract workflow structure:
 
@@ -218,10 +218,10 @@ For each step, confirm agent assignment:
 AskUserQuestion(
   question: "Who should handle 'Implementation'?",
   options: [
-    {"label": "@flow:Developer", "description": "Writes code, runs tests"},
-    {"label": "@flow:Planner", "description": "Creates plans, explores codebase"},
-    {"label": "@flow:Tester", "description": "Writes and runs tests"},
-    {"label": "@flow:Reviewer", "description": "Reviews code and plans"},
+    {"label": "Developer", "description": "Writes code, runs tests"},
+    {"label": "Planner", "description": "Creates plans, explores codebase"},
+    {"label": "Tester", "description": "Writes and runs tests"},
+    {"label": "Reviewer", "description": "Reviews code and plans"},
     {"label": "Direct (no agent)", "description": "Orchestrator handles directly"}
   ]
 )
@@ -234,12 +234,12 @@ Or batch assignment for efficiency:
 
 I'll use these default assignments based on step types:
 
-| Step Type         | Default Agent   |
-| ----------------- | --------------- |
-| Planning/Analysis | @flow:Planner   |
-| Implementation    | @flow:Developer |
-| Testing           | @flow:Tester    |
-| Review/Gate       | @flow:Reviewer  |
+| Step Type         | Default Agent |
+| ----------------- | ------------- |
+| Planning/Analysis | Planner       |
+| Implementation    | Developer     |
+| Testing           | Tester        |
+| Review/Gate       | Reviewer      |
 ```
 
 ```
@@ -357,7 +357,7 @@ I didn't find:
 - Process documentation
 
 **Options:**
-1. Use a catalog workflow: `/flow:init`
+1. Use a catalog workflow: `/flow:setup`
 2. Describe your workflow and I'll help build it
 3. Point me to specific files to analyze
 ````

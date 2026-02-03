@@ -67,7 +67,9 @@ Navigator returns: currentStep: "explore_codebase", stage: "planning"
 | `ListWorkflows`  | List all available workflows                                 |
 | `SelectWorkflow` | Get workflow selection dialog for user interaction           |
 | `CopyWorkflows`  | Copy workflows from catalog to project                       |
-| `ListCatalog`    | List workflows available in the catalog                      |
+| `CopyAgents`     | Copy agent templates from catalog to project                 |
+| `ListCatalog`    | List workflows and agents available in the catalog           |
+| `LoadWorkflows`  | Load workflows at runtime from project or external plugin    |
 
 ### Navigate
 
@@ -83,6 +85,8 @@ The primary tool. Operates in 3 modes:
 | `description`  | string               | User's task description (for start)                       |
 | `taskFilePath` | string               | Path to task file (for advance/current)                   |
 | `result`       | "passed" \| "failed" | Step result (for advance)                                 |
+| `autonomy`     | boolean              | Auto-continue through stage boundary end nodes            |
+| `stepId`       | string               | Start at a specific step (mid-flow recovery)              |
 
 ### Diagram
 

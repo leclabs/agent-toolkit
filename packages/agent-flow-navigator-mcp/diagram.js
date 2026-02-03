@@ -51,7 +51,12 @@ export function generateDiagram(workflowDef, currentStep = null) {
   for (const [stepId, step] of Object.entries(nodes)) {
     const label = sanitizeMermaidLabel(step.name || step.description || stepId);
     const agentParts = [step.emoji, step.agent].filter(Boolean);
-    const agent = agentParts.length ? `<br/><small>${agentParts.join(" ")}</small>` : "";
+    const retryTag = step.maxRetries ? ` ↻${step.maxRetries}` : "";
+    const agent = agentParts.length
+      ? `<br/><small>${agentParts.join(" ")}${retryTag}</small>`
+      : retryTag
+        ? `<br/><small>${retryTag.trim()}</small>`
+        : "";
     const termType = getTerminalType(step);
     if (termType === "start") {
       lines.push(`    ${stepId}(("${label}"))`);

@@ -1,8 +1,8 @@
 {
   "name": "@leclabs/agent-flow-navigator-mcp",
-  "version": "1.9.1",
+  "version": "2.0.0",
   "description": "MCP server that navigates agents through graph-based workflows",
-  "license": "MIT",
+  "license": "ISC",
   "author": "leclabs",
   "homepage": "https://github.com/leclabs/agent-toolkit",
   "bugs": {
@@ -40,6 +40,7 @@
     "copier.js",
     "catalog.js",
     "catalog/**/*.json",
+    "catalog/**/*.md",
     "types.d.ts"
   ],
   "dependencies": {

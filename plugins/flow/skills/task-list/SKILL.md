@@ -58,15 +58,15 @@ Where `<emoji>` is determined by workflowType (see Workflow Emoji Mapping below)
 **Example output:**
 
 ```
-#2 Add lint gate to workflows ✨ (@flow:Planner)
+#2 Add lint gate to workflows ✨ (Planner)
  → feature-development · planning
  → parse_requirements · pending
 
-#3 Add format gate to workflows ✨ (@flow:Planner)
+#3 Add format gate to workflows ✨ (Planner)
  → feature-development · planning
  → parse_requirements · pending · blocked by #2
 
-#4 Add test gate to workflows ✨ (@flow:Planner)
+#4 Add test gate to workflows ✨ (Planner)
  → feature-development · planning
  → parse_requirements · pending · blocked by #3
 ```

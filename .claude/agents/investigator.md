@@ -1,0 +1,1 @@
+../../packages/agent-flow-navigator-mcp/catalog/agents/investigator.md

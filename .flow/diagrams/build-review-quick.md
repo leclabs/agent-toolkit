@@ -8,8 +8,8 @@ Low-scrutiny iterative build-review loop. A lightweight review pass ensures basi
 flowchart TD
     start(("Start"))
     build["Build<br/><small>🔧 Developer</small>"]
-    review{"Quick Review<br/><small>👀 Reviewer</small>"}
-    lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}
+    review{"Quick Review<br/><small>👀 Reviewer ↻2</small>"}
+    lint_format{"Lint and Format<br/><small>🔧 Developer ↻3</small>"}
     commit["Commit Changes<br/><small>🔧 Developer</small>"]
     end_success[["Complete"]]
     hitl_blocked{{"✋ Blocked"}}
@@ -39,9 +39,9 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step        | Name           | Agent             | Instructions                                                             |
-| ------------ | ----------- | -------------- | ----------------- | ------------------------------------------------------------------------ |
-| development  | build       | Build          | 🔧 flow:Developer | Implement or revise the changes based on requirements or review feedback |
-| verification | review      | Quick Review   | 👀 flow:Reviewer  | Lightweight review checking basic correctness and completeness           |
-| delivery     | lint_format | Lint & Format  | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible.              |
-| delivery     | commit      | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message summarizing the work done  |
+| Stage        | Step        | Name           | Agent        | Instructions                                                             |
+| ------------ | ----------- | -------------- | ------------ | ------------------------------------------------------------------------ |
+| development  | build       | Build          | 🔧 Developer | Implement or revise the changes based on requirements or review feedback |
+| verification | review      | Quick Review   | 👀 Reviewer  | Lightweight review checking basic correctness and completeness           |
+| delivery     | lint_format | Lint & Format  | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible.              |
+| delivery     | commit      | Commit Changes | 🔧 Developer | Commit all changes with a descriptive message summarizing the work done  |

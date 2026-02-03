@@ -11,24 +11,26 @@ This is a **greenfield project**. Do NOT:
 
 When making breaking changes, just make them. Delete old code, don't wrap it.
 
-## Architecture: Source vs Generated
+## Architecture: Source vs Symlinked Project
 
-This project follows a clear separation between **source templates** and **generated client configurations**:
+The catalog is the **source of truth**. Project-level `.flow/` and `.claude/agents/` are **symlinks** back to catalog source, not copies.
 
 ```
-SOURCE (Catalog/Plugin)              →  GENERATED (Project/.flow/)
-─────────────────────────────────      ─────────────────────────────
-plugins/flow/                          .flow/
-  ├── workflows/*.json
+SOURCE (Catalog)                                    SYMLINKED (Project)
+────────────────────────────────────────            ────────────────────────────────
+packages/agent-flow-navigator-mcp/                  .flow/workflows/*.json  →  catalog/workflows/*
+  catalog/workflows/*.json                          .claude/agents/*.md     →  catalog/agents/*
+  catalog/agents/*.md
 ```
 
 ### Key Principles
 
 1. **Catalog JSON = portable templates** (source of truth)
-   - Flow's catalog of workflows, `plugins/flow/catalog/`
+   - `packages/agent-flow-navigator-mcp/catalog/workflows/` and `catalog/agents/`
 
-2. **Dogfooding context**
+2. **Dogfooding via symlinks**
    - We're using the flow plugin to develop the flow plugin
+   - `.flow/workflows/` and `.claude/agents/` are symlinks to the catalog, so edits to catalog source are immediately reflected in the project
    - `plugins/flow/` and `packages/agent-flow-navigator-mcp/` = source we're building
 
 ## Releases
@@ -90,4 +92,4 @@ agent-toolkit (marketplace)
 | Plugin                 | `flow`                              | Workflow orchestration      |
 | MCP Server flow config | `navigator`                         | Navigates through workflows |
 | MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package     |
-| Skills                 | `/flow:*`                           | User-facing commands        |
+| Skills / Commands      | `/flow:*`                           | User-facing commands        |

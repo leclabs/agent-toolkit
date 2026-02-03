@@ -31,7 +31,7 @@
       "type": "task",
       "name": "System Information",
       "description": "Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands.",
-      "agent": "flow:Investigator",
+      "agent": "Investigator",
       "emoji": "🔍",
       "stage": "investigation"
     },
@@ -39,7 +39,7 @@
       "type": "task",
       "name": "Weather Report",
       "description": "Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast.",
-      "agent": "flow:Planner",
+      "agent": "Planner",
       "emoji": "📋",
       "stage": "investigation"
     },
@@ -47,7 +47,7 @@
       "type": "task",
       "name": "Repository Information",
       "description": "Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata.",
-      "agent": "flow:Investigator",
+      "agent": "Investigator",
       "emoji": "🔍",
       "stage": "investigation"
     },
@@ -55,7 +55,7 @@
       "type": "task",
       "name": "Analyze Repository",
       "description": "Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions.",
-      "agent": "flow:Reviewer",
+      "agent": "Reviewer",
       "emoji": "👀",
       "stage": "investigation"
     },
@@ -69,7 +69,7 @@
       "type": "task",
       "name": "Summarize Context",
       "description": "Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format.",
-      "agent": "flow:Architect",
+      "agent": "Architect",
       "emoji": "🏛️",
       "stage": "planning"
     },

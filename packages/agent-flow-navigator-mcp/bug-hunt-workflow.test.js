@@ -133,16 +133,16 @@ describe("bug-hunt workflow JSON structure", () => {
   });
 
   it("should assign correct agents to nodes", () => {
-    assert.strictEqual(workflow.nodes.triage.agent, "flow:Investigator");
-    assert.strictEqual(workflow.nodes.reproduce.agent, "flow:Tester");
-    assert.strictEqual(workflow.nodes.code_archaeology.agent, "flow:Investigator");
-    assert.strictEqual(workflow.nodes.git_forensics.agent, "flow:Investigator");
-    assert.strictEqual(workflow.nodes.synthesize.agent, "flow:Architect");
-    assert.strictEqual(workflow.nodes.write_fix.agent, "flow:Developer");
-    assert.strictEqual(workflow.nodes.add_regression_test.agent, "flow:Tester");
-    assert.strictEqual(workflow.nodes.verify_fix.agent, "flow:Tester");
-    assert.strictEqual(workflow.nodes.lint_format.agent, "flow:Developer");
-    assert.strictEqual(workflow.nodes.commit.agent, "flow:Developer");
+    assert.strictEqual(workflow.nodes.triage.agent, "Investigator");
+    assert.strictEqual(workflow.nodes.reproduce.agent, "Tester");
+    assert.strictEqual(workflow.nodes.code_archaeology.agent, "Investigator");
+    assert.strictEqual(workflow.nodes.git_forensics.agent, "Investigator");
+    assert.strictEqual(workflow.nodes.synthesize.agent, "Architect");
+    assert.strictEqual(workflow.nodes.write_fix.agent, "Developer");
+    assert.strictEqual(workflow.nodes.add_regression_test.agent, "Tester");
+    assert.strictEqual(workflow.nodes.verify_fix.agent, "Tester");
+    assert.strictEqual(workflow.nodes.lint_format.agent, "Developer");
+    assert.strictEqual(workflow.nodes.commit.agent, "Developer");
   });
 });
 
@@ -302,7 +302,7 @@ describe("bug-hunt workflow fork/join behavior", () => {
 
     assert.strictEqual(result.currentStep, "synthesize");
     assert.strictEqual(result.action, "advance");
-    assert.strictEqual(result.subagent, "flow:Architect");
+    assert.strictEqual(result.subagent, "Architect");
     assert.strictEqual(result.terminal, null);
 
     rmSync(tmpDir, { recursive: true });
@@ -359,7 +359,7 @@ describe("bug-hunt workflow fork/join behavior", () => {
     // Reproduce branch
     const reproduce = result.fork.branches.reproduce;
     assert.strictEqual(reproduce.entryStep, "reproduce");
-    assert.strictEqual(reproduce.subagent, "flow:Tester");
+    assert.strictEqual(reproduce.subagent, "Tester");
     assert.strictEqual(reproduce.stage, "investigation");
     assert.ok(reproduce.stepInstructions);
     assert.strictEqual(reproduce.stepInstructions.name, "Reproduce Bug");
@@ -373,14 +373,14 @@ describe("bug-hunt workflow fork/join behavior", () => {
     // Code archaeology branch
     const archaeology = result.fork.branches.code_archaeology;
     assert.strictEqual(archaeology.entryStep, "code_archaeology");
-    assert.strictEqual(archaeology.subagent, "flow:Investigator");
+    assert.strictEqual(archaeology.subagent, "Investigator");
     assert.strictEqual(archaeology.stage, "investigation");
     assert.strictEqual(archaeology.multiStep, false); // code_archaeology → join_investigate directly
 
     // Git forensics branch
     const forensics = result.fork.branches.git_forensics;
     assert.strictEqual(forensics.entryStep, "git_forensics");
-    assert.strictEqual(forensics.subagent, "flow:Investigator");
+    assert.strictEqual(forensics.subagent, "Investigator");
     assert.strictEqual(forensics.stage, "investigation");
     assert.strictEqual(forensics.multiStep, false); // git_forensics → join_investigate directly
 
@@ -503,8 +503,8 @@ describe("bug-hunt workflow diagram generation", () => {
     const workflow = loadBugHuntWorkflow();
     const diagram = generateDiagram(workflow);
 
-    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 flow:Tester</small>"}'));
-    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 flow:Developer</small>"}'));
+    assert.ok(diagram.includes('verify_fix{"Verify Fix<br/><small>🧪 Tester ↻3</small>"}'));
+    assert.ok(diagram.includes('lint_format{"Lint and Format<br/><small>🔧 Developer ↻3</small>"}'));
   });
 
   it("should highlight a step when currentStep is provided", () => {
@@ -547,7 +547,7 @@ describe("bug-hunt workflow mid-flow start", () => {
     assert.strictEqual(result.currentStep, "write_fix");
     assert.strictEqual(result.action, "start");
     assert.strictEqual(result.stage, "development");
-    assert.strictEqual(result.subagent, "flow:Developer");
+    assert.strictEqual(result.subagent, "Developer");
     assert.strictEqual(result.terminal, null);
     assert.ok(result.stepInstructions);
     assert.strictEqual(result.metadata.retryCount, 0);
@@ -559,7 +559,7 @@ describe("bug-hunt workflow mid-flow start", () => {
     assert.strictEqual(result.currentStep, "synthesize");
     assert.strictEqual(result.action, "start");
     assert.strictEqual(result.stage, "planning");
-    assert.strictEqual(result.subagent, "flow:Architect");
+    assert.strictEqual(result.subagent, "Architect");
   });
 
   it("should start at fork_investigate and return fork response", () => {
@@ -773,6 +773,6 @@ describe("context-gather workflow edge coverage", () => {
 
   it("should use Investigator for system_info branch", () => {
     const result = engine.navigate({ workflowType: "context-gather" });
-    assert.strictEqual(result.fork.branches.system.subagent, "flow:Investigator");
+    assert.strictEqual(result.fork.branches.system.subagent, "Investigator");
   });
 });

@@ -40,13 +40,8 @@ flowchart TD
 ## Quick Start
 
 ```bash
-# Load the orchestrator at session start
-/flow:prime
-
-# Create a task using any command
-/flow:feat "add user authentication"
-/flow:bug "fix login redirect loop"
-/flow:task "refactor the settings module"
+# Create a task with a workflow
+/flow:task "add user authentication"
 
 # Execute all pending tasks
 /flow:go
@@ -54,19 +49,13 @@ flowchart TD
 
 ## Commands
 
-Commands are the primary human interface. Type a command to create a task with the right workflow:
-
-| Command       | Workflow             | Description                        |
-| ------------- | -------------------- | ---------------------------------- |
-| `/flow:feat`  | feature-development  | New feature with planning + review |
-| `/flow:bug`   | bug-fix              | Bug investigation and fix          |
-| `/flow:task`  | agile-task           | General development task           |
-| `/flow:fix`   | quick-task           | Quick fix, minimal ceremony        |
-| `/flow:spec`  | test-coverage        | Analyze and improve test coverage  |
-| `/flow:ctx`   | context-optimization | Optimize agent context and prompts |
-| `/flow:ui`    | ui-reconstruction    | Reconstruct UI from reference      |
-| `/flow:go`    | _(runs task queue)_  | Execute all pending tasks          |
-| `/flow:recon` | _(exploration)_      | Deep project reconnaissance        |
+| Command       | Description                                  |
+| ------------- | -------------------------------------------- |
+| `/flow:task`  | Create a task and choose a workflow          |
+| `/flow:go`    | Execute all pending tasks                    |
+| `/flow:recon` | Deep project reconnaissance                  |
+| `/flow:list`  | List available workflows                     |
+| `/flow:setup` | Set up workflows and agents for your project |
 
 ## Workflows
 
@@ -89,27 +78,37 @@ Commands are the primary human interface. Type a command to create a task with t
 | execute                   | 3     | Single-step workflow: just do the thing                            |
 | hitl-test                 | 5     | Minimal HITL recovery test: work, gate, escalate                   |
 
-Customize workflows for your project with `/flow:init`.
+Customize workflows for your project with `/flow:setup`.
 
 ## Architecture
 
-```
-/flow:feat "add dark mode"     ← human types a command
-         │
-         ▼
-┌──────────────────┐         ┌──────────────────┐
-│   Orchestrator   │ ◄─MCP─► │    Navigator     │
-│   (flow:prime)   │         │  (state machine) │
-└──────────────────┘         └──────────────────┘
-         │                            │
-         ▼                            ▼
-┌──────────────────┐         ┌──────────────────┐
-│    Subagents     │         │    Workflows     │
-│  @flow:Planner   │         │                  │
-│  @flow:Developer │         └──────────────────┘
-│  @flow:Tester    │
-│  @flow:Reviewer  │
-└──────────────────┘
+```mermaid
+flowchart TB
+    user["/flow:task 'add dark mode'"]
+
+    subgraph Orchestrator
+        start["flow:start"]
+    end
+
+    subgraph Navigator["Navigator (MCP)"]
+        sm["State Machine"]
+    end
+
+    subgraph Subagents
+        planner["Planner"]
+        developer["Developer"]
+        tester["Tester"]
+        reviewer["Reviewer"]
+    end
+
+    subgraph Workflows
+        wf["Graph Definitions"]
+    end
+
+    user --> Orchestrator
+    Orchestrator <-->|MCP| Navigator
+    Orchestrator --> Subagents
+    Navigator --> Workflows
 ```
 
 ## Links

@@ -12,7 +12,7 @@
       "type": "task",
       "name": "Build",
       "description": "Implement or revise the changes based on requirements or review feedback",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "development"
     },
@@ -20,7 +20,7 @@
       "type": "gate",
       "name": "Quick Review",
       "description": "Lightweight review checking basic correctness and completeness",
-      "agent": "flow:Reviewer",
+      "agent": "Reviewer",
       "emoji": "👀",
       "stage": "verification",
       "maxRetries": 2,
@@ -32,7 +32,7 @@
       "type": "gate",
       "name": "Lint & Format",
       "description": "Run lint and format checks. Auto-fix issues where possible.",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "delivery",
       "maxRetries": 3
@@ -41,7 +41,7 @@
       "type": "task",
       "name": "Commit Changes",
       "description": "Commit all changes with a descriptive message summarizing the work done",
-      "agent": "flow:Developer",
+      "agent": "Developer",
       "emoji": "🔧",
       "stage": "delivery"
     },

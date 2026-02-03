@@ -25,6 +25,6 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage       | Step    | Name    | Agent             | Instructions                       |
-| ----------- | ------- | ------- | ----------------- | ---------------------------------- |
-| development | execute | Execute | 🔧 flow:Developer | Do the work described in the task. |
+| Stage       | Step    | Name    | Agent        | Instructions                       |
+| ----------- | ------- | ------- | ------------ | ---------------------------------- |
+| development | execute | Execute | 🔧 Developer | Do the work described in the task. |

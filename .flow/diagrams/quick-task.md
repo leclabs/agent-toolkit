@@ -9,8 +9,8 @@ flowchart TD
     start(("Start"))
     understand["Understand<br/><small>🔧 Developer</small>"]
     execute["Execute<br/><small>🔧 Developer</small>"]
-    verify["Verify<br/><small>🔧 Developer</small>"]
-    lint_format{"Lint and Format<br/><small>🔧 Developer</small>"}
+    verify["Verify<br/><small>🔧 Developer ↻1</small>"]
+    lint_format{"Lint and Format<br/><small>🔧 Developer ↻3</small>"}
     commit["Commit Changes<br/><small>🔧 Developer</small>"]
     end_success[["Done"]]
     hitl_blocked{{"✋ Blocked"}}
@@ -41,10 +41,10 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage        | Step        | Name           | Agent             | Instructions                                                |
-| ------------ | ----------- | -------------- | ----------------- | ----------------------------------------------------------- |
-| planning     | understand  | Understand     | 🔧 flow:Developer | Clarify what needs to be done and identify the approach     |
-| development  | execute     | Execute        | 🔧 flow:Developer | Make the changes or complete the work                       |
-| verification | verify      | Verify         | 🔧 flow:Developer | Confirm the work is correct and complete                    |
-| delivery     | lint_format | Lint & Format  | 🔧 flow:Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery     | commit      | Commit Changes | 🔧 flow:Developer | Commit all changes with a descriptive message               |
+| Stage        | Step        | Name           | Agent        | Instructions                                                |
+| ------------ | ----------- | -------------- | ------------ | ----------------------------------------------------------- |
+| planning     | understand  | Understand     | 🔧 Developer | Clarify what needs to be done and identify the approach     |
+| development  | execute     | Execute        | 🔧 Developer | Make the changes or complete the work                       |
+| verification | verify      | Verify         | 🔧 Developer | Confirm the work is correct and complete                    |
+| delivery     | lint_format | Lint & Format  | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery     | commit      | Commit Changes | 🔧 Developer | Commit all changes with a descriptive message               |

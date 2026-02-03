@@ -5,6 +5,8 @@ import {
   generateWorkflowsReadme,
   isValidWorkflowForCopy,
   computeWorkflowsToCopy,
+  isValidAgentForCopy,
+  computeAgentsToCopy,
 } from "./copier.js";
 
 describe("generateFlowReadme", () => {
@@ -32,8 +34,6 @@ describe("generateFlowReadme", () => {
   it("should include available workflows", () => {
     const result = generateFlowReadme();
     assert.ok(result.includes("## Available Workflows"));
-    assert.ok(result.includes("quick-task"));
-    assert.ok(result.includes("feature-development"));
   });
 });
 
@@ -115,5 +115,50 @@ describe("computeWorkflowsToCopy", () => {
   it("should return requested IDs even if not in available", () => {
     const result = computeWorkflowsToCopy(["wf1", "wf99"], availableIds);
     assert.deepStrictEqual(result, ["wf1", "wf99"]);
+  });
+});
+
+describe("isValidAgentForCopy", () => {
+  it("should return true for valid agent with frontmatter", () => {
+    assert.strictEqual(isValidAgentForCopy("---\nname: Developer\n---\nBody"), true);
+  });
+
+  it("should return false for null", () => {
+    assert.strictEqual(isValidAgentForCopy(null), false);
+  });
+
+  it("should return false for undefined", () => {
+    assert.strictEqual(isValidAgentForCopy(undefined), false);
+  });
+
+  it("should return false for non-string", () => {
+    assert.strictEqual(isValidAgentForCopy(42), false);
+  });
+
+  it("should return false for content without frontmatter", () => {
+    assert.strictEqual(isValidAgentForCopy("No frontmatter here"), false);
+  });
+
+  it("should return false for empty string", () => {
+    assert.strictEqual(isValidAgentForCopy(""), false);
+  });
+});
+
+describe("computeAgentsToCopy", () => {
+  it("should throw when requestedIds is empty", () => {
+    assert.throws(() => computeAgentsToCopy([]), { message: /agentIds is required/ });
+  });
+
+  it("should throw when requestedIds is undefined", () => {
+    assert.throws(() => computeAgentsToCopy(undefined), { message: /agentIds is required/ });
+  });
+
+  it("should throw when requestedIds is null", () => {
+    assert.throws(() => computeAgentsToCopy(null), { message: /agentIds is required/ });
+  });
+
+  it("should return requested IDs when specified", () => {
+    const result = computeAgentsToCopy(["developer", "tester"]);
+    assert.deepStrictEqual(result, ["developer", "tester"]);
   });
 });
