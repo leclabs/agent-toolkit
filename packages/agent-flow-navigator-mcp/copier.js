@@ -122,15 +122,14 @@ export function isValidWorkflowForCopy(content) {
 }
 
 /**
- * Compute which workflow IDs to copy
- * @param {string[]} requestedIds - Specifically requested workflow IDs (may be empty)
- * @returns {string[]} IDs to copy
+ * Validate that workflow IDs are provided
+ * @param {string[]} ids - Workflow IDs to validate
+ * @throws {Error} If ids is empty or not provided
  */
-export function computeWorkflowsToCopy(requestedIds) {
-  if (!requestedIds || requestedIds.length === 0) {
+export function requireWorkflowIds(ids) {
+  if (!ids || ids.length === 0) {
     throw new Error("workflowIds is required. Use ListCatalog to see available workflows, then pass specific IDs.");
   }
-  return requestedIds;
 }
 
 /**
@@ -143,13 +142,12 @@ export function isValidAgentForCopy(content) {
 }
 
 /**
- * Compute which agent IDs to copy
- * @param {string[]} requestedIds - Specifically requested agent IDs
- * @returns {string[]} IDs to copy
+ * Validate that agent IDs are provided
+ * @param {string[]} ids - Agent IDs to validate
+ * @throws {Error} If ids is empty or not provided
  */
-export function computeAgentsToCopy(requestedIds) {
-  if (!requestedIds || requestedIds.length === 0) {
+export function requireAgentIds(ids) {
+  if (!ids || ids.length === 0) {
     throw new Error("agentIds is required. Use ListCatalog to see available agents, then pass specific IDs.");
   }
-  return requestedIds;
 }

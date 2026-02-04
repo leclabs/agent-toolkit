@@ -31,9 +31,9 @@ import {
   generateFlowReadme,
   generateWorkflowsReadme,
   isValidWorkflowForCopy,
-  computeWorkflowsToCopy,
+  requireWorkflowIds,
   isValidAgentForCopy,
-  computeAgentsToCopy,
+  requireAgentIds,
 } from "./copier.js";
 import {
   buildWorkflowSummary,
@@ -42,6 +42,7 @@ import {
   buildCatalogResponse,
   buildEmptyCatalogResponse,
 } from "./catalog.js";
+import { SCHEMA_VERSION } from "./constants.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync, statSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -58,11 +59,6 @@ const DIAGRAMS_PATH = join(FLOW_PATH, "diagrams");
 
 const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
-
-/**
- * Schema version for API responses
- */
-const SCHEMA_VERSION = 3;
 
 /**
  * Load external workflows from a directory
@@ -409,14 +405,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         writeFileSync(join(FLOW_PATH, "README.md"), generateFlowReadme());
         writeFileSync(join(WORKFLOWS_PATH, "README.md"), generateWorkflowsReadme());
 
-        const catalogFiles = readdirSync(catalogPath).filter((f) => f.endsWith(".json"));
-        const availableIds = catalogFiles.map((f) => f.replace(".json", ""));
-        const workflowIds = computeWorkflowsToCopy(args.workflowIds, availableIds);
+        requireWorkflowIds(args.workflowIds);
 
         const copied = [];
         const errors = [];
 
-        for (const id of workflowIds) {
+        for (const id of args.workflowIds) {
           const srcFile = join(catalogPath, `${id}.json`);
 
           if (!existsSync(srcFile)) {
@@ -461,14 +455,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           mkdirSync(targetDir, { recursive: true });
         }
 
-        const catalogAgentFiles = readdirSync(catalogAgentsPath).filter((f) => f.endsWith(".md"));
-        const availableIds = catalogAgentFiles.map((f) => f.replace(".md", ""));
-        const agentIds = computeAgentsToCopy(args.agentIds, availableIds);
+        requireAgentIds(args.agentIds);
 
         const copied = [];
         const errors = [];
 
-        for (const id of agentIds) {
+        for (const id of args.agentIds) {
           const srcFile = join(catalogAgentsPath, `${id}.md`);
 
           if (!existsSync(srcFile)) {

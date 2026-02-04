@@ -5,10 +5,7 @@
  * Actual file I/O handled by MCP handler.
  */
 
-/**
- * Schema version for API responses
- */
-const SCHEMA_VERSION = 3;
+import { SCHEMA_VERSION } from "./constants.js";
 
 /**
  * Build a workflow summary from workflow content

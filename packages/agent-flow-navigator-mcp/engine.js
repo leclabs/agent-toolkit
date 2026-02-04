@@ -48,13 +48,6 @@ export function isTerminalNode(node) {
 }
 
 /**
- * Return agent ID as-is (pass-through for workflow definitions)
- */
-export function toSubagentRef(agentId) {
-  return agentId || null;
-}
-
-/**
  * Get terminal type for a node
  * Returns: "start" | "success" | "hitl" | "failure" | "join" | null
  */
@@ -68,12 +61,6 @@ export function getTerminalType(node) {
   }
   return null;
 }
-
-/**
- * Result values for workflow transitions
- */
-export const RESULT_PASSED = "passed";
-export const RESULT_FAILED = "failed";
 
 /**
  * Workflow emoji mapping for task subjects
