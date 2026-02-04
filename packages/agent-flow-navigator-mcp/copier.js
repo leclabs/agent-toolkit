@@ -67,7 +67,7 @@ Step instructions are generated automatically from:
 1. **workflow.json** - \`name\` and \`description\` fields for each step
 2. **Baseline patterns** - Default guidance based on step type (analyze, implement, test, etc.)
 
-The \`Navigate\` API returns \`stepInstructions\` with all this combined.
+The navigation APIs (Start/Current/Next) return \`node\` with the step's name, description, and instructions.
 
 ## Customizing Step Instructions
 

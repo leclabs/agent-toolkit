@@ -37,26 +37,39 @@ export function validateWorkflow(id, content) {
       return false;
     }
 
-    // All branch entryStep values must reference existing nodes
-    if (!forkDef.branches || typeof forkDef.branches !== "object") {
-      console.error(`Invalid workflow ${id}: fork '${forkId}' missing branches`);
+    // Branches are derived from edges - validate fork has outgoing edges
+    const branchEdges = content.edges.filter((e) => e.from === forkId);
+    if (branchEdges.length === 0) {
+      console.error(`Invalid workflow ${id}: fork '${forkId}' has no outgoing edges (branches)`);
       return false;
     }
-    for (const [branchName, branchDef] of Object.entries(forkDef.branches)) {
-      if (!branchDef.entryStep || !nodes[branchDef.entryStep]) {
+
+    // All branch targets must reference existing nodes
+    for (const edge of branchEdges) {
+      if (!nodes[edge.to]) {
+        console.error(`Invalid workflow ${id}: fork '${forkId}' edge targets missing node '${edge.to}'`);
+        return false;
+      }
+    }
+
+    // No nested forks in v1: branch edges must not target fork nodes
+    for (const edge of branchEdges) {
+      if (nodes[edge.to]?.type === "fork") {
         console.error(
-          `Invalid workflow ${id}: fork '${forkId}' branch '${branchName}' references missing node '${branchDef.entryStep}'`
+          `Invalid workflow ${id}: fork '${forkId}' edge targets another fork '${edge.to}' (nested forks not supported in v1)`
         );
         return false;
       }
     }
 
-    // No nested forks in v1: branch paths must not contain fork nodes
-    for (const [branchName, branchDef] of Object.entries(forkDef.branches)) {
-      if (nodes[branchDef.entryStep]?.type === "fork") {
-        console.error(
-          `Invalid workflow ${id}: fork '${forkId}' branch '${branchName}' entry step '${branchDef.entryStep}' is a nested fork (not supported in v1)`
-        );
+    // Validate maxConcurrency if present
+    if (forkDef.maxConcurrency !== undefined) {
+      if (
+        typeof forkDef.maxConcurrency !== "number" ||
+        forkDef.maxConcurrency < 1 ||
+        !Number.isInteger(forkDef.maxConcurrency)
+      ) {
+        console.error(`Invalid workflow ${id}: fork '${forkId}' maxConcurrency must be a positive integer`);
         return false;
       }
     }

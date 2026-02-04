@@ -40,53 +40,73 @@ Add to your `.mcp.json`:
 Navigator works with the [flow plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) to provide structured workflow execution:
 
 1. **Initialize workflows** -- Copy workflow templates to your project with `CopyWorkflows`
-2. **Start a task** -- Use `Navigate` with a workflow type and description
-3. **Follow the flow** -- Navigator tells you the current step and what to do
-4. **Advance on completion** -- Report `passed` or `failed` to move to the next step
+2. **Start a task** -- Use `Start` with a workflow type and description
+3. **Follow the flow** -- Use `Current` to read the current step and what to do
+4. **Advance on completion** -- Use `Next` with `passed` or `failed` to move forward
 
 ```
 User: "Add dark mode support"
   ↓
-Navigate(workflowType: "feature-development", description: "Add dark mode support")
+Start(taskFilePath, workflowType: "feature-development", description: "Add dark mode support")
   ↓
-Navigator returns: currentStep: "parse_requirements", stage: "planning"
+Navigator returns: currentStep: "parse_requirements", node: { agent: "Planner", ... }
   ↓
-Agent executes step, then calls Navigate(taskFilePath: "...", result: "passed")
+Agent executes step, then calls Next(taskFilePath, result: "passed")
   ↓
-Navigator returns: currentStep: "explore_codebase", stage: "planning"
+Navigator returns: currentStep: "explore_codebase", node: { agent: "Explore", ... }
   ↓
 ... continues through workflow ...
 ```
 
 ## MCP Tools Reference
 
-| Tool             | Description                                                  |
-| ---------------- | ------------------------------------------------------------ |
-| `Navigate`       | Start a workflow, get current state, or advance to next step |
-| `Diagram`        | Generate a mermaid flowchart for a workflow                  |
-| `ListWorkflows`  | List all available workflows                                 |
-| `SelectWorkflow` | Get workflow selection dialog for user interaction           |
-| `CopyWorkflows`  | Copy workflows from catalog to project                       |
-| `CopyAgents`     | Copy agent templates from catalog to project                 |
-| `ListCatalog`    | List workflows and agents available in the catalog           |
-| `LoadWorkflows`  | Load workflows at runtime from project or external plugin    |
+### Navigation Tools
 
-### Navigate
+| Tool      | Description                                    |
+| --------- | ---------------------------------------------- |
+| `Start`   | Initialize workflow on task at any step        |
+| `Current` | Read current workflow position (read-only)     |
+| `Next`    | Advance workflow based on step outcome         |
 
-The primary tool. Operates in 3 modes:
+### Management Tools
 
-- **Start**: Pass `workflowType` + `description` to begin a workflow
-- **Current**: Pass `taskFilePath` to get current step state
-- **Advance**: Pass `taskFilePath` + `result` to move to the next step
+| Tool             | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `Diagram`        | Generate a mermaid flowchart for a workflow               |
+| `ListWorkflows`  | List all available workflows                              |
+| `SelectWorkflow` | Get workflow selection dialog for user interaction        |
+| `CopyWorkflows`  | Copy workflows from catalog to project                    |
+| `CopyAgents`     | Copy agent templates from catalog to project              |
+| `ListCatalog`    | List workflows and agents available in the catalog        |
+| `LoadWorkflows`  | Load workflows at runtime from project or external plugin |
 
-| Parameter      | Type                 | Description                                               |
-| -------------- | -------------------- | --------------------------------------------------------- |
-| `workflowType` | string               | Workflow ID (for start only, e.g., "feature-development") |
-| `description`  | string               | User's task description (for start)                       |
-| `taskFilePath` | string               | Path to task file (for advance/current)                   |
-| `result`       | "passed" \| "failed" | Step result (for advance)                                 |
-| `autonomy`     | boolean              | Auto-continue through stage boundary end nodes            |
-| `stepId`       | string               | Start at a specific step (mid-flow recovery)              |
+### Start
+
+Initialize a workflow on a task. Returns current step info and outgoing edges.
+
+| Parameter      | Type   | Description                                     |
+| -------------- | ------ | ----------------------------------------------- |
+| `taskFilePath` | string | Path to task file (writes workflow state)       |
+| `workflowType` | string | Workflow ID (required, e.g., "feature-development") |
+| `description`  | string | User's task description                         |
+| `stepId`       | string | Start at specific step (for mid-flow recovery)  |
+
+### Current
+
+Read current workflow position. Returns step info and outgoing edges without modifying state.
+
+| Parameter      | Type   | Description                |
+| -------------- | ------ | -------------------------- |
+| `taskFilePath` | string | Path to task file (required) |
+
+### Next
+
+Advance workflow based on step outcome. Returns new step info and outgoing edges.
+
+| Parameter      | Type                 | Description                    |
+| -------------- | -------------------- | ------------------------------ |
+| `taskFilePath` | string               | Path to task file (required)   |
+| `result`       | "passed" \| "failed" | Outcome of current step (required) |
 
 ### Diagram
 
@@ -129,9 +149,10 @@ Lists workflows available in the built-in catalog. No parameters.
 │  (Executes tasks, delegates to subagents)        │
 └──────────────────────┬──────────────────────────┘
                        │
-       Navigate ───────┼─────── Diagram
-       ListWorkflows ──┤        CopyWorkflows
-       SelectWorkflow ─┤        ListCatalog
+       Start ──────────┼─────── Diagram
+       Current ────────┤        CopyWorkflows
+       Next ───────────┤        ListCatalog
+       ListWorkflows ──┤        LoadWorkflows
                        │
 ┌──────────────────────┴──────────────────────────┐
 │                   NAVIGATOR                      │
@@ -152,8 +173,8 @@ Lists workflows available in the built-in catalog. No parameters.
 | Concept                 | Description                                                                            |
 | ----------------------- | -------------------------------------------------------------------------------------- |
 | **Workflow Definition** | A graph blueprint describing how to execute a type of work (nodes + conditional edges) |
-| **Navigate 3-Mode API** | Start a workflow, get current state, or advance -- one tool, three calling patterns    |
-| **Write-Through**       | State transitions are persisted to the task file atomically on every advance           |
+| **Start/Current/Next**  | Three explicit tools: initialize, read position, advance based on outcome              |
+| **Write-Through**       | State transitions are persisted to the task file atomically on Start and Next          |
 | **Conditional Edges**   | Edges with `on` condition (passed/failed) -- retry logic is on nodes via `maxRetries`  |
 | **HITL Escalation**     | When retries are exhausted, tasks route to end nodes with `escalation: "hitl"`         |
 

@@ -19,21 +19,7 @@
     "fork_investigate": {
       "type": "fork",
       "name": "Fork Investigation",
-      "join": "join_investigate",
-      "branches": {
-        "reproduce": {
-          "entryStep": "reproduce",
-          "description": "Try to trigger the bug"
-        },
-        "code_archaeology": {
-          "entryStep": "code_archaeology",
-          "description": "Trace code paths related to symptoms"
-        },
-        "git_forensics": {
-          "entryStep": "git_forensics",
-          "description": "Check recent commits and git blame"
-        }
-      }
+      "join": "join_investigate"
     },
     "reproduce": {
       "type": "task",
@@ -62,8 +48,7 @@
     "join_investigate": {
       "type": "join",
       "name": "Join Investigation",
-      "fork": "fork_investigate",
-      "strategy": "all-pass"
+      "fork": "fork_investigate"
     },
     "synthesize": {
       "type": "task",
@@ -148,17 +133,17 @@
     {
       "from": "fork_investigate",
       "to": "reproduce",
-      "label": "Branch: reproduce"
+      "label": "Try to trigger the bug"
     },
     {
       "from": "fork_investigate",
       "to": "code_archaeology",
-      "label": "Branch: code archaeology"
+      "label": "Trace code paths related to symptoms"
     },
     {
       "from": "fork_investigate",
       "to": "git_forensics",
-      "label": "Branch: git forensics"
+      "label": "Check recent commits and git blame"
     },
     {
       "from": "reproduce",

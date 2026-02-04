@@ -12,20 +12,7 @@
       "type": "fork",
       "name": "Fork Gather",
       "join": "join_gather",
-      "branches": {
-        "system": {
-          "entryStep": "system_info",
-          "description": "Gather system information"
-        },
-        "weather": {
-          "entryStep": "weather_info",
-          "description": "Get today's weather at current location"
-        },
-        "repo": {
-          "entryStep": "repo_info",
-          "description": "Get information about the current repository"
-        }
-      }
+      "maxConcurrency": 5
     },
     "system_info": {
       "type": "task",
@@ -62,8 +49,7 @@
     "join_gather": {
       "type": "join",
       "name": "Join Gather",
-      "fork": "fork_gather",
-      "strategy": "all-pass"
+      "fork": "fork_gather"
     },
     "summarize": {
       "type": "task",
@@ -89,9 +75,9 @@
   },
   "edges": [
     { "from": "start", "to": "fork_gather" },
-    { "from": "fork_gather", "to": "system_info", "label": "Branch: system" },
-    { "from": "fork_gather", "to": "weather_info", "label": "Branch: weather" },
-    { "from": "fork_gather", "to": "repo_info", "label": "Branch: repo" },
+    { "from": "fork_gather", "to": "system_info", "label": "Gather system information" },
+    { "from": "fork_gather", "to": "weather_info", "label": "Get today's weather" },
+    { "from": "fork_gather", "to": "repo_info", "label": "Get repository information" },
     { "from": "system_info", "to": "join_gather" },
     { "from": "weather_info", "to": "join_gather" },
     { "from": "repo_info", "to": "repo_analyze", "on": "passed" },
