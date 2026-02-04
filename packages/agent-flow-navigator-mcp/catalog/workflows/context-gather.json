@@ -17,8 +17,8 @@
     "system_info": {
       "type": "task",
       "name": "System Information",
-      "description": "Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands.",
-      "agent": "Investigator",
+      "description": "Run `uname -a` and return the output.",
+      "agent": "Bash",
       "emoji": "🔍",
       "stage": "investigation"
     },
@@ -33,16 +33,16 @@
     "repo_info": {
       "type": "task",
       "name": "Repository Information",
-      "description": "Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata.",
-      "agent": "Investigator",
+      "description": "Run `git remote -v` and return the output.",
+      "agent": "Bash",
       "emoji": "🔍",
       "stage": "investigation"
     },
     "repo_analyze": {
       "type": "task",
       "name": "Analyze Repository",
-      "description": "Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions.",
-      "agent": "Reviewer",
+      "description": "Run `git log --oneline -3` and return the output.",
+      "agent": "Bash",
       "emoji": "👀",
       "stage": "investigation"
     },

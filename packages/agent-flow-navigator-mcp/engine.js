@@ -54,11 +54,12 @@ export function toSubagentRef(agentId) {
 
 /**
  * Get terminal type for a node
- * Returns: "start" | "success" | "hitl" | "failure" | null
+ * Returns: "start" | "success" | "hitl" | "failure" | "join" | null
  */
 export function getTerminalType(node) {
   if (!node) return null;
   if (node.type === "start") return "start";
+  if (node.type === "join") return "join";
   if (node.type === "end") {
     if (node.escalation === "hitl") return "hitl";
     return node.result === "success" ? "success" : "failure";
@@ -83,12 +84,15 @@ const WORKFLOW_EMOJIS = {
 /**
  * Build formatted task subject for write-through
  */
-function buildTaskSubject(taskId, userDescription, workflowType, stepId, terminal) {
+function buildTaskSubject(taskId, userDescription, workflowType, stepId, terminal, isChildBranch = false) {
   const emoji = WORKFLOW_EMOJIS[workflowType] || "";
   const line1 = `#${taskId} ${userDescription}${emoji ? ` ${emoji}` : ""}`;
 
+  // Only show "completed" for success, or join if it's a child branch
+  const isCompleted = terminal === "success" || (terminal === "join" && isChildBranch);
+
   let line2;
-  if (terminal === "success") {
+  if (isCompleted) {
     line2 = `→ ${workflowType} · completed ✓`;
   } else if (terminal === "hitl" || terminal === "failure") {
     line2 = `→ ${workflowType} · ${stepId} · HITL`;
@@ -235,13 +239,17 @@ function writeThrough(taskFilePath, response) {
   // - "start": leave status unchanged (task stays pending until work begins)
   // - null: work in progress
   // - "success": completed
+  // - "join": completed only if child branch (has parentTaskId)
   // - "hitl"/"failure": keep current status
+  const isChildBranch = !!task.metadata?.parentTaskId;
   if (response.terminal === null) {
     task.status = "in_progress";
   } else if (response.terminal === "success") {
     task.status = "completed";
+  } else if (response.terminal === "join" && isChildBranch) {
+    task.status = "completed";
   }
-  // "start", "hitl", "failure" keep current status
+  // "start", "hitl", "failure", "join" (non-child) keep current status
 
   // Update subject
   task.subject = buildTaskSubject(
@@ -249,12 +257,14 @@ function writeThrough(taskFilePath, response) {
     response.metadata.userDescription || "",
     response.metadata.workflowType,
     response.currentStep,
-    response.terminal
+    response.terminal,
+    isChildBranch
   );
 
   // Update activeForm from step name
   const stepName = response.metadata.stepName || response.currentStep;
-  task.activeForm = response.terminal === "success"
+  const isCompleted = response.terminal === "success" || (response.terminal === "join" && isChildBranch);
+  task.activeForm = isCompleted
     ? "Completed"
     : response.terminal === "hitl" || response.terminal === "failure"
       ? "HITL - Needs help"
