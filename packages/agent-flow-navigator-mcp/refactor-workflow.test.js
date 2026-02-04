@@ -1,7 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { readFileSync } from "fs";
+import { readFileSync, mkdtempSync, rmSync } from "fs";
 import { join, dirname } from "path";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { WorkflowEngine } from "./engine.js";
 import { WorkflowStore, validateWorkflow } from "./store.js";
@@ -41,28 +42,34 @@ describe("refactor workflow JSON structure", () => {
 });
 
 // =============================================================================
-// Refactor workflow - Engine navigation
+// Refactor workflow - Engine navigation (new API: init/start/current/next)
 // =============================================================================
 
 describe("refactor workflow engine navigation", () => {
   let store;
   let engine;
+  let tmpDir;
+  let taskFile;
 
   beforeEach(() => {
     store = new WorkflowStore();
     engine = new WorkflowEngine(store);
     store.loadDefinition("refactor", loadRefactorWorkflow());
+
+    tmpDir = mkdtempSync(join(tmpdir(), "nav-"));
+    taskFile = join(tmpDir, "1.json");
   });
 
-  it("should start at start node", () => {
-    const result = engine.start({ workflowType: "refactor" });
+  it("should init at start node", () => {
+    const result = engine.init({ workflowType: "refactor", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "start");
     assert.strictEqual(result.terminal, "start");
   });
 
-  it("should return outgoing edges", () => {
-    const result = engine.start({ workflowType: "refactor" });
-    assert.ok(result.edges.length > 0);
+  it("should return instructions", () => {
+    const result = engine.init({ workflowType: "refactor", taskFilePath: taskFile });
+    assert.ok(result.instructions.includes("## Queued"));
+    assert.ok(result.instructions.includes("→ Call Start()"));
   });
 });
 

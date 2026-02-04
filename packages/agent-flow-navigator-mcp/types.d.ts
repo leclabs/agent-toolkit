@@ -6,17 +6,16 @@
  * - end: Exit point with result classification
  * - task: Work performed by agent
  * - gate: Review/approval checkpoint
+ * - fork: Fan out to parallel branches
+ * - join: Collect parallel branches
  * - subflow: Connector to another workflow
- *
- * Fork/join are just nodes with multiple edges - the orchestrator
- * interprets them based on node instructions and graph topology.
  */
 
 // =============================================================================
 // Node Types (Discriminated Union)
 // =============================================================================
 
-export type Node = StartNode | EndNode | TaskNode | GateNode | SubflowNode;
+export type Node = StartNode | EndNode | TaskNode | GateNode | ForkNode | JoinNode | SubflowNode;
 
 export interface StartNode {
   type: "start";
@@ -78,6 +77,30 @@ export interface GateNode {
 }
 
 /**
+ * Fork node - fan out to parallel branches.
+ * Branches are determined by outgoing edges.
+ */
+export interface ForkNode {
+  type: "fork";
+  name?: string;
+  description?: string;
+  join: string; // ID of paired join node
+  maxConcurrency?: number;
+}
+
+/**
+ * Join node - collect parallel branches.
+ * Strategy determines how to evaluate branch outcomes.
+ */
+export interface JoinNode {
+  type: "join";
+  name?: string;
+  description?: string;
+  fork: string; // ID of paired fork node
+  strategy?: "all-pass" | "any-pass";
+}
+
+/**
  * Subflow node - connector to another workflow.
  */
 export interface SubflowNode {
@@ -120,7 +143,7 @@ export interface Workflow {
 }
 
 // =============================================================================
-// Navigation API Types (v3 - explicit, single-purpose tools)
+// Navigation API Types (v3 - prose instructions)
 // =============================================================================
 
 /**
@@ -157,28 +180,14 @@ export interface NextOptions {
 
 /**
  * Unified response shape for all navigation operations.
- * Returns current position, node info, and outgoing edges.
- * The orchestrator interprets this based on node type and instructions.
+ * Returns current position and prose instructions.
+ * Graph topology is private - orchestrator receives actionable context.
  */
 export interface NavigationResponse {
   /** Current step ID */
   currentStep: string;
-  /** Node definition with resolved prose paths */
-  node: {
-    type: string;
-    name: string;
-    description: string | null;
-    instructions: string | null;
-    agent: string | null;
-    stage: Stage | null;
-    maxRetries: number;
-  } | null;
-  /** Outgoing edges from current step */
-  edges: Array<{
-    to: string;
-    on: string | null;
-    label: string | null;
-  }>;
+  /** Prose instructions for the orchestrator - context-specific based on node type */
+  instructions: string;
   /** Terminal type if at start/end node */
   terminal: "start" | "success" | "hitl" | "failure" | null;
   /** Metadata for task storage */
@@ -187,6 +196,7 @@ export interface NavigationResponse {
     currentStep: string;
     retryCount: number;
     userDescription: string | null;
+    stepName: string;
   };
 }
 

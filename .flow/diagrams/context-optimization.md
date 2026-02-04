@@ -45,11 +45,11 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage          | Step                 | Name                 | Agent               | Instructions                                                                            |
-| -------------- | -------------------- | -------------------- | ------------------- | --------------------------------------------------------------------------------------- |
-| analysis       | map_connections      | Map Connections      | 🧠 Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents)      |
-| analysis       | identify_pathologies | Identify Pathologies | 🧠 Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing    |
-| design         | design_improvements  | Design Improvements  | 🧠 Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
-| design         | review_design        | Review Design        | 👀 Reviewer         | Verify improvements don't sacrifice meaning for brevity                                 |
-| implementation | implement            | Implement            | 🔧 Developer        | Apply the optimizations to actual files and configurations                              |
-| verification   | verify               | Verify               | 🧪 Tester           | Test that agents still function correctly with optimized context                        |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| analysis | map_connections | Map Connections | 🧠 Context Engineer | Identify all connection points between components (MCP, skills, agents, subagents) |
+| analysis | identify_pathologies | Identify Pathologies | 🧠 Context Engineer | Find context pathologies: specification bloat, attention dilution, redundant framing |
+| design | design_improvements | Design Improvements | 🧠 Context Engineer | Apply compression techniques: lead with conclusions, causal chains, precise terminology |
+| design | review_design | Review Design | 👀 Reviewer | Verify improvements don't sacrifice meaning for brevity |
+| implementation | implement | Implement | 🔧 Developer | Apply the optimizations to actual files and configurations |
+| verification | verify | Verify | 🧪 Tester | Test that agents still function correctly with optimized context |

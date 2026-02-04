@@ -1,0 +1,72 @@
+{
+  "id": "batch-process",
+  "name": "Batch Process",
+  "description": "Dynamic fork/join workflow for processing multiple items. The orchestrator spawns N tasks from a single branch template, throttled by maxConcurrency.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Batch processing begins"
+    },
+    "analyze_items": {
+      "type": "task",
+      "name": "Analyze Items",
+      "description": "Parse the user's input to extract the list of items to process. Return a structured list.",
+      "agent": "Planner",
+      "emoji": "📋",
+      "stage": "planning"
+    },
+    "fork_process": {
+      "type": "fork",
+      "name": "Fork Process",
+      "description": "Fan out to process each item. Orchestrator creates one task per item using the branch edge as template.",
+      "join": "join_process",
+      "maxConcurrency": 3
+    },
+    "process_item": {
+      "type": "task",
+      "name": "Process Item",
+      "description": "Process a single item. The item context is provided by the orchestrator. Analyze, transform, or validate the item as needed.",
+      "agent": "Developer",
+      "emoji": "🔧",
+      "stage": "development"
+    },
+    "join_process": {
+      "type": "join",
+      "name": "Join Process",
+      "description": "Collect results from all item processing tasks. Orchestrator evaluates success criteria.",
+      "fork": "fork_process"
+    },
+    "summarize": {
+      "type": "task",
+      "name": "Summarize Results",
+      "description": "Combine results from all processed items into a final summary report.",
+      "agent": "Architect",
+      "emoji": "🏛️",
+      "stage": "planning"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Batch Complete",
+      "description": "All items processed successfully"
+    },
+    "hitl_partial": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Partial Failure",
+      "description": "Some items failed processing - needs human review"
+    }
+  },
+  "edges": [
+    { "from": "start", "to": "analyze_items" },
+    { "from": "analyze_items", "to": "fork_process", "on": "passed" },
+    { "from": "fork_process", "to": "process_item", "label": "Process a single item from the batch" },
+    { "from": "process_item", "to": "join_process" },
+    { "from": "join_process", "to": "summarize", "on": "passed", "label": "All items processed" },
+    { "from": "join_process", "to": "hitl_partial", "on": "failed", "label": "Some items failed" },
+    { "from": "summarize", "to": "end_success" },
+    { "from": "hitl_partial", "to": "fork_process", "on": "passed", "label": "Human resolved - retry failed items" }
+  ]
+}

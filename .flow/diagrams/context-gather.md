@@ -18,9 +18,9 @@ flowchart TD
     hitl_failed{{"✋ Gather Failed"}}
 
     start --> fork_gather
-    fork_gather -->|Branch: system| system_info
-    fork_gather -->|Branch: weather| weather_info
-    fork_gather -->|Branch: repo| repo_info
+    fork_gather -->|Gather system information| system_info
+    fork_gather -->|Get today's weather| weather_info
+    fork_gather -->|Get repository information| repo_info
     system_info --> join_gather
     weather_info --> join_gather
     repo_info -->|passed| repo_analyze
@@ -45,10 +45,10 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage         | Step         | Name                   | Agent           | Instructions                                                                                                                                                     |
-| ------------- | ------------ | ---------------------- | --------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| investigation | system_info  | System Information     | 🔍 Investigator | Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands.                                   |
-| investigation | weather_info | Weather Report         | 📋 Planner      | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast.                               |
-| investigation | repo_info    | Repository Information | 🔍 Investigator | Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata. |
-| investigation | repo_analyze | Analyze Repository     | 👀 Reviewer     | Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions.    |
-| planning      | summarize    | Summarize Context      | 🏛️ Architect    | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format.                 |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| investigation | system_info | System Information | 🔍 Investigator | Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands. |
+| investigation | weather_info | Weather Report | 📋 Planner | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast. |
+| investigation | repo_info | Repository Information | 🔍 Investigator | Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata. |
+| investigation | repo_analyze | Analyze Repository | 👀 Reviewer | Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions. |
+| planning | summarize | Summarize Context | 🏛️ Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |

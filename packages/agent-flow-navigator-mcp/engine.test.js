@@ -1,4 +1,4 @@
-import { describe, it, beforeEach } from "node:test";
+import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { WorkflowEngine, getTerminalType, readTaskFile } from "./engine.js";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
@@ -42,7 +42,7 @@ class WorkflowStore {
 const simpleWorkflow = {
   nodes: {
     start: { type: "start", name: "Start" },
-    task1: { type: "task", name: "Task 1", agent: "Developer" },
+    task1: { type: "task", name: "Task 1", agent: "Developer", description: "First task" },
     task2: { type: "task", name: "Task 2" },
     end_success: { type: "end", result: "success" },
     end_failure: { type: "end", result: "failure" },
@@ -68,6 +68,25 @@ const retryWorkflow = {
     { from: "work", to: "end_success", on: "passed" },
     { from: "work", to: "work", on: "failed" },
     { from: "work", to: "end_hitl", on: "failed" },
+  ],
+};
+
+const forkWorkflow = {
+  nodes: {
+    start: { type: "start" },
+    fork_work: { type: "fork", name: "Fork Work", join: "join_work", maxConcurrency: 3 },
+    branch_a: { type: "task", name: "Branch A", agent: "Developer", description: "First branch" },
+    branch_b: { type: "task", name: "Branch B", agent: "Tester", description: "Second branch" },
+    join_work: { type: "join", name: "Join Work", fork: "fork_work" },
+    end_success: { type: "end", result: "success" },
+  },
+  edges: [
+    { from: "start", to: "fork_work" },
+    { from: "fork_work", to: "branch_a" },
+    { from: "fork_work", to: "branch_b" },
+    { from: "branch_a", to: "join_work", on: "passed" },
+    { from: "branch_b", to: "join_work", on: "passed" },
+    { from: "join_work", to: "end_success", on: "passed" },
   ],
 };
 
@@ -103,67 +122,13 @@ describe("getTerminalType", () => {
 });
 
 // =============================================================================
-// WorkflowEngine.start
+// WorkflowEngine.init
 // =============================================================================
 
-describe("WorkflowEngine.start", () => {
+describe("WorkflowEngine.init", () => {
   let store;
   let engine;
-
-  beforeEach(() => {
-    store = new WorkflowStore();
-    engine = new WorkflowEngine(store);
-    store.loadDefinition("simple", simpleWorkflow);
-  });
-
-  it("throws if workflowType not provided", () => {
-    assert.throws(() => engine.start({}), /workflowType is required/);
-  });
-
-  it("throws if workflow not found", () => {
-    assert.throws(() => engine.start({ workflowType: "nonexistent" }), /not found/);
-  });
-
-  it("starts at start node by default", () => {
-    const result = engine.start({ workflowType: "simple" });
-    assert.strictEqual(result.currentStep, "start");
-    assert.strictEqual(result.terminal, "start");
-    assert.strictEqual(result.node.type, "start");
-  });
-
-  it("returns outgoing edges", () => {
-    const result = engine.start({ workflowType: "simple" });
-    assert.strictEqual(result.edges.length, 1);
-    assert.strictEqual(result.edges[0].to, "task1");
-  });
-
-  it("can start at specific step", () => {
-    const result = engine.start({ workflowType: "simple", stepId: "task1" });
-    assert.strictEqual(result.currentStep, "task1");
-    assert.strictEqual(result.node.name, "Task 1");
-    assert.strictEqual(result.node.agent, "Developer");
-  });
-
-  it("stores description in metadata", () => {
-    const result = engine.start({ workflowType: "simple", description: "Test task" });
-    assert.strictEqual(result.metadata.userDescription, "Test task");
-    assert.strictEqual(result.metadata.workflowType, "simple");
-    assert.strictEqual(result.metadata.retryCount, 0);
-  });
-
-  it("throws if stepId not found", () => {
-    assert.throws(() => engine.start({ workflowType: "simple", stepId: "nonexistent" }), /not found/);
-  });
-});
-
-// =============================================================================
-// WorkflowEngine.start with taskFilePath (write-through)
-// =============================================================================
-
-describe("WorkflowEngine.start with taskFilePath", () => {
-  let store;
-  let engine;
-  let tmpDir;
+  let taskDir;
   let taskFile;
 
   beforeEach(() => {
@@ -171,50 +136,131 @@ describe("WorkflowEngine.start with taskFilePath", () => {
     engine = new WorkflowEngine(store);
     store.loadDefinition("simple", simpleWorkflow);
 
-    tmpDir = join(tmpdir(), `engine-test-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-    taskFile = join(tmpDir, "123.json");
-
-    // Create initial task file
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "123",
-        subject: "Test task",
-        description: "Original description",
-        status: "pending",
-        metadata: {},
-      })
-    );
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
   });
 
-  it("writes workflow state to task file", () => {
-    engine.start({ taskFilePath: taskFile, workflowType: "simple", description: "My task" });
-
-    const task = readTaskFile(taskFile);
-    assert.strictEqual(task.metadata.workflowType, "simple");
-    assert.strictEqual(task.metadata.currentStep, "start");
-    assert.strictEqual(task.metadata.userDescription, "My task");
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 
-  it("sets task status to in_progress", () => {
-    engine.start({ taskFilePath: taskFile, workflowType: "simple" });
-
-    const task = readTaskFile(taskFile);
-    assert.strictEqual(task.status, "in_progress");
+  it("throws if taskFilePath not provided", () => {
+    assert.throws(() => engine.init({}), /taskFilePath is required/);
   });
 
-  it("updates task subject with workflow info", () => {
-    engine.start({ taskFilePath: taskFile, workflowType: "simple", description: "My task" });
-
-    const task = readTaskFile(taskFile);
-    assert.ok(task.subject.includes("simple"));
-    assert.ok(task.subject.includes("start"));
+  it("throws if workflowType not provided for new init", () => {
+    assert.throws(() => engine.init({ taskFilePath: taskFile }), /workflowType is required/);
   });
 
-  // Cleanup
-  it("cleanup", () => {
-    rmSync(tmpDir, { recursive: true, force: true });
+  it("throws if workflow not found", () => {
+    assert.throws(() => engine.init({ taskFilePath: taskFile, workflowType: "nonexistent" }), /not found/);
+  });
+
+  it("initializes at start node by default", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple" });
+    assert.strictEqual(result.currentStep, "start");
+    assert.strictEqual(result.terminal, "start");
+    assert.ok(result.instructions.includes("## Queued"));
+    assert.ok(result.instructions.includes("→ Call Start()"));
+  });
+
+  it("returns prose instructions", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple" });
+    assert.ok(typeof result.instructions === "string");
+    assert.ok(result.instructions.length > 0);
+  });
+
+  it("can init at specific step", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple", stepId: "task1" });
+    assert.strictEqual(result.currentStep, "task1");
+    assert.ok(result.instructions.includes("## Task 1"));
+    assert.ok(result.instructions.includes("Agent: Developer"));
+  });
+
+  it("stores description in metadata", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple", description: "Test task" });
+    assert.strictEqual(result.metadata.userDescription, "Test task");
+    assert.strictEqual(result.metadata.workflowType, "simple");
+  });
+
+  it("stores stepName in metadata", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple", stepId: "task1" });
+    assert.strictEqual(result.metadata.stepName, "Task 1");
+  });
+
+  it("initializes retryCount to 0", () => {
+    const result = engine.init({ taskFilePath: taskFile, workflowType: "simple" });
+    assert.strictEqual(result.metadata.retryCount, 0);
+  });
+
+  it("is idempotent - returns current state if already initialized", () => {
+    // First init
+    engine.init({ taskFilePath: taskFile, workflowType: "simple", description: "Original" });
+
+    // Second init without workflowType should return current state
+    const result = engine.init({ taskFilePath: taskFile });
+    assert.strictEqual(result.currentStep, "start");
+    assert.strictEqual(result.metadata.userDescription, "Original");
+  });
+});
+
+// =============================================================================
+// WorkflowEngine.start (advance from start node)
+// =============================================================================
+
+describe("WorkflowEngine.start", () => {
+  let store;
+  let engine;
+  let taskDir;
+  let taskFile;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("simple", simpleWorkflow);
+
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
+  });
+
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  it("throws if taskFilePath not provided", () => {
+    assert.throws(() => engine.start({}), /taskFilePath is required/);
+  });
+
+  it("throws if task not initialized", () => {
+    assert.throws(() => engine.start({ taskFilePath: taskFile }), /not found/);
+  });
+
+  it("advances from start node to first real step", () => {
+    engine.init({ taskFilePath: taskFile, workflowType: "simple" });
+    const result = engine.start({ taskFilePath: taskFile });
+
+    assert.strictEqual(result.currentStep, "task1");
+    assert.strictEqual(result.terminal, null);
+    assert.ok(result.instructions.includes("## Task 1"));
+  });
+
+  it("is idempotent - returns current state if not at start node", () => {
+    engine.init({ taskFilePath: taskFile, workflowType: "simple" });
+    engine.start({ taskFilePath: taskFile }); // Advance to task1
+
+    // Call start again - should return current state
+    const result = engine.start({ taskFilePath: taskFile });
+    assert.strictEqual(result.currentStep, "task1");
   });
 });
 
@@ -225,7 +271,7 @@ describe("WorkflowEngine.start with taskFilePath", () => {
 describe("WorkflowEngine.current", () => {
   let store;
   let engine;
-  let tmpDir;
+  let taskDir;
   let taskFile;
 
   beforeEach(() => {
@@ -233,9 +279,10 @@ describe("WorkflowEngine.current", () => {
     engine = new WorkflowEngine(store);
     store.loadDefinition("simple", simpleWorkflow);
 
-    tmpDir = join(tmpdir(), `engine-test-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-    taskFile = join(tmpDir, "456.json");
+    // Create temp task file
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
   });
 
   it("throws if taskFilePath not provided", () => {
@@ -243,48 +290,38 @@ describe("WorkflowEngine.current", () => {
   });
 
   it("throws if task file not found", () => {
-    assert.throws(() => engine.current({ taskFilePath: "/nonexistent/path.json" }), /not found/);
+    assert.throws(() => engine.current({ taskFilePath: "/nonexistent/task.json" }), /not found/);
   });
 
   it("throws if task has no workflow metadata", () => {
-    writeFileSync(taskFile, JSON.stringify({ id: "456", status: "pending", metadata: {} }));
+    writeFileSync(taskFile, JSON.stringify({ description: "test" }));
     assert.throws(() => engine.current({ taskFilePath: taskFile }), /no workflow metadata/);
   });
 
   it("returns current step info", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "456",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 0 },
-      })
-    );
+    // Initialize task
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
 
     const result = engine.current({ taskFilePath: taskFile });
-    assert.strictEqual(result.currentStep, "task1");
-    assert.strictEqual(result.node.name, "Task 1");
-    assert.strictEqual(result.edges.length, 2); // passed -> task2, failed -> end_failure
+    assert.strictEqual(result.currentStep, "start");
+    assert.strictEqual(result.terminal, "start");
+    assert.ok(result.instructions.includes("## Queued"));
   });
 
-  it("preserves retry count", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "456",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 2, userDescription: "Test" },
-      })
-    );
+  it("reads task metadata correctly", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile, description: "My task" });
 
     const result = engine.current({ taskFilePath: taskFile });
-    assert.strictEqual(result.metadata.retryCount, 2);
-    assert.strictEqual(result.metadata.userDescription, "Test");
+    assert.strictEqual(result.metadata.workflowType, "simple");
+    assert.strictEqual(result.metadata.userDescription, "My task");
   });
 
-  // Cleanup
-  it("cleanup", () => {
-    rmSync(tmpDir, { recursive: true, force: true });
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
   });
 });
 
@@ -295,7 +332,7 @@ describe("WorkflowEngine.current", () => {
 describe("WorkflowEngine.next", () => {
   let store;
   let engine;
-  let tmpDir;
+  let taskDir;
   let taskFile;
 
   beforeEach(() => {
@@ -304,291 +341,220 @@ describe("WorkflowEngine.next", () => {
     store.loadDefinition("simple", simpleWorkflow);
     store.loadDefinition("retry", retryWorkflow);
 
-    tmpDir = join(tmpdir(), `engine-test-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-    taskFile = join(tmpDir, "789.json");
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
   });
 
   it("throws if taskFilePath not provided", () => {
-    assert.throws(() => engine.next({ result: "passed" }), /taskFilePath is required/);
+    assert.throws(() => engine.next({}), /taskFilePath is required/);
   });
 
   it("throws if result not provided", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 0 },
-      })
-    );
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
     assert.throws(() => engine.next({ taskFilePath: taskFile }), /result is required/);
   });
 
-  it("advances on passed result", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 0 },
-      })
-    );
+  it("advances to next step on passed", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
 
-    const result = engine.next({ taskFilePath: taskFile, result: "passed" });
+    const result = engine.next({ taskFilePath: taskFile, result: "passed" }); // task1 -> task2
     assert.strictEqual(result.currentStep, "task2");
-    assert.strictEqual(result.node.name, "Task 2");
+    assert.ok(result.instructions.includes("## Task 2"));
   });
 
-  it("advances on failed result", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 0 },
-      })
-    );
+  it("advances to failure on failed", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
 
-    const result = engine.next({ taskFilePath: taskFile, result: "failed" });
+    const result = engine.next({ taskFilePath: taskFile, result: "failed" }); // task1 -> end_failure
     assert.strictEqual(result.currentStep, "end_failure");
     assert.strictEqual(result.terminal, "failure");
+    assert.ok(result.instructions.includes("## Failed"));
   });
 
-  it("writes updated state to task file", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task1", retryCount: 0 },
-      })
-    );
+  it("reaches success terminal", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // task1 -> task2
 
-    engine.next({ taskFilePath: taskFile, result: "passed" });
+    const result = engine.next({ taskFilePath: taskFile, result: "passed" }); // task2 -> end_success
+    assert.strictEqual(result.currentStep, "end_success");
+    assert.strictEqual(result.terminal, "success");
+    assert.ok(result.instructions.includes("## Complete"));
+  });
+
+  it("retries on failure when retries available", () => {
+    engine.init({ workflowType: "retry", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> work
+
+    // First failure - should retry (retryCount: 0 -> 1)
+    let result = engine.next({ taskFilePath: taskFile, result: "failed" });
+    assert.strictEqual(result.currentStep, "work");
+    assert.strictEqual(result.metadata.retryCount, 1);
+
+    // Second failure - should retry (retryCount: 1 -> 2)
+    result = engine.next({ taskFilePath: taskFile, result: "failed" });
+    assert.strictEqual(result.currentStep, "work");
+    assert.strictEqual(result.metadata.retryCount, 2);
+
+    // Third failure - should escalate to HITL (retryCount: 2, maxRetries: 2)
+    result = engine.next({ taskFilePath: taskFile, result: "failed" });
+    assert.strictEqual(result.currentStep, "end_hitl");
+    assert.strictEqual(result.terminal, "hitl");
+    assert.ok(result.instructions.includes("## HITL"));
+  });
+
+  it("resets retryCount on successful advance", () => {
+    engine.init({ workflowType: "retry", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> work
+    engine.next({ taskFilePath: taskFile, result: "failed" }); // retry 1
+
+    const result = engine.next({ taskFilePath: taskFile, result: "passed" }); // work -> end_success
+    assert.strictEqual(result.metadata.retryCount, 0);
+  });
+
+  it("persists state to task file", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile, description: "Test" });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
 
     const task = readTaskFile(taskFile);
-    assert.strictEqual(task.metadata.currentStep, "task2");
+    assert.strictEqual(task.metadata.currentStep, "task1");
+    assert.strictEqual(task.metadata.workflowType, "simple");
+    assert.strictEqual(task.status, "in_progress");
   });
 
-  it("sets status to completed on success terminal", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "task2", retryCount: 0 },
-      })
-    );
-
-    engine.next({ taskFilePath: taskFile, result: "passed" });
+  it("updates task status to completed on success terminal", () => {
+    engine.init({ workflowType: "simple", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> task1
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // task1 -> task2
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // task2 -> end_success
 
     const task = readTaskFile(taskFile);
     assert.strictEqual(task.status, "completed");
   });
 
-  it("returns error for no matching edge", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "789",
-        status: "in_progress",
-        metadata: { workflowType: "simple", currentStep: "end_success", retryCount: 0 },
-      })
-    );
-
-    const result = engine.next({ taskFilePath: taskFile, result: "passed" });
-    assert.ok(result.error);
-  });
-
-  // Cleanup
-  it("cleanup", () => {
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-});
-
-// =============================================================================
-// WorkflowEngine.next - Retry logic
-// =============================================================================
-
-describe("WorkflowEngine.next - retry logic", () => {
-  let store;
-  let engine;
-  let tmpDir;
-  let taskFile;
-
-  beforeEach(() => {
-    store = new WorkflowStore();
-    engine = new WorkflowEngine(store);
-    store.loadDefinition("retry", retryWorkflow);
-
-    tmpDir = join(tmpdir(), `engine-test-${Date.now()}`);
-    mkdirSync(tmpDir, { recursive: true });
-    taskFile = join(tmpDir, "retry.json");
-  });
-
-  it("increments retry count on failure within limit", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "retry",
-        status: "in_progress",
-        metadata: { workflowType: "retry", currentStep: "work", retryCount: 0 },
-      })
-    );
-
-    const result = engine.next({ taskFilePath: taskFile, result: "failed" });
-    assert.strictEqual(result.currentStep, "work"); // Stays at work (retry)
-    assert.strictEqual(result.metadata.retryCount, 1);
-  });
-
-  it("escalates to end node after max retries", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "retry",
-        status: "in_progress",
-        metadata: { workflowType: "retry", currentStep: "work", retryCount: 2 }, // At max
-      })
-    );
-
-    const result = engine.next({ taskFilePath: taskFile, result: "failed" });
-    assert.strictEqual(result.currentStep, "end_hitl");
-    assert.strictEqual(result.terminal, "hitl");
-  });
-
-  it("resets retry count on success", () => {
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "retry",
-        status: "in_progress",
-        metadata: { workflowType: "retry", currentStep: "work", retryCount: 1 },
-      })
-    );
-
-    const result = engine.next({ taskFilePath: taskFile, result: "passed" });
-    assert.strictEqual(result.currentStep, "end_success");
-    assert.strictEqual(result.metadata.retryCount, 0);
-  });
-
-  // Cleanup
-  it("cleanup", () => {
-    rmSync(tmpDir, { recursive: true, force: true });
-  });
-});
-
-// =============================================================================
-// Response shape consistency
-// =============================================================================
-
-describe("Response shape consistency", () => {
-  let store;
-  let engine;
-
-  beforeEach(() => {
-    store = new WorkflowStore();
-    engine = new WorkflowEngine(store);
-    store.loadDefinition("simple", simpleWorkflow);
-  });
-
-  it("start returns consistent shape", () => {
-    const result = engine.start({ workflowType: "simple" });
-
-    assert.ok("currentStep" in result);
-    assert.ok("node" in result);
-    assert.ok("edges" in result);
-    assert.ok("terminal" in result);
-    assert.ok("metadata" in result);
-    assert.ok(Array.isArray(result.edges));
-  });
-
-  it("node contains expected fields", () => {
-    const result = engine.start({ workflowType: "simple", stepId: "task1" });
-
-    assert.strictEqual(result.node.type, "task");
-    assert.strictEqual(result.node.name, "Task 1");
-    assert.strictEqual(result.node.agent, "Developer");
-    assert.strictEqual(result.node.maxRetries, 0);
-  });
-
-  it("metadata contains expected fields", () => {
-    const result = engine.start({ workflowType: "simple", description: "Test" });
-
-    assert.strictEqual(result.metadata.workflowType, "simple");
-    assert.strictEqual(result.metadata.currentStep, "start");
-    assert.strictEqual(result.metadata.retryCount, 0);
-    assert.strictEqual(result.metadata.userDescription, "Test");
-  });
-
-  it("edges contain expected fields", () => {
-    const result = engine.start({ workflowType: "simple", stepId: "task1" });
-
-    for (const edge of result.edges) {
-      assert.ok("to" in edge);
-      assert.ok("on" in edge);
-      assert.ok("label" in edge);
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
     }
   });
 });
 
 // =============================================================================
-// Multiple edges (fork-like behavior)
+// Fork/Join workflows
 // =============================================================================
 
-describe("Multiple outgoing edges", () => {
+describe("Fork/Join instructions", () => {
   let store;
   let engine;
+  let taskDir;
+  let taskFile;
+
+  beforeEach(() => {
+    store = new WorkflowStore();
+    engine = new WorkflowEngine(store);
+    store.loadDefinition("fork", forkWorkflow);
+
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
+  });
+
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
+
+  it("returns fork instructions with branch list", () => {
+    const result = engine.init({ workflowType: "fork", stepId: "fork_work", taskFilePath: taskFile });
+    assert.strictEqual(result.currentStep, "fork_work");
+    assert.ok(result.instructions.includes("## Fork Work"));
+    assert.ok(result.instructions.includes("Branches:"));
+    assert.ok(result.instructions.includes("branch_a"));
+    assert.ok(result.instructions.includes("branch_b"));
+    assert.ok(result.instructions.includes("Branch A"));
+    assert.ok(result.instructions.includes("Branch B"));
+  });
+
+  it("includes join node and max concurrency in fork instructions", () => {
+    const result = engine.init({ workflowType: "fork", stepId: "fork_work", taskFilePath: taskFile });
+    assert.ok(result.instructions.includes("Join: join_work"));
+    assert.ok(result.instructions.includes("Max concurrency: 3"));
+  });
+
+  it("returns join instructions", () => {
+    const result = engine.init({ workflowType: "fork", stepId: "join_work", taskFilePath: taskFile });
+    assert.strictEqual(result.currentStep, "join_work");
+    assert.ok(result.instructions.includes("## Join Work"));
+    assert.ok(result.instructions.includes("Evaluate branch results"));
+  });
+});
+
+// =============================================================================
+// Edge cases
+// =============================================================================
+
+describe("Edge cases", () => {
+  let store;
+  let engine;
+  let taskDir;
+  let taskFile;
 
   beforeEach(() => {
     store = new WorkflowStore();
     engine = new WorkflowEngine(store);
 
-    // Workflow with a node that has multiple outgoing edges
-    store.loadDefinition("multi", {
-      nodes: {
-        start: { type: "start" },
-        dispatch: {
-          type: "task",
-          name: "Dispatch",
-          description: "Process items in parallel: {items}",
-        },
-        branch_a: { type: "task", name: "Branch A" },
-        branch_b: { type: "task", name: "Branch B" },
-        branch_c: { type: "task", name: "Branch C" },
-        end: { type: "end", result: "success" },
-      },
-      edges: [
-        { from: "start", to: "dispatch" },
-        { from: "dispatch", to: "branch_a", label: "Item A" },
-        { from: "dispatch", to: "branch_b", label: "Item B" },
-        { from: "dispatch", to: "branch_c", label: "Item C" },
-        { from: "branch_a", to: "end", on: "passed" },
-        { from: "branch_b", to: "end", on: "passed" },
-        { from: "branch_c", to: "end", on: "passed" },
-      ],
-    });
+    taskDir = join(tmpdir(), `flow-test-${Date.now()}`);
+    mkdirSync(taskDir, { recursive: true });
+    taskFile = join(taskDir, "test-task.json");
   });
 
-  it("returns all outgoing edges from dispatch node", () => {
-    const result = engine.start({ workflowType: "multi", stepId: "dispatch" });
+  afterEach(() => {
+    try {
+      rmSync(taskDir, { recursive: true });
+    } catch {
+      // Ignore cleanup errors
+    }
+  });
 
-    assert.strictEqual(result.edges.length, 3);
-    assert.deepStrictEqual(
-      result.edges.map((e) => e.to).sort(),
-      ["branch_a", "branch_b", "branch_c"]
+  it("handles workflow with no start node", () => {
+    store.loadDefinition("bad", {
+      nodes: { task: { type: "task", name: "Task" } },
+      edges: [],
+    });
+    assert.throws(() => engine.init({ workflowType: "bad", taskFilePath: taskFile }), /no start node/);
+  });
+
+  it("handles invalid step ID", () => {
+    store.loadDefinition("simple", simpleWorkflow);
+    assert.throws(
+      () => engine.init({ workflowType: "simple", stepId: "nonexistent", taskFilePath: taskFile }),
+      /not found/
     );
   });
 
-  it("edges include labels", () => {
-    const result = engine.start({ workflowType: "multi", stepId: "dispatch" });
+  it("handles workflow with no outgoing edges from step", () => {
+    store.loadDefinition("dead-end", {
+      nodes: {
+        start: { type: "start" },
+        dead: { type: "task", name: "Dead End" },
+      },
+      edges: [{ from: "start", to: "dead" }],
+    });
 
-    const labels = result.edges.map((e) => e.label).sort();
-    assert.deepStrictEqual(labels, ["Item A", "Item B", "Item C"]);
-  });
+    engine.init({ workflowType: "dead-end", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> dead
 
-  it("node description contains parallelization hint", () => {
-    const result = engine.start({ workflowType: "multi", stepId: "dispatch" });
-
-    assert.ok(result.node.description.includes("parallel"));
+    const result = engine.next({ taskFilePath: taskFile, result: "passed" });
+    assert.ok(result.error);
+    assert.strictEqual(result.error, "no_outgoing_edges");
   });
 });

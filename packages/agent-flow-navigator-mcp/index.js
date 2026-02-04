@@ -6,7 +6,8 @@
  * All task state is stored in Claude Code native /tasks via metadata.
  *
  * Navigation Tools (explicit, single-purpose):
- * - Start: Initialize workflow on task at any step
+ * - Init: Initialize workflow on task (idempotent - returns current state if already initialized)
+ * - Start: Begin work - advance from start node to first real step
  * - Current: Read current position (read-only)
  * - Next: Advance based on outcome
  *
@@ -127,8 +128,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
     tools: [
       // Navigation tools - explicit, single-purpose
       {
-        name: "Start",
-        description: "Initialize workflow on task. Returns current step info and outgoing edges.",
+        name: "Init",
+        description: "Initialize workflow on task. Idempotent: returns current state if already initialized. Task stays pending until Start() is called.",
         inputSchema: {
           type: "object",
           properties: {
@@ -138,7 +139,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             },
             workflowType: {
               type: "string",
-              description: "Workflow ID (e.g., 'feature-development')",
+              description: "Workflow ID (e.g., 'feature-development'). Required for new initialization.",
             },
             description: {
               type: "string",
@@ -149,7 +150,21 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
               description: "Start at specific step (for mid-flow recovery or child tasks)",
             },
           },
-          required: ["workflowType"],
+          required: ["taskFilePath"],
+        },
+      },
+      {
+        name: "Start",
+        description: "Begin work - advance from start node to first real step. Sets task to in_progress. Requires Init() first.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskFilePath: {
+              type: "string",
+              description: "Path to task file",
+            },
+          },
+          required: ["taskFilePath"],
         },
       },
       {
@@ -297,12 +312,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
   try {
     switch (name) {
       // Navigation tools
-      case "Start": {
-        const result = engine.start({
+      case "Init": {
+        const result = engine.init({
           taskFilePath: args.taskFilePath,
           workflowType: args.workflowType,
           description: args.description,
           stepId: args.stepId,
+        });
+        return jsonResponse(result);
+      }
+
+      case "Start": {
+        const result = engine.start({
+          taskFilePath: args.taskFilePath,
         });
         return jsonResponse(result);
       }
@@ -584,4 +606,4 @@ await server.connect(transport);
 
 console.error(`Navigator MCP Server v3 running`);
 console.error(`  Project: ${PROJECT_ROOT}`);
-console.error(`  Tools: Start, Current, Next, ListWorkflows, Diagram, ...`);
+console.error(`  Tools: Init, Start, Current, Next, ListWorkflows, Diagram, ...`);

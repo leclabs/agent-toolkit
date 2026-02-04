@@ -123,63 +123,57 @@ describe("bug-hunt workflow JSON structure", () => {
 });
 
 // =============================================================================
-// Bug Hunt workflow - Engine navigation (new API: start/current/next)
+// Bug Hunt workflow - Engine navigation (new API: init/start/current/next)
 // =============================================================================
 
 describe("bug-hunt workflow engine navigation", () => {
   let store;
   let engine;
+  let tmpDir;
+  let taskFile;
 
   beforeEach(() => {
     store = new WorkflowStore();
     engine = new WorkflowEngine(store);
     store.loadDefinition("bug-hunt", loadBugHuntWorkflow());
+
+    tmpDir = mkdtempSync(join(tmpdir(), "nav-"));
+    taskFile = join(tmpDir, "1.json");
   });
 
-  it("should start at start node", () => {
-    const result = engine.start({ workflowType: "bug-hunt" });
+  it("should init at start node", () => {
+    const result = engine.init({ workflowType: "bug-hunt", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "start");
     assert.strictEqual(result.terminal, "start");
   });
 
-  it("should return outgoing edges from start", () => {
-    const result = engine.start({ workflowType: "bug-hunt" });
-    assert.strictEqual(result.edges.length, 1);
-    assert.strictEqual(result.edges[0].to, "triage");
+  it("should return instructions from init", () => {
+    const result = engine.init({ workflowType: "bug-hunt", taskFilePath: taskFile });
+    assert.ok(result.instructions.includes("## Queued"));
+    assert.ok(result.instructions.includes("→ Call Start()"));
   });
 
   it("should advance from start to triage", () => {
-    const tmpDir = mkdtempSync(join(tmpdir(), "nav-"));
-    const taskFile = join(tmpDir, "1.json");
-    writeFileSync(
-      taskFile,
-      JSON.stringify({
-        id: "1",
-        status: "in_progress",
-        metadata: { workflowType: "bug-hunt", currentStep: "start", retryCount: 0 },
-      })
-    );
-
-    const result = engine.next({ taskFilePath: taskFile, result: "passed" });
+    engine.init({ workflowType: "bug-hunt", taskFilePath: taskFile });
+    const result = engine.start({ taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "triage");
-    assert.strictEqual(result.node.agent, "Investigator");
-
-    rmSync(tmpDir, { recursive: true });
+    assert.ok(result.instructions.includes("Agent: Investigator"));
   });
 
-  it("should start at specific step with stepId", () => {
-    const result = engine.start({ workflowType: "bug-hunt", stepId: "write_fix" });
+  it("should init at specific step with stepId", () => {
+    const result = engine.init({ workflowType: "bug-hunt", stepId: "write_fix", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "write_fix");
-    assert.strictEqual(result.node.agent, "Developer");
-    assert.strictEqual(result.node.stage, "development");
+    assert.ok(result.instructions.includes("Agent: Developer"));
   });
 
-  it("should return multiple outgoing edges from fork node", () => {
-    const result = engine.start({ workflowType: "bug-hunt", stepId: "fork_investigate" });
+  it("should return fork instructions with branch list", () => {
+    const result = engine.init({ workflowType: "bug-hunt", stepId: "fork_investigate", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "fork_investigate");
-    assert.strictEqual(result.edges.length, 3);
-    const targets = result.edges.map((e) => e.to).sort();
-    assert.deepStrictEqual(targets, ["code_archaeology", "git_forensics", "reproduce"]);
+    assert.ok(result.instructions.includes("## Fork Investigation"));
+    assert.ok(result.instructions.includes("Branches:"));
+    assert.ok(result.instructions.includes("reproduce"));
+    assert.ok(result.instructions.includes("code_archaeology"));
+    assert.ok(result.instructions.includes("git_forensics"));
   });
 });
 

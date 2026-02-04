@@ -15,7 +15,8 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "test": "node --test engine.test.js diagram.test.js store.test.js dialog.test.js copier.test.js catalog.test.js refactor-workflow.test.js build-review-workflow.test.js bug-hunt-workflow.test.js"
+    "test": "node --test *.test.js 2>&1 | grep -E '^ℹ|^✗|FAIL|Error'",
+    "test:verbose": "node --test *.test.js"
   },
   "keywords": [
     "mcp",

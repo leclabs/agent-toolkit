@@ -1,7 +1,8 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { readFileSync } from "fs";
+import { readFileSync, mkdtempSync, rmSync } from "fs";
 import { join, dirname } from "path";
+import { tmpdir } from "os";
 import { fileURLToPath } from "url";
 import { WorkflowEngine } from "./engine.js";
 import { WorkflowStore, validateWorkflow } from "./store.js";
@@ -65,50 +66,62 @@ describe("build-review-murder-board workflow JSON structure", () => {
 });
 
 // =============================================================================
-// Build Review Workflows - Engine navigation
+// Build Review Workflows - Engine navigation (new API: init/start/current/next)
 // =============================================================================
 
 describe("build-review-quick workflow engine navigation", () => {
   let store;
   let engine;
+  let tmpDir;
+  let taskFile;
 
   beforeEach(() => {
     store = new WorkflowStore();
     engine = new WorkflowEngine(store);
     store.loadDefinition("build-review-quick", loadWorkflow("build-review-quick"));
+
+    tmpDir = mkdtempSync(join(tmpdir(), "nav-"));
+    taskFile = join(tmpDir, "1.json");
   });
 
-  it("should start at start node", () => {
-    const result = engine.start({ workflowType: "build-review-quick" });
+  it("should init at start node", () => {
+    const result = engine.init({ workflowType: "build-review-quick", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "start");
     assert.strictEqual(result.terminal, "start");
   });
 
-  it("should return outgoing edges", () => {
-    const result = engine.start({ workflowType: "build-review-quick" });
-    assert.ok(result.edges.length > 0);
+  it("should return instructions", () => {
+    const result = engine.init({ workflowType: "build-review-quick", taskFilePath: taskFile });
+    assert.ok(result.instructions.includes("## Queued"));
+    assert.ok(result.instructions.includes("→ Call Start()"));
   });
 });
 
 describe("build-review-murder-board workflow engine navigation", () => {
   let store;
   let engine;
+  let tmpDir;
+  let taskFile;
 
   beforeEach(() => {
     store = new WorkflowStore();
     engine = new WorkflowEngine(store);
     store.loadDefinition("build-review-murder-board", loadWorkflow("build-review-murder-board"));
+
+    tmpDir = mkdtempSync(join(tmpdir(), "nav-"));
+    taskFile = join(tmpDir, "1.json");
   });
 
-  it("should start at start node", () => {
-    const result = engine.start({ workflowType: "build-review-murder-board" });
+  it("should init at start node", () => {
+    const result = engine.init({ workflowType: "build-review-murder-board", taskFilePath: taskFile });
     assert.strictEqual(result.currentStep, "start");
     assert.strictEqual(result.terminal, "start");
   });
 
-  it("should return outgoing edges", () => {
-    const result = engine.start({ workflowType: "build-review-murder-board" });
-    assert.ok(result.edges.length > 0);
+  it("should return instructions", () => {
+    const result = engine.init({ workflowType: "build-review-murder-board", taskFilePath: taskFile });
+    assert.ok(result.instructions.includes("## Queued"));
+    assert.ok(result.instructions.includes("→ Call Start()"));
   });
 });
 

@@ -1,17 +1,13 @@
 /**
- * Workflow Engine (Simplified)
+ * Workflow Engine v3
  *
- * A graph walker with three operations:
+ * A graph walker that returns prose instructions to the orchestrator.
+ * The graph topology is private - orchestrator receives actionable context.
+ *
+ * Operations:
  * - start: Initialize workflow at any step
  * - current: Read current position (read-only)
  * - next: Advance based on outcome
- *
- * All nodes are treated uniformly. Fork/join semantics are determined by
- * the orchestrator based on node instructions and outgoing edges.
- *
- * Schema:
- * - nodes: { [id]: { type, name, description?, agent?, maxRetries?, ... } }
- * - edges: [{ from, to, on?, label? }]
  */
 
 import { existsSync, readFileSync, writeFileSync } from "fs";
@@ -104,11 +100,119 @@ function buildTaskSubject(taskId, userDescription, workflowType, stepId, termina
 }
 
 /**
- * Resolve ./ prefixed paths in prose text against sourceRoot
+ * Build prose instructions based on node type
+ *
+ * Composites workflow node fields into consistent prose format.
+ * No substitution - placeholders like {repository} are passed through
+ * for the Orchestrator to interpret.
+ *
+ * Format:
+ *   ## [{stage} · ]{name}
+ *   [Context: {context_files}]
+ *   {description}
+ *   [Agent: {agent}]
+ *   [Retries: {maxRetries}]
+ *   → {call-to-action}
  */
-function resolveProseRefs(text, sourceRoot) {
-  if (!text || !sourceRoot) return text;
-  return text.replace(/\.\/[\w\-./]+/g, (match) => join(sourceRoot, match));
+function buildInstructions(node, edges, workflowDef) {
+  if (!node) return null;
+
+  const name = node.name || "";
+  const desc = node.description || "";
+  const stage = node.stage || "";
+  const agent = node.agent || "";
+  const contextFiles = node.context_files || [];
+  const maxRetries = node.maxRetries || 0;
+
+  switch (node.type) {
+    case "start": {
+      const lines = ["## Queued"];
+      if (desc) lines.push("", desc);
+      lines.push("", "→ Call Start() to begin work.");
+      return lines.join("\n");
+    }
+
+    case "task":
+    case "gate": {
+      // Header with optional stage
+      const header = stage ? `## ${stage} · ${name}` : `## ${name}`;
+      const lines = [header];
+
+      // Context files (backward compat)
+      if (contextFiles.length > 0) {
+        lines.push("", `Context: ${contextFiles.join(", ")}`);
+      }
+
+      // Description (as-is, placeholders preserved)
+      if (desc) lines.push("", desc);
+
+      // Agent (backward compat)
+      if (agent) lines.push("", `Agent: ${agent}`);
+
+      // Retries
+      if (maxRetries > 0) lines.push(`Retries: ${maxRetries}`);
+
+      // Call to action
+      lines.push("", "→ Call Next(passed|failed) when complete.");
+
+      return lines.join("\n");
+    }
+
+    case "fork": {
+      const lines = [`## ${name || "Fork"}`];
+
+      if (desc) lines.push("", desc);
+
+      // Branch list
+      lines.push("", "Branches:");
+      edges.forEach((edge) => {
+        const targetNode = workflowDef.nodes[edge.to];
+        const branchName = targetNode?.name || edge.to;
+        lines.push(`- ${edge.to}: ${branchName}`);
+      });
+
+      // Join node
+      if (node.join) lines.push("", `Join: ${node.join}`);
+
+      // Max concurrency
+      if (node.maxConcurrency) lines.push(`Max concurrency: ${node.maxConcurrency}`);
+
+      // Call to action
+      lines.push("", "→ Create child tasks for each branch. Call Next(passed|failed) when all complete.");
+
+      return lines.join("\n");
+    }
+
+    case "join": {
+      const lines = [`## ${name || "Join"}`];
+      if (desc) lines.push("", desc);
+      lines.push("", "→ Evaluate branch results. Call Next(passed|failed).");
+      return lines.join("\n");
+    }
+
+    case "end": {
+      if (node.escalation === "hitl") {
+        const lines = ["## HITL"];
+        if (desc) lines.push("", desc);
+        lines.push("", "Human intervention required.");
+        return lines.join("\n");
+      }
+      if (node.result === "success") {
+        const lines = ["## Complete"];
+        if (desc) lines.push("", desc);
+        lines.push("", "Workflow finished successfully.");
+        return lines.join("\n");
+      }
+      // failure
+      const lines = ["## Failed"];
+      if (desc) lines.push("", desc);
+      lines.push("", "Workflow ended in failure.");
+      return lines.join("\n");
+    }
+
+    default:
+      return `Unknown node type: ${node.type}`;
+  }
 }
 
 /**
@@ -116,20 +220,28 @@ function resolveProseRefs(text, sourceRoot) {
  */
 function writeThrough(taskFilePath, response) {
   const resolved = expandPath(taskFilePath);
-  const task = readTaskFile(resolved);
-  if (!task) return;
+  let task = readTaskFile(resolved);
+
+  // Create task file if it doesn't exist
+  if (!task) {
+    task = {};
+  }
 
   const filenameId = basename(resolved, ".json");
   task.id = filenameId;
   task.metadata = { ...task.metadata, ...response.metadata };
 
   // Set status based on terminal state
-  if (!response.terminal || response.terminal === "start") {
+  // - "start": leave status unchanged (task stays pending until work begins)
+  // - null: work in progress
+  // - "success": completed
+  // - "hitl"/"failure": keep current status
+  if (response.terminal === null) {
     task.status = "in_progress";
   } else if (response.terminal === "success") {
     task.status = "completed";
   }
-  // HITL and failure keep current status
+  // "start", "hitl", "failure" keep current status
 
   // Update subject
   task.subject = buildTaskSubject(
@@ -140,12 +252,13 @@ function writeThrough(taskFilePath, response) {
     response.terminal
   );
 
-  // Update activeForm
+  // Update activeForm from step name
+  const stepName = response.metadata.stepName || response.currentStep;
   task.activeForm = response.terminal === "success"
     ? "Completed"
     : response.terminal === "hitl" || response.terminal === "failure"
       ? "HITL - Needs help"
-      : response.node?.name || response.currentStep;
+      : stepName;
 
   writeFileSync(resolved, JSON.stringify(task, null, 2));
 }
@@ -153,25 +266,20 @@ function writeThrough(taskFilePath, response) {
 /**
  * Build response shape (same for all three operations)
  */
-function buildResponse(workflowType, stepId, node, edges, sourceRoot, description, retryCount = 0) {
+function buildResponse(workflowType, stepId, node, edges, workflowDef, description, retryCount = 0) {
+  const terminal = getTerminalType(node);
+  const instructions = buildInstructions(node, edges, workflowDef);
+
   return {
     currentStep: stepId,
-    node: node ? {
-      type: node.type,
-      name: node.name || stepId,
-      description: resolveProseRefs(node.description, sourceRoot) || null,
-      instructions: resolveProseRefs(node.instructions, sourceRoot) || null,
-      agent: node.agent || null,
-      stage: node.stage || null,
-      maxRetries: node.maxRetries || 0,
-    } : null,
-    edges: edges || [],
-    terminal: getTerminalType(node),
+    instructions,
+    terminal,
     metadata: {
       workflowType,
       currentStep: stepId,
       retryCount,
       userDescription: description || null,
+      stepName: node?.name || stepId,
     },
   };
 }
@@ -268,15 +376,35 @@ export class WorkflowEngine {
   }
 
   /**
-   * Start: Initialize workflow on task at any step
+   * Init: Initialize workflow on task, or return current state if already initialized
+   * - If no workflow attached → initialize at start node, task stays pending
+   * - If already initialized → return current step instructions
    */
-  start({ taskFilePath, workflowType, description, stepId }) {
+  init({ taskFilePath, workflowType, description, stepId }) {
+    if (!taskFilePath) {
+      throw new Error("taskFilePath is required");
+    }
+
+    // Check if task already has workflow metadata
+    const existingTask = readTaskFile(taskFilePath);
+    if (existingTask?.metadata?.workflowType && existingTask?.metadata?.currentStep) {
+      // Already initialized - return current state (delegate to current behavior)
+      const { workflowType: wfType, currentStep, retryCount = 0, userDescription } = existingTask.metadata;
+      const def = this.getWorkflow(wfType);
+      const node = def.nodes[currentStep];
+      if (!node) {
+        throw new Error(`Step '${currentStep}' not found in workflow '${wfType}'`);
+      }
+      const edges = this.getOutgoingEdges(wfType, currentStep);
+      return buildResponse(wfType, currentStep, node, edges, def, userDescription, retryCount);
+    }
+
+    // New initialization
     if (!workflowType) {
-      throw new Error("workflowType is required");
+      throw new Error("workflowType is required for new initialization");
     }
 
     const def = this.getWorkflow(workflowType);
-    const sourceRoot = this.store.getSourceRoot?.(workflowType) || null;
 
     // Default to start node if no stepId provided
     const targetStepId = stepId || this.findStartNode(workflowType);
@@ -287,11 +415,62 @@ export class WorkflowEngine {
     }
 
     const edges = this.getOutgoingEdges(workflowType, targetStepId);
-    const response = buildResponse(workflowType, targetStepId, targetNode, edges, sourceRoot, description, 0);
+    const response = buildResponse(workflowType, targetStepId, targetNode, edges, def, description, 0);
 
-    if (taskFilePath) {
-      writeThrough(taskFilePath, response);
+    writeThrough(taskFilePath, response);
+
+    return response;
+  }
+
+  /**
+   * Start: Begin work - advance from start node to first real step
+   * - Sets task to in_progress
+   * - Returns first actionable step instructions
+   */
+  start({ taskFilePath }) {
+    if (!taskFilePath) {
+      throw new Error("taskFilePath is required");
     }
+
+    const task = readTaskFile(taskFilePath);
+    if (!task) {
+      throw new Error(`Task file not found: ${taskFilePath}`);
+    }
+
+    const { workflowType, currentStep, userDescription } = task.metadata || {};
+    if (!workflowType || !currentStep) {
+      throw new Error("Task has no workflow metadata. Use Init to initialize first.");
+    }
+
+    const def = this.getWorkflow(workflowType);
+    const currentNode = def.nodes[currentStep];
+
+    if (!currentNode) {
+      throw new Error(`Step '${currentStep}' not found in workflow '${workflowType}'`);
+    }
+
+    // If not at start node, just return current (idempotent)
+    if (currentNode.type !== "start") {
+      const edges = this.getOutgoingEdges(workflowType, currentStep);
+      return buildResponse(workflowType, currentStep, currentNode, edges, def, userDescription, task.metadata?.retryCount || 0);
+    }
+
+    // Advance from start node to first real step
+    const transition = this.evaluateTransition(workflowType, currentStep, "passed", 0);
+
+    if (!transition.nextStep) {
+      throw new Error("No outgoing edge from start node");
+    }
+
+    const nextNode = def.nodes[transition.nextStep];
+    if (!nextNode) {
+      throw new Error(`Next step '${transition.nextStep}' not found in workflow`);
+    }
+
+    const edges = this.getOutgoingEdges(workflowType, transition.nextStep);
+    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, def, userDescription, 0);
+
+    writeThrough(taskFilePath, response);
 
     return response;
   }
@@ -311,11 +490,10 @@ export class WorkflowEngine {
 
     const { workflowType, currentStep, retryCount = 0, userDescription } = task.metadata || {};
     if (!workflowType || !currentStep) {
-      throw new Error("Task has no workflow metadata. Use Start to initialize.");
+      throw new Error("Task has no workflow metadata. Use Init to initialize.");
     }
 
     const def = this.getWorkflow(workflowType);
-    const sourceRoot = this.store.getSourceRoot?.(workflowType) || null;
     const node = def.nodes[currentStep];
 
     if (!node) {
@@ -323,7 +501,7 @@ export class WorkflowEngine {
     }
 
     const edges = this.getOutgoingEdges(workflowType, currentStep);
-    return buildResponse(workflowType, currentStep, node, edges, sourceRoot, userDescription, retryCount);
+    return buildResponse(workflowType, currentStep, node, edges, def, userDescription, retryCount);
   }
 
   /**
@@ -344,11 +522,10 @@ export class WorkflowEngine {
 
     const { workflowType, currentStep, retryCount = 0, userDescription } = task.metadata || {};
     if (!workflowType || !currentStep) {
-      throw new Error("Task has no workflow metadata. Use Start to initialize.");
+      throw new Error("Task has no workflow metadata. Use Init to initialize.");
     }
 
     const def = this.getWorkflow(workflowType);
-    const sourceRoot = this.store.getSourceRoot?.(workflowType) || null;
 
     // Evaluate transition
     const transition = this.evaluateTransition(workflowType, currentStep, result, retryCount);
@@ -376,7 +553,7 @@ export class WorkflowEngine {
     }
 
     const edges = this.getOutgoingEdges(workflowType, transition.nextStep);
-    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, sourceRoot, userDescription, newRetryCount);
+    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, def, userDescription, newRetryCount);
 
     if (taskFilePath) {
       writeThrough(taskFilePath, response);

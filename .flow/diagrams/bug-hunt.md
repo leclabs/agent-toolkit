@@ -25,9 +25,9 @@ flowchart TD
 
     start --> triage
     triage --> fork_investigate
-    fork_investigate -->|Branch: reproduce| reproduce
-    fork_investigate -->|Branch: code archaeology| code_archaeology
-    fork_investigate -->|Branch: git forensics| git_forensics
+    fork_investigate -->|Try to trigger the bug| reproduce
+    fork_investigate -->|Trace code paths related to symptoms| code_archaeology
+    fork_investigate -->|Check recent commits and git blame| git_forensics
     reproduce --> join_investigate
     code_archaeology --> join_investigate
     git_forensics --> join_investigate
@@ -61,15 +61,15 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage         | Step                | Name                | Agent           | Instructions                                                                                                                                        |
-| ------------- | ------------------- | ------------------- | --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------- |
-| planning      | triage              | Triage Report       | 🔍 Investigator | Parse the vague report. Extract symptoms, affected area, timing, severity. Form 2-3 hypotheses to test.                                             |
-| investigation | reproduce           | Reproduce Bug       | 🧪 Tester       | Try to trigger the bug. Document exact reproduction steps, environment, and observed vs expected behavior.                                          |
-| investigation | code_archaeology    | Code Archaeology    | 🔍 Investigator | Trace the code paths related to the reported symptoms. Map data flow, identify suspect modules, check edge cases.                                   |
-| investigation | git_forensics       | Git Forensics       | 🔍 Investigator | Check recent commits touching affected areas. Run git blame on suspect files. Look for correlated changes or regressions.                           |
-| planning      | synthesize          | Synthesize Findings | 🏛️ Architect    | Combine findings from all investigation tracks into a root cause analysis. Identify the most likely cause, supporting evidence, and a fix strategy. |
-| development   | write_fix           | Write Fix           | 🔧 Developer    | Implement the fix with minimal changes                                                                                                              |
-| development   | add_regression_test | Add Regression Test | 🧪 Tester       | Write a test that would have caught this bug                                                                                                        |
-| verification  | verify_fix          | Verify Fix          | 🧪 Tester       | Run tests, verify fix addresses root cause                                                                                                          |
-| delivery      | lint_format         | Lint & Format       | 🔧 Developer    | Run lint and format checks. Auto-fix issues where possible.                                                                                         |
-| delivery      | commit              | Commit Changes      | 🔧 Developer    | Commit the fix and regression test with a descriptive message                                                                                       |
+| Stage | Step | Name | Agent | Instructions |
+|-------|------|------|-------|--------------|
+| planning | triage | Triage Report | 🔍 Investigator | Parse the vague report. Extract symptoms, affected area, timing, severity. Form 2-3 hypotheses to test. |
+| investigation | reproduce | Reproduce Bug | 🧪 Tester | Try to trigger the bug. Document exact reproduction steps, environment, and observed vs expected behavior. |
+| investigation | code_archaeology | Code Archaeology | 🔍 Investigator | Trace the code paths related to the reported symptoms. Map data flow, identify suspect modules, check edge cases. |
+| investigation | git_forensics | Git Forensics | 🔍 Investigator | Check recent commits touching affected areas. Run git blame on suspect files. Look for correlated changes or regressions. |
+| planning | synthesize | Synthesize Findings | 🏛️ Architect | Combine findings from all investigation tracks into a root cause analysis. Identify the most likely cause, supporting evidence, and a fix strategy. |
+| development | write_fix | Write Fix | 🔧 Developer | Implement the fix with minimal changes |
+| development | add_regression_test | Add Regression Test | 🧪 Tester | Write a test that would have caught this bug |
+| verification | verify_fix | Verify Fix | 🧪 Tester | Run tests, verify fix addresses root cause |
+| delivery | lint_format | Lint & Format | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible. |
+| delivery | commit | Commit Changes | 🔧 Developer | Commit the fix and regression test with a descriptive message |
