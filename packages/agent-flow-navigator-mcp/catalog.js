@@ -6,6 +6,11 @@
  */
 
 /**
+ * Schema version for API responses
+ */
+const SCHEMA_VERSION = 3;
+
+/**
  * Build a workflow summary from workflow content
  * @param {string} fileId - File name without .json extension
  * @param {Object} content - Workflow content from JSON
@@ -99,7 +104,7 @@ export function buildAgentSelectionOptions(agents) {
  */
 export function buildCatalogResponse(workflows, agents = []) {
   return {
-    schemaVersion: 3,
+    schemaVersion: SCHEMA_VERSION,
     workflows,
     workflowSelectionOptions: buildCatalogSelectionOptions(workflows),
     agents,
@@ -113,7 +118,7 @@ export function buildCatalogResponse(workflows, agents = []) {
  */
 export function buildEmptyCatalogResponse() {
   return {
-    schemaVersion: 3,
+    schemaVersion: SCHEMA_VERSION,
     workflows: [],
     workflowSelectionOptions: [],
     agents: [],

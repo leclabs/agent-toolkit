@@ -1,39 +1,10 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert";
 import { WorkflowEngine, getTerminalType, readTaskFile } from "./engine.js";
+import { WorkflowStore } from "./store.js";
 import { writeFileSync, mkdirSync, rmSync } from "fs";
 import { join } from "path";
 import { tmpdir } from "os";
-
-/**
- * Minimal WorkflowStore for testing
- */
-class WorkflowStore {
-  constructor() {
-    this.workflows = new Map();
-    this.sources = new Map();
-    this.sourceRoots = new Map();
-  }
-
-  loadDefinition(id, definition, source = "catalog", sourceRoot = null) {
-    this.workflows.set(id, definition);
-    this.sources.set(id, source);
-    if (sourceRoot) this.sourceRoots.set(id, sourceRoot);
-    return id;
-  }
-
-  getDefinition(id) {
-    return this.workflows.get(id);
-  }
-
-  getSource(id) {
-    return this.sources.get(id);
-  }
-
-  getSourceRoot(id) {
-    return this.sourceRoots.get(id);
-  }
-}
 
 // =============================================================================
 // Helper: Simple workflow for testing

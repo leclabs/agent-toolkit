@@ -60,12 +60,21 @@ const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
 
 /**
+ * Schema version for API responses
+ */
+const SCHEMA_VERSION = 3;
+
+/**
  * Load external workflows from a directory
+ * @param {string} dirPath - Directory path to load from
+ * @param {string} sourceRoot - Root path for resolving ./ context_files
+ * @returns {{loaded: string[], errors: Array<{id: string, error: string}>}} Loaded IDs and any errors
  */
 function loadExternalWorkflows(dirPath, sourceRoot) {
-  if (!existsSync(dirPath)) return [];
+  if (!existsSync(dirPath)) return { loaded: [], errors: [] };
 
   const loaded = [];
+  const errors = [];
   const names = readdirSync(dirPath);
 
   for (const name of names) {
@@ -85,9 +94,11 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
         if (validateWorkflow(id, content)) {
           store.loadDefinition(id, content, "external", sourceRoot);
           loaded.push(id);
+        } else {
+          errors.push({ id, error: "invalid schema" });
         }
       } catch (e) {
-        console.error(`Error loading external workflow ${id}: ${e.message}`);
+        errors.push({ id, error: e.message });
       }
       continue;
     }
@@ -102,14 +113,16 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
         if (validateWorkflow(id, content)) {
           store.loadDefinition(id, content, "external", sourceRoot);
           loaded.push(id);
+        } else {
+          errors.push({ id, error: "invalid schema" });
         }
       } catch (e) {
-        console.error(`Error loading external workflow ${id}: ${e.message}`);
+        errors.push({ id, error: e.message });
       }
     }
   }
 
-  return loaded;
+  return { loaded, errors };
 }
 
 // Initialize server
@@ -350,7 +363,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const filter = args.source || (hasProject ? "project" : "all");
         const workflows = store.listWorkflows(filter);
         return jsonResponse({
-          schemaVersion: 3,
+          schemaVersion: SCHEMA_VERSION,
           workflows,
           filter,
           hasProjectWorkflows: hasProject,
@@ -428,7 +441,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return jsonResponse({
-          schemaVersion: 3,
+          schemaVersion: SCHEMA_VERSION,
           copied,
           errors: errors.length > 0 ? errors : undefined,
           path: WORKFLOWS_PATH,
@@ -476,7 +489,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return jsonResponse({
-          schemaVersion: 3,
+          schemaVersion: SCHEMA_VERSION,
           copied,
           errors: errors.length > 0 ? errors : undefined,
           path: targetDir,
@@ -488,8 +501,11 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           const pathArg = resolve(args.path);
           const dirPath = args.sourceRoot ? pathArg : join(pathArg, ".flow", "workflows");
           const root = args.sourceRoot ? resolve(args.sourceRoot) : pathArg;
-          const loaded = loadExternalWorkflows(dirPath, root);
-          return jsonResponse({ loaded: loaded.length });
+          const result = loadExternalWorkflows(dirPath, root);
+          return jsonResponse({
+            loaded: result.loaded.length,
+            errors: result.errors.length > 0 ? result.errors : undefined,
+          });
         }
 
         if (!existsSync(WORKFLOWS_PATH)) {
@@ -593,7 +609,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (error) {
     return jsonResponse({
-      schemaVersion: 3,
+      schemaVersion: SCHEMA_VERSION,
       error: error.message,
       tool: name,
       args,

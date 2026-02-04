@@ -45,7 +45,6 @@
     "types.d.ts"
   ],
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.25.3",
-    "zod": "^3.22.4"
+    "@modelcontextprotocol/sdk": "^1.25.3"
   }
 }

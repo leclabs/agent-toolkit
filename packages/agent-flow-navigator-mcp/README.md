@@ -40,20 +40,25 @@ Add to your `.mcp.json`:
 Navigator works with the [flow plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) to provide structured workflow execution:
 
 1. **Initialize workflows** -- Copy workflow templates to your project with `CopyWorkflows`
-2. **Start a task** -- Use `Start` with a workflow type and description
-3. **Follow the flow** -- Use `Current` to read the current step and what to do
-4. **Advance on completion** -- Use `Next` with `passed` or `failed` to move forward
+2. **Initialize a task** -- Use `Init` with a workflow type and description
+3. **Start the task** -- Use `Start` to advance from the start node to the first real step
+4. **Follow the flow** -- Use `Current` to read the current step and what to do
+5. **Advance on completion** -- Use `Next` with `passed` or `failed` to move forward
 
 ```
 User: "Add dark mode support"
   ↓
-Start(taskFilePath, workflowType: "feature-development", description: "Add dark mode support")
+Init(taskFilePath, workflowType: "feature-development", description: "Add dark mode support")
   ↓
-Navigator returns: currentStep: "parse_requirements", node: { agent: "Planner", ... }
+Navigator returns: currentStep: "start", terminal: "start", instructions: "→ Call Start()"
+  ↓
+Start(taskFilePath)
+  ↓
+Navigator returns: currentStep: "parse_requirements", instructions: "Agent: Planner..."
   ↓
 Agent executes step, then calls Next(taskFilePath, result: "passed")
   ↓
-Navigator returns: currentStep: "explore_codebase", node: { agent: "Explore", ... }
+Navigator returns: currentStep: "explore_codebase", instructions: "Agent: Explore..."
   ↓
 ... continues through workflow ...
 ```
@@ -62,11 +67,12 @@ Navigator returns: currentStep: "explore_codebase", node: { agent: "Explore", ..
 
 ### Navigation Tools
 
-| Tool      | Description                                    |
-| --------- | ---------------------------------------------- |
-| `Start`   | Initialize workflow on task at any step        |
-| `Current` | Read current workflow position (read-only)     |
-| `Next`    | Advance workflow based on step outcome         |
+| Tool      | Description                                              |
+| --------- | -------------------------------------------------------- |
+| `Init`    | Initialize workflow on task (idempotent)                 |
+| `Start`   | Begin work - advance from start node to first real step  |
+| `Current` | Read current workflow position (read-only)               |
+| `Next`    | Advance workflow based on step outcome                   |
 
 ### Management Tools
 
@@ -80,16 +86,24 @@ Navigator returns: currentStep: "explore_codebase", node: { agent: "Explore", ..
 | `ListCatalog`    | List workflows and agents available in the catalog        |
 | `LoadWorkflows`  | Load workflows at runtime from project or external plugin |
 
+### Init
+
+Initialize a workflow on a task. Idempotent: returns current state if already initialized. Task stays pending until `Start()` is called.
+
+| Parameter      | Type   | Description                                         |
+| -------------- | ------ | --------------------------------------------------- |
+| `taskFilePath` | string | Path to task file (writes workflow state)           |
+| `workflowType` | string | Workflow ID (required for new init, e.g., "feature-development") |
+| `description`  | string | User's task description                             |
+| `stepId`       | string | Start at specific step (for mid-flow recovery or child tasks) |
+
 ### Start
 
-Initialize a workflow on a task. Returns current step info and outgoing edges.
+Begin work - advance from start node to first real step. Sets task to in_progress. Requires `Init()` first.
 
-| Parameter      | Type   | Description                                     |
-| -------------- | ------ | ----------------------------------------------- |
-| `taskFilePath` | string | Path to task file (writes workflow state)       |
-| `workflowType` | string | Workflow ID (required, e.g., "feature-development") |
-| `description`  | string | User's task description                         |
-| `stepId`       | string | Start at specific step (for mid-flow recovery)  |
+| Parameter      | Type   | Description                |
+| -------------- | ------ | -------------------------- |
+| `taskFilePath` | string | Path to task file (required) |
 
 ### Current
 

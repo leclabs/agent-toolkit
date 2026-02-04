@@ -15,9 +15,11 @@ import { homedir } from "os";
 import { basename, join } from "path";
 
 /**
- * Expand tilde to home directory
+ * Expand tilde (~) to user's home directory
+ * @param {string} p - Path that may contain tilde
+ * @returns {string} Path with tilde expanded
  */
-function expandPath(p) {
+export function expandPath(p) {
   if (!p) return p;
   if (p.startsWith("~/")) return join(homedir(), p.slice(2));
   if (p === "~") return homedir();
@@ -68,6 +70,12 @@ export function getTerminalType(node) {
 }
 
 /**
+ * Result values for workflow transitions
+ */
+export const RESULT_PASSED = "passed";
+export const RESULT_FAILED = "failed";
+
+/**
  * Workflow emoji mapping for task subjects
  */
 const WORKFLOW_EMOJIS = {
@@ -79,12 +87,23 @@ const WORKFLOW_EMOJIS = {
   "quick-task": "⚡",
   "ui-reconstruction": "🎨",
   "test-coverage": "🧪",
+  "batch-process": "📦",
+  "build-review-murder-board": "⚔️",
+  "build-review-quick": "👀",
+  refactor: "♻️",
 };
 
 /**
- * Build formatted task subject for write-through
+ * Build formatted task subject for write-through persistence
+ * @param {string} taskId - Task identifier
+ * @param {string} userDescription - User's task description
+ * @param {string} workflowType - Workflow identifier
+ * @param {string} stepId - Current step identifier
+ * @param {string|null} terminal - Terminal type if at end node
+ * @param {boolean} isChildBranch - Whether this is a child branch task
+ * @returns {string} Formatted task subject
  */
-function buildTaskSubject(taskId, userDescription, workflowType, stepId, terminal, isChildBranch = false) {
+export function buildTaskSubject(taskId, userDescription, workflowType, stepId, terminal, isChildBranch = false) {
   const emoji = WORKFLOW_EMOJIS[workflowType] || "";
   const line1 = `#${taskId} ${userDescription}${emoji ? ` ${emoji}` : ""}`;
 
@@ -117,8 +136,13 @@ function buildTaskSubject(taskId, userDescription, workflowType, stepId, termina
  *   [Agent: {agent}]
  *   [Retries: {maxRetries}]
  *   → {call-to-action}
+ *
+ * @param {Object} node - Workflow node definition
+ * @param {Array} edges - Outgoing edges from this node
+ * @param {Object} workflowDef - Full workflow definition
+ * @returns {string|null} Prose instructions or null if no node
  */
-function buildInstructions(node, edges, workflowDef) {
+export function buildInstructions(node, edges, workflowDef) {
   if (!node) return null;
 
   const name = node.name || "";
@@ -544,6 +568,10 @@ export class WorkflowEngine {
 
     const def = this.getWorkflow(workflowType);
     const currentNode = def.nodes[currentStep];
+
+    if (!currentNode) {
+      throw new Error(`Current step '${currentStep}' not found in workflow '${workflowType}'`);
+    }
 
     // Handle fork->join advancement
     // When Next() is called on a fork node, advance to the associated join first

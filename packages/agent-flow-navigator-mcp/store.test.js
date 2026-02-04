@@ -121,6 +121,27 @@ describe("validateWorkflow", () => {
     };
     assert.strictEqual(validateWorkflow("test", workflow), false);
   });
+
+  it("should return false for fork edge that targets its own join directly", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+        },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_test" },
+        { from: "fork_test", to: "join_test" }, // Invalid: fork edge directly to its own join
+        { from: "join_test", to: "end" },
+      ],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
 });
 
 describe("WorkflowStore", () => {

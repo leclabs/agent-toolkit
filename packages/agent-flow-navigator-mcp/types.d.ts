@@ -188,8 +188,8 @@ export interface NavigationResponse {
   currentStep: string;
   /** Prose instructions for the orchestrator - context-specific based on node type */
   instructions: string;
-  /** Terminal type if at start/end node */
-  terminal: "start" | "success" | "hitl" | "failure" | null;
+  /** Terminal type if at start/end/join node */
+  terminal: "start" | "success" | "hitl" | "failure" | "join" | null;
   /** Metadata for task storage */
   metadata: {
     workflowType: string;
