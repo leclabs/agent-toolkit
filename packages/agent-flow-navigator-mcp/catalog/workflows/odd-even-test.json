@@ -1,0 +1,61 @@
+{
+  "id": "odd-even-test",
+  "name": "Odd/Even Test",
+  "description": "Test workflow demonstrating fork with single branch, retry logic. Compute determines if task ID is odd/even, check fails odd tasks (with retries) and passes even tasks.",
+  "nodes": {
+    "start": {
+      "type": "start",
+      "name": "Start",
+      "description": "Begin odd/even test"
+    },
+    "fork_tasks": {
+      "type": "fork",
+      "name": "Fork Tasks",
+      "join": "join_tasks",
+      "maxConcurrency": 3
+    },
+    "compute": {
+      "type": "task",
+      "name": "Compute Parity",
+      "description": "Determine if the task ID is odd or even. Store the result.",
+      "agent": "Bash",
+      "stage": "investigation"
+    },
+    "check": {
+      "type": "gate",
+      "name": "Check Parity",
+      "description": "Verify parity. FAIL if task ID is odd, PASS if task ID is even.",
+      "maxRetries": 3,
+      "stage": "verification"
+    },
+    "join_tasks": {
+      "type": "join",
+      "name": "Join Tasks",
+      "fork": "fork_tasks"
+    },
+    "end_success": {
+      "type": "end",
+      "result": "success",
+      "name": "Complete",
+      "description": "All tasks processed"
+    },
+    "hitl_failed": {
+      "type": "end",
+      "result": "blocked",
+      "escalation": "hitl",
+      "name": "Max Retries Exceeded",
+      "description": "Odd task failed after max retries"
+    }
+  },
+  "edges": [
+    { "from": "start", "to": "fork_tasks" },
+    { "from": "fork_tasks", "to": "compute", "label": "Process task" },
+    { "from": "compute", "to": "check", "on": "passed" },
+    { "from": "check", "to": "join_tasks", "on": "passed" },
+    { "from": "check", "to": "compute", "on": "failed", "label": "Retry" },
+    { "from": "check", "to": "hitl_failed", "on": "failed", "label": "Max retries exceeded" },
+    { "from": "join_tasks", "to": "end_success", "on": "passed" },
+    { "from": "join_tasks", "to": "hitl_failed", "on": "failed" },
+    { "from": "hitl_failed", "to": "join_tasks", "on": "passed", "label": "Human resolved" }
+  ]
+}

@@ -276,21 +276,28 @@ function writeThrough(taskFilePath, response) {
 /**
  * Build response shape (same for all three operations)
  */
-function buildResponse(workflowType, stepId, node, edges, workflowDef, description, retryCount = 0) {
+function buildResponse(workflowType, stepId, node, edges, workflowDef, description, retryCount = 0, retrySourceGate = null) {
   const terminal = getTerminalType(node);
   const instructions = buildInstructions(node, edges, workflowDef);
+
+  const metadata = {
+    workflowType,
+    currentStep: stepId,
+    retryCount,
+    userDescription: description || null,
+    stepName: node?.name || stepId,
+  };
+
+  // Track which gate initiated the retry loop
+  if (retrySourceGate) {
+    metadata.retrySourceGate = retrySourceGate;
+  }
 
   return {
     currentStep: stepId,
     instructions,
     terminal,
-    metadata: {
-      workflowType,
-      currentStep: stepId,
-      retryCount,
-      userDescription: description || null,
-      stepName: node?.name || stepId,
-    },
+    metadata,
   };
 }
 
@@ -530,7 +537,7 @@ export class WorkflowEngine {
       throw new Error(`Task file not found: ${taskFilePath}`);
     }
 
-    const { workflowType, currentStep, retryCount = 0, userDescription } = task.metadata || {};
+    const { workflowType, currentStep, retryCount = 0, userDescription, retrySourceGate = null } = task.metadata || {};
     if (!workflowType || !currentStep) {
       throw new Error("Task has no workflow metadata. Use Init to initialize.");
     }
@@ -558,7 +565,7 @@ export class WorkflowEngine {
         error: transition.error || "no_transition",
         currentStep,
         result,
-        metadata: { workflowType, currentStep, retryCount, userDescription },
+        metadata: { workflowType, currentStep, retryCount, userDescription, retrySourceGate },
       };
     }
 
@@ -567,16 +574,29 @@ export class WorkflowEngine {
       throw new Error(`Next step '${transition.nextStep}' not found in workflow`);
     }
 
-    // Compute new retry count
+    // Compute new retry count and retry source gate
     let newRetryCount = retryCount;
+    let newRetrySourceGate = retrySourceGate;
+
     if (transition.action === "retry") {
+      // Gate failed, entering retry loop - track which gate initiated it
       newRetryCount = transition.newRetryCount;
-    } else if (transition.resetRetries) {
+      newRetrySourceGate = currentStep;
+    } else if (currentStep === retrySourceGate && result === "passed") {
+      // Successfully passed the gate that initiated the retry - reset
       newRetryCount = 0;
+      newRetrySourceGate = null;
+    } else if (retrySourceGate && currentStep !== retrySourceGate) {
+      // In a retry loop, passing through intermediate step - preserve retry state
+      // Don't reset, keep tracking the retry
+    } else if (transition.resetRetries && !retrySourceGate) {
+      // Normal transition, no active retry loop - reset
+      newRetryCount = 0;
+      newRetrySourceGate = null;
     }
 
     const edges = this.getOutgoingEdges(workflowType, transition.nextStep);
-    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, def, userDescription, newRetryCount);
+    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, def, userDescription, newRetryCount, newRetrySourceGate);
 
     if (taskFilePath) {
       writeThrough(taskFilePath, response);

@@ -133,12 +133,26 @@ When instructions include \`Branches:\` (fork node):
      metadata: {parentTaskId: "{parentId}", branchStep: "{branch_id}"}
    )
    \`\`\`
-3. **Initialize branches** - \`Init(childTaskFilePath, workflowType, stepId="{branch_id}")\` then \`Start(childTaskFilePath)\`
+3. **Initialize branches via Navigator** (REQUIRED - enables state tracking):
+   \`\`\`
+   Init(childTaskFilePath, workflowType, stepId="{branch_id}")
+   Start(childTaskFilePath)  # Advances child, marks in_progress
+   \`\`\`
 4. **Track forkState** - \`TaskUpdate(parentId, metadata: {forkState: {branch_id: childTaskId}})\`
-5. **Execute branches** - Launch subagents in parallel
-6. **Evaluate results** - When all done, decide pass/fail
-7. **Advance through join** - \`Next(parentTaskFilePath, result)\`
-8. **Clean up** - \`TaskUpdate(childId, status: "deleted")\` for each child
+5. **Execute branches with concurrency control**:
+   - Read \`Max concurrency: N\` from instructions
+   - Launch first N branches in parallel
+   - As each completes, launch next pending branch
+   - Continue until all branches complete
+   - Track: \`active\` (running), \`pending\` (queued), \`completed\` (done)
+6. **Advance each child through Navigator** - After each branch completes:
+   - Success: \`Next(childTaskFilePath, result: "passed")\` → child marked completed at join
+   - Failure: \`Next(childTaskFilePath, result: "failed")\` → triggers retry/escalation
+7. **Evaluate all results** - When all children complete, decide overall pass/fail
+8. **Advance parent through join** - \`Next(parentTaskFilePath, result)\`
+9. **Clean up** - \`TaskUpdate(childId, status: "deleted")\` for each child
+
+**Critical**: Skipping step 3 (Navigator Init/Start) breaks workflow state tracking on children.
 
 ## Delegation Protocol
 

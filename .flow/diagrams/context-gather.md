@@ -8,10 +8,10 @@ Toy workflow demonstrating fork/join. Fans out into three parallel information-g
 flowchart TD
     start(("Start"))
     fork_gather(["Fork Gather"])
-    system_info["System Information<br/><small>🔍 Investigator</small>"]
+    system_info["System Information<br/><small>🔍 Bash</small>"]
     weather_info["Weather Report<br/><small>📋 Planner</small>"]
-    repo_info["Repository Information<br/><small>🔍 Investigator</small>"]
-    repo_analyze["Analyze Repository<br/><small>👀 Reviewer</small>"]
+    repo_info["Repository Information<br/><small>🔍 Bash</small>"]
+    repo_analyze["Analyze Repository<br/><small>👀 Bash</small>"]
     join_gather(["Join Gather"])
     summarize["Summarize Context<br/><small>🏛️ Architect</small>"]
     end_success[["Context Gathered"]]
@@ -47,8 +47,8 @@ flowchart TD
 
 | Stage | Step | Name | Agent | Instructions |
 |-------|------|------|-------|--------------|
-| investigation | system_info | System Information | 🔍 Investigator | Gather system information: OS, architecture, CPU, memory, disk, shell, environment. Run uname, hostname, and similar commands. |
+| investigation | system_info | System Information | 🔍 Bash | Run `uname -a` and return the output. |
 | investigation | weather_info | Weather Report | 📋 Planner | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast. |
-| investigation | repo_info | Repository Information | 🔍 Investigator | Gather information about the current git repository: remote URL, branch, recent commits, language breakdown, directory structure overview, and package metadata. |
-| investigation | repo_analyze | Analyze Repository | 👀 Reviewer | Analyze the repository structure and health: test coverage status, dependency freshness, code organization patterns, and any notable architectural decisions. |
+| investigation | repo_info | Repository Information | 🔍 Bash | Run `git remote -v` and return the output. |
+| investigation | repo_analyze | Analyze Repository | 👀 Bash | Run `git log --oneline -3` and return the output. |
 | planning | summarize | Summarize Context | 🏛️ Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |

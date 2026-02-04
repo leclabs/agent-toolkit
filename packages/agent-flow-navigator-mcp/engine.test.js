@@ -90,6 +90,24 @@ const forkWorkflow = {
   ],
 };
 
+// Workflow with retry loop to prior step (gate -> task on failed)
+const retryLoopWorkflow = {
+  nodes: {
+    start: { type: "start" },
+    compute: { type: "task", name: "Compute" },
+    check: { type: "gate", name: "Check", maxRetries: 2 },
+    end_success: { type: "end", result: "success" },
+    end_hitl: { type: "end", result: "failure", escalation: "hitl" },
+  },
+  edges: [
+    { from: "start", to: "compute" },
+    { from: "compute", to: "check", on: "passed" },
+    { from: "check", to: "end_success", on: "passed" },
+    { from: "check", to: "compute", on: "failed" },
+    { from: "check", to: "end_hitl", on: "failed" },
+  ],
+};
+
 // =============================================================================
 // getTerminalType
 // =============================================================================
@@ -414,6 +432,57 @@ describe("WorkflowEngine.next", () => {
 
     const result = engine.next({ taskFilePath: taskFile, result: "passed" }); // work -> end_success
     assert.strictEqual(result.metadata.retryCount, 0);
+  });
+
+  it("preserves retryCount through retry loop to prior step", () => {
+    store.loadDefinition("retry-loop", retryLoopWorkflow);
+    engine.init({ workflowType: "retry-loop", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> compute
+
+    // First pass through compute -> check
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // compute -> check
+
+    // First failure at check - should retry back to compute (retryCount: 0 -> 1)
+    let result = engine.next({ taskFilePath: taskFile, result: "failed" }); // check -> compute
+    assert.strictEqual(result.currentStep, "compute");
+    assert.strictEqual(result.metadata.retryCount, 1);
+    assert.strictEqual(result.metadata.retrySourceGate, "check");
+
+    // Pass through compute again - retryCount should be preserved
+    result = engine.next({ taskFilePath: taskFile, result: "passed" }); // compute -> check
+    assert.strictEqual(result.currentStep, "check");
+    assert.strictEqual(result.metadata.retryCount, 1); // NOT reset to 0!
+    assert.strictEqual(result.metadata.retrySourceGate, "check");
+
+    // Second failure at check - should retry (retryCount: 1 -> 2)
+    result = engine.next({ taskFilePath: taskFile, result: "failed" }); // check -> compute
+    assert.strictEqual(result.currentStep, "compute");
+    assert.strictEqual(result.metadata.retryCount, 2);
+
+    // Pass through compute again
+    result = engine.next({ taskFilePath: taskFile, result: "passed" }); // compute -> check
+    assert.strictEqual(result.currentStep, "check");
+    assert.strictEqual(result.metadata.retryCount, 2); // preserved
+
+    // Third failure at check - should escalate to HITL (maxRetries: 2 exceeded)
+    result = engine.next({ taskFilePath: taskFile, result: "failed" }); // check -> end_hitl
+    assert.strictEqual(result.currentStep, "end_hitl");
+    assert.strictEqual(result.terminal, "hitl");
+  });
+
+  it("resets retryCount when gate passes after retries", () => {
+    store.loadDefinition("retry-loop", retryLoopWorkflow);
+    engine.init({ workflowType: "retry-loop", taskFilePath: taskFile });
+    engine.start({ taskFilePath: taskFile }); // start -> compute
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // compute -> check
+    engine.next({ taskFilePath: taskFile, result: "failed" }); // check -> compute (retry 1)
+    engine.next({ taskFilePath: taskFile, result: "passed" }); // compute -> check
+
+    // Now pass the check - retryCount should reset
+    const result = engine.next({ taskFilePath: taskFile, result: "passed" }); // check -> end_success
+    assert.strictEqual(result.currentStep, "end_success");
+    assert.strictEqual(result.metadata.retryCount, 0);
+    assert.strictEqual(result.metadata.retrySourceGate, undefined);
   });
 
   it("persists state to task file", () => {
