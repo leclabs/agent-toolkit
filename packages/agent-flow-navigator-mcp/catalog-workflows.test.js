@@ -12,7 +12,7 @@ import assert from "node:assert";
 import { validateWorkflow } from "./store.js";
 import { buildWorkflowSummary } from "./catalog.js";
 import { generateDiagram } from "./diagram.js";
-import { createTestContext, cleanupTestContext, loadCatalogWorkflow } from "./test-helpers.js";
+import { createTestContext, loadCatalogWorkflow } from "./test-helpers.js";
 
 // =============================================================================
 // Define all catalog workflows to test
@@ -161,9 +161,7 @@ for (const workflowConfig of CATALOG_WORKFLOWS) {
 
       it("should support currentStep highlighting", () => {
         // Find first non-terminal step
-        const stepId = Object.entries(workflow.nodes).find(
-          ([, n]) => n.type === "task" || n.type === "gate"
-        )?.[0];
+        const stepId = Object.entries(workflow.nodes).find(([, n]) => n.type === "task" || n.type === "gate")?.[0];
         if (stepId) {
           const diagram = generateDiagram(workflow, stepId);
           assert.ok(diagram.includes(`class ${stepId} currentStep`), "should highlight current step");
