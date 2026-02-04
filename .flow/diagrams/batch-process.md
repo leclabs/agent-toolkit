@@ -38,8 +38,8 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| planning | analyze_items | Analyze Items | 📋 Planner | Parse the user's input to extract the list of items to process. Return a structured list. |
-| development | process_item | Process Item | 🔧 Developer | Process a single item. The item context is provided by the orchestrator. Analyze, transform, or validate the item as needed. |
-| planning | summarize | Summarize Results | 🏛️ Architect | Combine results from all processed items into a final summary report. |
+| Stage       | Step          | Name              | Agent        | Instructions                                                                                                                 |
+| ----------- | ------------- | ----------------- | ------------ | ---------------------------------------------------------------------------------------------------------------------------- |
+| planning    | analyze_items | Analyze Items     | 📋 Planner   | Parse the user's input to extract the list of items to process. Return a structured list.                                    |
+| development | process_item  | Process Item      | 🔧 Developer | Process a single item. The item context is provided by the orchestrator. Analyze, transform, or validate the item as needed. |
+| planning    | summarize     | Summarize Results | 🏛️ Architect | Combine results from all processed items into a final summary report.                                                        |

@@ -39,7 +39,7 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| investigation | compute | Compute Parity | Bash | Determine if the task ID is odd or even. Store the result. |
-| verification | check | Check Parity | - | Verify parity. FAIL if task ID is odd, PASS if task ID is even. |
+| Stage         | Step    | Name           | Agent | Instructions                                                    |
+| ------------- | ------- | -------------- | ----- | --------------------------------------------------------------- |
+| investigation | compute | Compute Parity | Bash  | Determine if the task ID is odd or even. Store the result.      |
+| verification  | check   | Check Parity   | -     | Verify parity. FAIL if task ID is odd, PASS if task ID is even. |

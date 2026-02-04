@@ -39,9 +39,9 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| development | build | Build | 🔧 Developer | Implement or revise the changes based on requirements or review feedback |
-| verification | review | Murder Board Review | 👀 Reviewer | Independent high-scrutiny review. Reviewer must be a fresh agent with no prior context of this build. Approval requires confidence score >= 80. |
-| delivery | lint_format | Lint & Format | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible. |
-| delivery | commit | Commit Changes | 🔧 Developer | Commit all changes with a descriptive message summarizing the work done |
+| Stage        | Step        | Name                | Agent        | Instructions                                                                                                                                    |
+| ------------ | ----------- | ------------------- | ------------ | ----------------------------------------------------------------------------------------------------------------------------------------------- |
+| development  | build       | Build               | 🔧 Developer | Implement or revise the changes based on requirements or review feedback                                                                        |
+| verification | review      | Murder Board Review | 👀 Reviewer  | Independent high-scrutiny review. Reviewer must be a fresh agent with no prior context of this build. Approval requires confidence score >= 80. |
+| delivery     | lint_format | Lint & Format       | 🔧 Developer | Run lint and format checks. Auto-fix issues where possible.                                                                                     |
+| delivery     | commit      | Commit Changes      | 🔧 Developer | Commit all changes with a descriptive message summarizing the work done                                                                         |

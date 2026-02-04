@@ -87,3 +87,4 @@ When helpful, provide a component diagram:
 - Need stakeholder input on trade-offs
 - Scope requires decomposition first
 </checklist>
+```

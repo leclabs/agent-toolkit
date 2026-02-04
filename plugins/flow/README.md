@@ -15,6 +15,7 @@ Create a feature-development task for adding user authentication
 ```
 
 Claude will:
+
 1. Call `TaskCreate` to create a tracked task
 2. Call `Start` to initialize workflow state
 3. Execute the workflow loop (`Current` → work → `Next`), delegating to subagents
@@ -37,22 +38,22 @@ Navigator MCP provides the workflow state machine. Claude calls it directly—no
 
 14 workflows ship in the catalog:
 
-| Workflow | Purpose |
-|----------|---------|
-| feature-development | Full lifecycle for building features |
-| bug-fix | Structured bug fixing with regression testing |
-| bug-hunt | Parallel investigation (reproduce, archaeology, forensics) |
-| agile-task | General development tasks with review |
-| quick-task | Minimal workflow for small tasks |
-| test-coverage | Analyze gaps and improve test coverage |
-| refactor | Codebase restructuring (Functional Core / Imperative Shell) |
-| ui-reconstruction | Reconstruct UI from screenshots |
-| context-optimization | Optimize agent context and instructions |
-| build-review-murder-board | Iterative build with 80% approval threshold |
-| build-review-quick | Iterative build with basic sanity check |
-| context-gather | Parallel context gathering |
-| execute | Single-step: just do the thing |
-| hitl-test | Minimal workflow for testing HITL recovery |
+| Workflow                  | Purpose                                                     |
+| ------------------------- | ----------------------------------------------------------- |
+| feature-development       | Full lifecycle for building features                        |
+| bug-fix                   | Structured bug fixing with regression testing               |
+| bug-hunt                  | Parallel investigation (reproduce, archaeology, forensics)  |
+| agile-task                | General development tasks with review                       |
+| quick-task                | Minimal workflow for small tasks                            |
+| test-coverage             | Analyze gaps and improve test coverage                      |
+| refactor                  | Codebase restructuring (Functional Core / Imperative Shell) |
+| ui-reconstruction         | Reconstruct UI from screenshots                             |
+| context-optimization      | Optimize agent context and instructions                     |
+| build-review-murder-board | Iterative build with 80% approval threshold                 |
+| build-review-quick        | Iterative build with basic sanity check                     |
+| context-gather            | Parallel context gathering                                  |
+| execute                   | Single-step: just do the thing                              |
+| hitl-test                 | Minimal workflow for testing HITL recovery                  |
 
 Use `ListWorkflows()` to see available workflows, `Diagram(workflowType)` to visualize.
 
@@ -110,15 +111,15 @@ flowchart TB
 
 Flow delegates work to specialized subagents via Claude's Task tool:
 
-| Agent | Role |
-|-------|------|
-| Planner | Parse requirements, explore code, create plans |
-| Developer | Write code, fix issues, implement features |
-| Tester | Write tests, run tests, verify behavior |
-| Reviewer | Review plans and code for quality |
-| Investigator | Reproduce bugs, trace issues, find root causes |
-| Context Engineer | Optimize context, analyze documentation |
-| Architect | Design system architecture, review builds |
+| Agent            | Role                                           |
+| ---------------- | ---------------------------------------------- |
+| Planner          | Parse requirements, explore code, create plans |
+| Developer        | Write code, fix issues, implement features     |
+| Tester           | Write tests, run tests, verify behavior        |
+| Reviewer         | Review plans and code for quality              |
+| Investigator     | Reproduce bugs, trace issues, find root causes |
+| Context Engineer | Optimize context, analyze documentation        |
+| Architect        | Design system architecture, review builds      |
 
 ## Human-in-the-Loop (HITL)
 

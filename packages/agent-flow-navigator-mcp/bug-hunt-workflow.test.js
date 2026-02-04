@@ -1,6 +1,6 @@
 import { describe, it, beforeEach } from "node:test";
 import assert from "node:assert";
-import { readFileSync, writeFileSync, mkdtempSync, rmSync } from "fs";
+import { readFileSync, mkdtempSync } from "fs";
 import { join, dirname } from "path";
 import { tmpdir } from "os";
 import { fileURLToPath } from "url";

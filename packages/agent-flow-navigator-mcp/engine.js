@@ -300,7 +300,16 @@ function writeThrough(taskFilePath, response) {
 /**
  * Build response shape (same for all three operations)
  */
-function buildResponse(workflowType, stepId, node, edges, workflowDef, description, retryCount = 0, retrySourceGate = null) {
+function buildResponse(
+  workflowType,
+  stepId,
+  node,
+  edges,
+  workflowDef,
+  description,
+  retryCount = 0,
+  retrySourceGate = null
+) {
   const terminal = getTerminalType(node);
   const instructions = buildInstructions(node, edges, workflowDef);
 
@@ -353,8 +362,8 @@ export class WorkflowEngine {
   getOutgoingEdges(workflowType, stepId) {
     const def = this.getWorkflow(workflowType);
     return def.edges
-      .filter(e => e.from === stepId)
-      .map(e => ({ to: e.to, on: e.on || null, label: e.label || null }));
+      .filter((e) => e.from === stepId)
+      .map((e) => ({ to: e.to, on: e.on || null, label: e.label || null }));
   }
 
   /**
@@ -382,8 +391,8 @@ export class WorkflowEngine {
     }
 
     const maxRetries = currentNode?.maxRetries || 0;
-    const unconditional = edges.filter(e => !e.on);
-    const matching = edges.filter(e => e.on === result);
+    const unconditional = edges.filter((e) => !e.on);
+    const matching = edges.filter((e) => e.on === result);
 
     // No result - use unconditional edge
     if (!result && unconditional.length > 0) {
@@ -391,8 +400,8 @@ export class WorkflowEngine {
     }
 
     // Separate retry edges (to non-end) from escalation edges (to end)
-    const retryEdges = matching.filter(e => def.nodes[e.to]?.type !== "end");
-    const escalateEdges = matching.filter(e => def.nodes[e.to]?.type === "end");
+    const retryEdges = matching.filter((e) => def.nodes[e.to]?.type !== "end");
+    const escalateEdges = matching.filter((e) => def.nodes[e.to]?.type === "end");
 
     // Failed with both retry and escalation paths
     if (result === "failed" && retryEdges.length > 0 && escalateEdges.length > 0) {
@@ -493,7 +502,15 @@ export class WorkflowEngine {
     // If not at start node, just return current (idempotent)
     if (currentNode.type !== "start") {
       const edges = this.getOutgoingEdges(workflowType, currentStep);
-      return buildResponse(workflowType, currentStep, currentNode, edges, def, userDescription, task.metadata?.retryCount || 0);
+      return buildResponse(
+        workflowType,
+        currentStep,
+        currentNode,
+        edges,
+        def,
+        userDescription,
+        task.metadata?.retryCount || 0
+      );
     }
 
     // Advance from start node to first real step
@@ -624,7 +641,16 @@ export class WorkflowEngine {
     }
 
     const edges = this.getOutgoingEdges(workflowType, transition.nextStep);
-    const response = buildResponse(workflowType, transition.nextStep, nextNode, edges, def, userDescription, newRetryCount, newRetrySourceGate);
+    const response = buildResponse(
+      workflowType,
+      transition.nextStep,
+      nextNode,
+      edges,
+      def,
+      userDescription,
+      newRetryCount,
+      newRetrySourceGate
+    );
 
     if (taskFilePath) {
       writeThrough(taskFilePath, response);

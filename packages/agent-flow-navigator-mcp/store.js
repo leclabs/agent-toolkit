@@ -55,7 +55,9 @@ export function validateWorkflow(id, content) {
     // Branch edges cannot target their own join directly (degenerate branch)
     for (const edge of branchEdges) {
       if (edge.to === forkDef.join) {
-        console.error(`Invalid workflow ${id}: fork '${forkId}' edge cannot target its own join '${forkDef.join}' directly`);
+        console.error(
+          `Invalid workflow ${id}: fork '${forkId}' edge cannot target its own join '${forkDef.join}' directly`
+        );
         return false;
       }
     }

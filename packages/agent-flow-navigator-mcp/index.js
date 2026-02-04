@@ -142,7 +142,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       // Navigation tools - explicit, single-purpose
       {
         name: "Init",
-        description: "Initialize workflow on task. Idempotent: returns current state if already initialized. Task stays pending until Start() is called.",
+        description:
+          "Initialize workflow on task. Idempotent: returns current state if already initialized. Task stays pending until Start() is called.",
         inputSchema: {
           type: "object",
           properties: {
@@ -168,7 +169,8 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "Start",
-        description: "Begin work - advance from start node to first real step. Sets task to in_progress. Requires Init() first.",
+        description:
+          "Begin work - advance from start node to first real step. Sets task to in_progress. Requires Init() first.",
         inputSchema: {
           type: "object",
           properties: {

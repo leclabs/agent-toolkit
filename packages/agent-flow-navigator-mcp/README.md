@@ -67,12 +67,12 @@ Navigator returns: currentStep: "explore_codebase", instructions: "Agent: Explor
 
 ### Navigation Tools
 
-| Tool      | Description                                              |
-| --------- | -------------------------------------------------------- |
-| `Init`    | Initialize workflow on task (idempotent)                 |
-| `Start`   | Begin work - advance from start node to first real step  |
-| `Current` | Read current workflow position (read-only)               |
-| `Next`    | Advance workflow based on step outcome                   |
+| Tool      | Description                                             |
+| --------- | ------------------------------------------------------- |
+| `Init`    | Initialize workflow on task (idempotent)                |
+| `Start`   | Begin work - advance from start node to first real step |
+| `Current` | Read current workflow position (read-only)              |
+| `Next`    | Advance workflow based on step outcome                  |
 
 ### Management Tools
 
@@ -90,36 +90,36 @@ Navigator returns: currentStep: "explore_codebase", instructions: "Agent: Explor
 
 Initialize a workflow on a task. Idempotent: returns current state if already initialized. Task stays pending until `Start()` is called.
 
-| Parameter      | Type   | Description                                         |
-| -------------- | ------ | --------------------------------------------------- |
-| `taskFilePath` | string | Path to task file (writes workflow state)           |
+| Parameter      | Type   | Description                                                      |
+| -------------- | ------ | ---------------------------------------------------------------- |
+| `taskFilePath` | string | Path to task file (writes workflow state)                        |
 | `workflowType` | string | Workflow ID (required for new init, e.g., "feature-development") |
-| `description`  | string | User's task description                             |
-| `stepId`       | string | Start at specific step (for mid-flow recovery or child tasks) |
+| `description`  | string | User's task description                                          |
+| `stepId`       | string | Start at specific step (for mid-flow recovery or child tasks)    |
 
 ### Start
 
 Begin work - advance from start node to first real step. Sets task to in_progress. Requires `Init()` first.
 
-| Parameter      | Type   | Description                |
-| -------------- | ------ | -------------------------- |
+| Parameter      | Type   | Description                  |
+| -------------- | ------ | ---------------------------- |
 | `taskFilePath` | string | Path to task file (required) |
 
 ### Current
 
 Read current workflow position. Returns step info and outgoing edges without modifying state.
 
-| Parameter      | Type   | Description                |
-| -------------- | ------ | -------------------------- |
+| Parameter      | Type   | Description                  |
+| -------------- | ------ | ---------------------------- |
 | `taskFilePath` | string | Path to task file (required) |
 
 ### Next
 
 Advance workflow based on step outcome. Returns new step info and outgoing edges.
 
-| Parameter      | Type                 | Description                    |
-| -------------- | -------------------- | ------------------------------ |
-| `taskFilePath` | string               | Path to task file (required)   |
+| Parameter      | Type                 | Description                        |
+| -------------- | -------------------- | ---------------------------------- |
+| `taskFilePath` | string               | Path to task file (required)       |
 | `result`       | "passed" \| "failed" | Outcome of current step (required) |
 
 ### Diagram

@@ -45,10 +45,10 @@ flowchart TD
 
 ### Step Instructions
 
-| Stage | Step | Name | Agent | Instructions |
-|-------|------|------|-------|--------------|
-| investigation | system_info | System Information | 🔍 Bash | Run `uname -a` and return the output. |
-| investigation | weather_info | Weather Report | 📋 Planner | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast. |
-| investigation | repo_info | Repository Information | 🔍 Bash | Run `git remote -v` and return the output. |
-| investigation | repo_analyze | Analyze Repository | 👀 Bash | Run `git log --oneline -3` and return the output. |
-| planning | summarize | Summarize Context | 🏛️ Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |
+| Stage         | Step         | Name                   | Agent        | Instructions                                                                                                                                     |
+| ------------- | ------------ | ---------------------- | ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| investigation | system_info  | System Information     | 🔍 Bash      | Run `uname -a` and return the output.                                                                                                            |
+| investigation | weather_info | Weather Report         | 📋 Planner   | Get today's weather at the user's location. Use a web search or weather API to find current conditions, temperature, and forecast.               |
+| investigation | repo_info    | Repository Information | 🔍 Bash      | Run `git remote -v` and return the output.                                                                                                       |
+| investigation | repo_analyze | Analyze Repository     | 👀 Bash      | Run `git log --oneline -3` and return the output.                                                                                                |
+| planning      | summarize    | Summarize Context      | 🏛️ Architect | Combine findings from all three branches into a single context summary. Present system info, weather, and repo info in a clear, readable format. |

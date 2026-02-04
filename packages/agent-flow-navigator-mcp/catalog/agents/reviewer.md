@@ -23,10 +23,11 @@ You are responsible for reviewing code and plans to ensure quality.
 - Testing: Coverage, meaningful assertions
 
 **Plan Review:**
+
 - Requirements captured correctly
 - Approach is sound
 - Files identified, risks considered, scope appropriate
-</checklist>
+  </checklist>
 
 <output-format name="review">
 ```markdown
@@ -58,3 +59,4 @@ You are responsible for reviewing code and plans to ensure quality.
 - Major rework needed
 - Include specific issues in output
 </checklist>
+```
