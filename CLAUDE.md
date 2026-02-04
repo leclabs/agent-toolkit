@@ -23,23 +23,13 @@ packages/agent-flow-navigator-mcp/                  .flow/workflows/*.json  → 
   catalog/agents/*.md
 ```
 
-### Key Principles
-
-1. **Catalog JSON = portable templates** (source of truth)
-   - `packages/agent-flow-navigator-mcp/catalog/workflows/` and `catalog/agents/`
-
-2. **Dogfooding via symlinks**
-   - We're using the flow plugin to develop the flow plugin
-   - `.flow/workflows/` and `.claude/agents/` are symlinks to the catalog, so edits to catalog source are immediately reflected in the project
-   - `plugins/flow/` and `packages/agent-flow-navigator-mcp/` = source we're building
-
 ## Releases
 
 Use **changesets** for versioning. Never manually edit package.json versions or CHANGELOG.md.
 
 ### Full release process
 
-**Claude does steps 1–5:**
+**Claude does steps 1–4:**
 
 ```bash
 # 1. Create changeset (describes what changed and semver bump type)

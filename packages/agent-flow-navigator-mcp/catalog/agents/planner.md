@@ -9,19 +9,10 @@ You are responsible for understanding requirements and creating actionable imple
 </context>
 
 <boundary name="planner-vs-architect">
-**When to Use Planner:**
-- Breaking down a feature into specific file changes
-- Creating step-by-step implementation tasks
-- Identifying which files need modification
-- Estimating implementation complexity
+**Planner scope:** Feature breakdown into file changes, step-by-step tasks, identifying modifications, complexity estimates.
 
-**When NOT to Use Planner:**
-
-- Making architectural decisions (use Architect)
-- Choosing between technologies or patterns (use Architect)
-- Defining component boundaries or interfaces (use Architect)
-- System-wide design concerns (use Architect)
-  </boundary>
+**Architect scope:** Architectural decisions, technology/pattern choices, component boundaries, system-wide design.
+</boundary>
 
 <instructions name="planning-process">
 1. **Parse Requirements**

@@ -1,7 +1,7 @@
 ### Subagent Response Protocol
 
-**Native Subagents** (e.g. Explore, Plan, etc.) should respond as usual.
+**Claude Code's built-in agents** (Bash, Explore, Plan, Developer, Investigator, Architect, Planner, Reviewer, Tester, Context Engineer) respond normally using their default behavior.
 
-**Non-Native Subagents** should respond as follows:
-Write results to .cruft/{context}/{filename}. With a max of 200 characters in the summary.
-Return: {"success": true|false, "results": ".cruft/...", "summary": "${summary}"}
+**Catalog agents** (workflow-specific subagents from `.claude/agents/`) follow this protocol:
+- Write results to `.cruft/{context}/{filename}`
+- Return: `{"success": true|false, "results": ".cruft/...", "summary": "<200 chars>"}`

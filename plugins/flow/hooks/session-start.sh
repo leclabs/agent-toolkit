@@ -86,21 +86,7 @@ Task files live at: \`${HOME}/.claude/tasks/${TASK_LIST_ID}/{taskId}.json\`
 4. \`Start(taskFilePath)\` → advances from start node to first step, sets task to \`in_progress\`
 5. Init/Start/Next do write-through: updates subject, activeForm, description, metadata
 
-**Critical rules:**
-- **NEVER use Write/Edit to create task files** - TaskCreate does this automatically
-- **NEVER use Write/Edit to modify task files** - use TaskUpdate only
-- Navigator tools read/write workflow state to the task file automatically
-- TaskCreate, TaskUpdate, TaskList, TaskGet are NATIVE Claude Code tools - use them directly
-
-## Flow Tasks vs Regular Tasks
-
-**Flow tasks** have \`metadata.workflowType\` set. They MUST be advanced through Navigator:
-
-- **NEVER** mark a flow task completed with just \`TaskUpdate(status: completed)\`
-- **ALWAYS** advance flow tasks via \`Next(taskFilePath, result)\`
-- Navigator evaluates edges, handles retries, determines next step, updates task metadata
-
-**Regular tasks** (no workflowType) can be managed with TaskCreate/TaskUpdate directly.
+**Critical:** Navigator owns workflow state in task files. Use TaskCreate/TaskUpdate for task operations, never Write/Edit on task files.
 
 ## Workflow Execution Loop
 
@@ -122,37 +108,14 @@ For flow tasks, follow this loop:
 
 ## Fork/Join Handling
 
-When instructions include \`Branches:\` (fork node):
+When instructions show \`Branches:\`:
 
-1. **Read the branch list** - Instructions list each branch with its ID and description
-2. **Create child tasks with TaskCreate** (NATIVE tool, not Write):
-   \`\`\`
-   TaskCreate(
-     subject: "Branch: {branch_id}",
-     description: "{branch description from instructions}",
-     metadata: {parentTaskId: "{parentId}", branchStep: "{branch_id}"}
-   )
-   \`\`\`
-3. **Initialize branches via Navigator** (REQUIRED - enables state tracking):
-   \`\`\`
-   Init(childTaskFilePath, workflowType, stepId="{branch_id}")
-   Start(childTaskFilePath)  # Advances child, marks in_progress
-   \`\`\`
-4. **Track forkState** - \`TaskUpdate(parentId, metadata: {forkState: {branch_id: childTaskId}})\`
-5. **Execute branches with concurrency control**:
-   - Read \`Max concurrency: N\` from instructions
-   - Launch first N branches in parallel
-   - As each completes, launch next pending branch
-   - Continue until all branches complete
-   - Track: \`active\` (running), \`pending\` (queued), \`completed\` (done)
-6. **Advance each child through Navigator** - After each branch completes:
-   - Success: \`Next(childTaskFilePath, result: "passed")\` → child marked completed at join
-   - Failure: \`Next(childTaskFilePath, result: "failed")\` → triggers retry/escalation
-7. **Evaluate all results** - When all children complete, decide overall pass/fail
-8. **Advance parent through join** - \`Next(parentTaskFilePath, result)\`
-9. **Clean up** - \`TaskUpdate(childId, status: "deleted")\` for each child
+1. **Create child tasks**: \`TaskCreate(metadata: {parentTaskId, branchStep: branch_id})\`
+2. **Initialize each child**: \`Init(childPath, workflowType, stepId=branch_id)\` then \`Start(childPath)\`
+3. **Execute branches**: Respect \`Max concurrency: N\`, advance each via \`Next()\` on completion
+4. **Complete fork**: When all children finish, evaluate results and \`Next(parentPath, result)\`
 
-**Critical**: Skipping step 3 (Navigator Init/Start) breaks workflow state tracking on children.
+Navigator Init/Start on children is required for state tracking. Clean up children with \`TaskUpdate(status: "deleted")\` after join.
 
 ## Delegation Protocol
 
