@@ -526,9 +526,22 @@ export class WorkflowEngine {
     }
 
     const def = this.getWorkflow(workflowType);
+    const currentNode = def.nodes[currentStep];
 
-    // Evaluate transition
-    const transition = this.evaluateTransition(workflowType, currentStep, result, retryCount);
+    // Handle fork->join advancement
+    // When Next() is called on a fork node, advance to the associated join first
+    let effectiveStep = currentStep;
+    if (currentNode?.type === "fork" && currentNode.join) {
+      const joinNodeId = currentNode.join;
+      const joinNode = def.nodes[joinNodeId];
+      if (!joinNode) {
+        throw new Error(`Join node '${joinNodeId}' not found in workflow`);
+      }
+      effectiveStep = joinNodeId;
+    }
+
+    // Evaluate transition from effective step (fork advances to join first)
+    const transition = this.evaluateTransition(workflowType, effectiveStep, result, retryCount);
 
     if (!transition.nextStep) {
       return {
