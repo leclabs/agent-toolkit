@@ -68,18 +68,19 @@ npm run release
 
 After modifying files in `packages/agent-flow-navigator-mcp/` or `plugins/flow/`, **ask the user to restart the MCP server** before using any `/flow:*` skills (like `/flow:diagram`). The running server will have stale code until restarted.
 
-## Naming Hierarchy
+## Component Hierarchy
 
 ```
 agent-toolkit (marketplace)
-└── flow (plugin)
-    └── navigator (mcp)
+└── flow (plugin)          ← Orchestration ruleset via prompt injection
+    └── navigator (mcp)    ← FSM for workflow navigation
 ```
 
-| Component              | Name                                | Purpose                     |
-| ---------------------- | ----------------------------------- | --------------------------- |
-| Marketplace            | `agent-toolkit`                     | Collection of agent tools   |
-| Plugin                 | `flow`                              | Workflow orchestration      |
-| MCP Server flow config | `navigator`                         | Navigates through workflows |
-| MCP Server npm Package | `@leclabs/agent-flow-navigator-mcp` | Publishable MCP package     |
-| Skills / Commands      | `/flow:*`                           | User-facing commands        |
+| Component   | Name                                              | Purpose                                            |
+| ----------- | ------------------------------------------------- | -------------------------------------------------- |
+| Marketplace | `agent-toolkit`                                   | Collection of agent tools                          |
+| Plugin      | `flow`                                            | Orchestration ruleset (prompt injection)           |
+| MCP Server  | `navigator` / `@leclabs/agent-flow-navigator-mcp` | FSM (currently uses Claude Code task file schema)  |
+| Commands    | `/flow:*`                                         | User-facing Claude Code commands                   |
+
+**Inversion of control**: Traditional workflow engines use agents as tools. Navigator flips this - the AI orchestrator uses the FSM for navigation.
