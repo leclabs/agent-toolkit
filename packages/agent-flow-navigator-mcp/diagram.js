@@ -5,7 +5,7 @@
  * No I/O operations - file saving handled by MCP handler.
  */
 
-import { isTerminalNode, getTerminalType, toSubagentRef } from "./engine.js";
+import { isTerminalNode, getTerminalType } from "./engine.js";
 
 /**
  * Sanitize a label for mermaid flowcharts
@@ -135,8 +135,7 @@ export function generateDiagram(workflowDef, currentStep = null) {
   for (const [stepId, step] of stepEntries) {
     const stage = step.stage || "-";
     const name = step.name || stepId;
-    const agentRef = step.agent ? toSubagentRef(step.agent) : null;
-    const agent = agentRef ? [step.emoji, agentRef].filter(Boolean).join(" ") : "-";
+    const agent = step.agent ? [step.emoji, step.agent].filter(Boolean).join(" ") : "-";
     const instructions = step.instructions || step.description || "-";
     // Escape pipes in table cells
     const safeInstructions = instructions.replace(/\|/g, "\\|");

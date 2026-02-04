@@ -14,7 +14,7 @@ The catalog is a template library for browsing and copying — not auto-loaded a
 
 A Claude Code plugin that wraps Flow with an orchestration layer. Example: `plugins/flow/`.
 
-**Owns**: Skills, commands, rules, hooks, delegation protocol. Ships zero agents and zero pre-loaded workflows — consumers explicitly load their own.
+**Owns**: Rules, hooks, delegation protocol. Ships zero agents and zero pre-loaded workflows — consumers explicitly load their own.
 
 Maps the `agent` string from workflow nodes to concrete agent definitions (e.g., `Developer` → `agents/developer.md`). Different host plugins can wrap the same Navigator with different agent rosters and conventions.
 

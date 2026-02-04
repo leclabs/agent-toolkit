@@ -5,6 +5,8 @@
  * Actual file I/O handled by MCP handler.
  */
 
+import { SCHEMA_VERSION } from "./constants.js";
+
 /**
  * Build a workflow summary from workflow content
  * @param {string} fileId - File name without .json extension
@@ -99,7 +101,7 @@ export function buildAgentSelectionOptions(agents) {
  */
 export function buildCatalogResponse(workflows, agents = []) {
   return {
-    schemaVersion: 3,
+    schemaVersion: SCHEMA_VERSION,
     workflows,
     workflowSelectionOptions: buildCatalogSelectionOptions(workflows),
     agents,
@@ -113,7 +115,7 @@ export function buildCatalogResponse(workflows, agents = []) {
  */
 export function buildEmptyCatalogResponse() {
   return {
-    schemaVersion: 3,
+    schemaVersion: SCHEMA_VERSION,
     workflows: [],
     workflowSelectionOptions: [],
     agents: [],

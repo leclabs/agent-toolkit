@@ -1,5 +1,24 @@
 # @leclabs/agent-toolkit
 
+## 3.0.0
+
+### Major Changes
+
+- v3 API: Init/Start/Current/Next navigation model
+
+  **Breaking Changes:**
+  - Replace single `Navigate` tool with explicit `Init`, `Start`, `Current`, `Next` tools
+  - `Init` attaches workflow to task (idempotent, task stays pending)
+  - `Start` advances from start node to first step (sets task to in_progress)
+  - `Current` reads position without modifying state
+  - `Next` advances based on step outcome (passed/failed)
+
+  **Improvements:**
+  - Fork->join advancement: passing result on fork auto-advances through join
+  - Child tasks marked completed at join node
+  - Simplified codebase with deduplicated logic
+  - Documentation clarifies Navigator as FSM, Flow as orchestration ruleset
+
 ## 2.1.0
 
 ### Minor Changes

@@ -1,18 +1,23 @@
 #!/usr/bin/env node
 /**
- * Navigator MCP Server (Stateless) v2
+ * Navigator MCP Server v3
  *
  * Provides stateless workflow navigation for the flow plugin.
- * All task state is stored in Claude Code native /tasks via metadata.navigator.
+ * All task state is stored in Claude Code native /tasks via metadata.
  *
- * Tools:
- * - Navigate: Unified navigation - start, get current, or advance
+ * Navigation Tools (explicit, single-purpose):
+ * - Init: Initialize workflow on task (idempotent - returns current state if already initialized)
+ * - Start: Begin work - advance from start node to first real step
+ * - Current: Read current position (read-only)
+ * - Next: Advance based on outcome
+ *
+ * Management Tools:
  * - ListWorkflows: List available workflows
  * - Diagram: Generate mermaid diagram for workflow
  * - CopyWorkflows: Copy workflows from catalog to project
  * - CopyAgents: Copy agent templates from catalog to project
- * - LoadWorkflows: Load workflows from a directory at runtime (external plugins or project reload)
- * - ListCatalog: List workflows and agents available in catalog
+ * - LoadWorkflows: Load workflows at runtime
+ * - ListCatalog: List catalog contents
  */
 
 import { Server } from "@modelcontextprotocol/sdk/server/index.js";
@@ -26,9 +31,9 @@ import {
   generateFlowReadme,
   generateWorkflowsReadme,
   isValidWorkflowForCopy,
-  computeWorkflowsToCopy,
+  requireWorkflowIds,
   isValidAgentForCopy,
-  computeAgentsToCopy,
+  requireAgentIds,
 } from "./copier.js";
 import {
   buildWorkflowSummary,
@@ -37,6 +42,7 @@ import {
   buildCatalogResponse,
   buildEmptyCatalogResponse,
 } from "./catalog.js";
+import { SCHEMA_VERSION } from "./constants.js";
 import { readFileSync, existsSync, readdirSync, mkdirSync, writeFileSync, statSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { fileURLToPath } from "url";
@@ -55,16 +61,16 @@ const store = new WorkflowStore();
 const engine = new WorkflowEngine(store);
 
 /**
- * Load external workflows from a directory: flat {id}.json files
- * Used by the LoadWorkflows tool at runtime.
- * @param {string} dirPath - Directory containing {id}.json workflow files
+ * Load external workflows from a directory
+ * @param {string} dirPath - Directory path to load from
  * @param {string} sourceRoot - Root path for resolving ./ context_files
- * @returns {string[]} Array of loaded workflow IDs
+ * @returns {{loaded: string[], errors: Array<{id: string, error: string}>}} Loaded IDs and any errors
  */
 function loadExternalWorkflows(dirPath, sourceRoot) {
-  if (!existsSync(dirPath)) return [];
+  if (!existsSync(dirPath)) return { loaded: [], errors: [] };
 
   const loaded = [];
+  const errors = [];
   const names = readdirSync(dirPath);
 
   for (const name of names) {
@@ -84,9 +90,11 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
         if (validateWorkflow(id, content)) {
           store.loadDefinition(id, content, "external", sourceRoot);
           loaded.push(id);
+        } else {
+          errors.push({ id, error: "invalid schema" });
         }
       } catch (e) {
-        console.error(`Error loading external workflow ${id}: ${e.message}`);
+        errors.push({ id, error: e.message });
       }
       continue;
     }
@@ -101,18 +109,20 @@ function loadExternalWorkflows(dirPath, sourceRoot) {
         if (validateWorkflow(id, content)) {
           store.loadDefinition(id, content, "external", sourceRoot);
           loaded.push(id);
+        } else {
+          errors.push({ id, error: "invalid schema" });
         }
       } catch (e) {
-        console.error(`Error loading external workflow ${id}: ${e.message}`);
+        errors.push({ id, error: e.message });
       }
     }
   }
 
-  return loaded;
+  return { loaded, errors };
 }
 
 // Initialize server
-const server = new Server({ name: "navigator", version: "2.0.0" }, { capabilities: { tools: {} } });
+const server = new Server({ name: "navigator", version: "3.0.0" }, { capabilities: { tools: {} } });
 
 /**
  * Minimal JSON response
@@ -125,36 +135,83 @@ function jsonResponse(data) {
 server.setRequestHandler(ListToolsRequestSchema, async () => {
   return {
     tools: [
+      // Navigation tools - explicit, single-purpose
       {
-        name: "Navigate",
-        description: "Unified workflow navigation. Start a workflow, get current state, or advance to next step.",
+        name: "Init",
+        description:
+          "Initialize workflow on task. Idempotent: returns current state if already initialized. Task stays pending until Start() is called.",
         inputSchema: {
           type: "object",
           properties: {
             taskFilePath: {
               type: "string",
-              description: "Path to task file (for advance/current). Reads workflow state from task metadata.",
+              description: "Path to task file (writes workflow state)",
             },
-            workflowType: { type: "string", description: "Workflow ID (for start only, e.g., 'feature-development')" },
-            result: {
+            workflowType: {
               type: "string",
-              enum: ["passed", "failed"],
-              description: "Step result (for advance). Omit to just get current state.",
+              description: "Workflow ID (e.g., 'feature-development'). Required for new initialization.",
             },
-            description: { type: "string", description: "User's task description (for start)" },
-            autonomy: {
-              type: "boolean",
-              description:
-                "When true, auto-continue through stage boundary end nodes (non-HITL end nodes with outgoing edges).",
+            description: {
+              type: "string",
+              description: "User's task description",
             },
             stepId: {
               type: "string",
-              description:
-                "Start at a specific step instead of the beginning (mid-flow recovery). Only used when starting a workflow (no taskFilePath). Ignored during advance.",
+              description: "Start at specific step (for mid-flow recovery or child tasks)",
             },
           },
+          required: ["taskFilePath"],
         },
       },
+      {
+        name: "Start",
+        description:
+          "Begin work - advance from start node to first real step. Sets task to in_progress. Requires Init() first.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskFilePath: {
+              type: "string",
+              description: "Path to task file",
+            },
+          },
+          required: ["taskFilePath"],
+        },
+      },
+      {
+        name: "Current",
+        description: "Read current workflow position (read-only). Returns step info and outgoing edges.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskFilePath: {
+              type: "string",
+              description: "Path to task file",
+            },
+          },
+          required: ["taskFilePath"],
+        },
+      },
+      {
+        name: "Next",
+        description: "Advance workflow based on step outcome. Returns new step info and outgoing edges.",
+        inputSchema: {
+          type: "object",
+          properties: {
+            taskFilePath: {
+              type: "string",
+              description: "Path to task file",
+            },
+            result: {
+              type: "string",
+              enum: ["passed", "failed"],
+              description: "Outcome of current step",
+            },
+          },
+          required: ["taskFilePath", "result"],
+        },
+      },
+      // Management tools
       {
         name: "ListWorkflows",
         description: "List available workflows. Filters by source when project workflows exist.",
@@ -171,8 +228,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "SelectWorkflow",
-        description:
-          "Get workflow selection dialog for user interaction. Returns workflows with multi-pane dialog for AskUserQuestion.",
+        description: "Get workflow selection dialog for user interaction.",
         inputSchema: {
           type: "object",
           properties: {},
@@ -188,7 +244,7 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             currentStep: { type: "string", description: "Optional: highlight this step" },
             filePath: {
               type: "string",
-              description: "Optional: absolute path to save the diagram. Defaults to .flow/diagrams/{workflowType}.md",
+              description: "Optional: path to save diagram. Defaults to .flow/diagrams/{workflowType}.md",
             },
           },
           required: ["workflowType"],
@@ -196,15 +252,14 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
       },
       {
         name: "CopyWorkflows",
-        description:
-          "Copy workflows from catalog to project. Creates workflow directory with workflow.json, README.md, and step instruction files.",
+        description: "Copy workflows from catalog to project.",
         inputSchema: {
           type: "object",
           properties: {
             workflowIds: {
               type: "array",
               items: { type: "string" },
-              description: "Workflow IDs to copy. Required. Use ListCatalog to see available workflows.",
+              description: "Workflow IDs to copy. Use ListCatalog to see available.",
             },
           },
         },
@@ -218,37 +273,33 @@ server.setRequestHandler(ListToolsRequestSchema, async () => {
             agentIds: {
               type: "array",
               items: { type: "string" },
-              description: "Agent IDs to copy. Required. Use ListCatalog to see available agents.",
+              description: "Agent IDs to copy. Use ListCatalog to see available.",
             },
             targetDir: {
               type: "string",
-              description: "Target directory for agent files. Defaults to .claude/agents/",
+              description: "Target directory. Defaults to .claude/agents/",
             },
           },
         },
       },
       {
         name: "LoadWorkflows",
-        description:
-          "Load workflows at runtime. External plugins pass path + sourceRoot. For project workflows, pass workflowIds to load specific workflows from .flow/workflows/.",
+        description: "Load workflows at runtime from project or external plugin.",
         inputSchema: {
           type: "object",
           properties: {
             path: {
               type: "string",
-              description:
-                "Source root of an external plugin. Workflows are loaded from <path>/.flow/workflows/. When combined with sourceRoot, path is treated as a direct directory of workflow files instead.",
+              description: "Source root of external plugin. Workflows loaded from <path>/.flow/workflows/.",
             },
             sourceRoot: {
               type: "string",
-              description:
-                "Root path for resolving ./ context_files entries. Defaults to path. When provided, path is treated as a direct workflow directory instead of a source root.",
+              description: "Root for resolving ./ paths. When provided, path is treated as direct workflow directory.",
             },
             workflowIds: {
               type: "array",
               items: { type: "string" },
-              description:
-                "Specific workflow IDs to load from .flow/workflows/. Required when loading project workflows (no path). Omit to list available workflows without loading.",
+              description: "Workflow IDs to load from .flow/workflows/. Omit to list available.",
             },
           },
         },
@@ -271,33 +322,49 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 
   try {
     switch (name) {
-      case "Navigate": {
-        const result = engine.navigate({
+      // Navigation tools
+      case "Init": {
+        const result = engine.init({
           taskFilePath: args.taskFilePath,
           workflowType: args.workflowType,
-          result: args.result,
           description: args.description,
-          projectRoot: PROJECT_ROOT,
-          autonomy: args.autonomy,
           stepId: args.stepId,
         });
         return jsonResponse(result);
       }
 
+      case "Start": {
+        const result = engine.start({
+          taskFilePath: args.taskFilePath,
+        });
+        return jsonResponse(result);
+      }
+
+      case "Current": {
+        const result = engine.current({
+          taskFilePath: args.taskFilePath,
+        });
+        return jsonResponse(result);
+      }
+
+      case "Next": {
+        const result = engine.next({
+          taskFilePath: args.taskFilePath,
+          result: args.result,
+        });
+        return jsonResponse(result);
+      }
+
+      // Management tools
       case "ListWorkflows": {
-        // Default to project-only if project workflows exist
         const hasProject = store.hasProjectWorkflows();
         const filter = args.source || (hasProject ? "project" : "all");
         const workflows = store.listWorkflows(filter);
         return jsonResponse({
-          schemaVersion: 2,
+          schemaVersion: SCHEMA_VERSION,
           workflows,
           filter,
           hasProjectWorkflows: hasProject,
-          hint:
-            hasProject && filter === "project"
-              ? "Showing project workflows. Use source='all' to include catalog."
-              : undefined,
         });
       }
 
@@ -315,7 +382,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const source = store.getSource(args.workflowType);
         const markdown = generateDiagram(wfDef, args.currentStep);
 
-        // Save diagram to file (use provided path or default)
         const filePath = args.filePath || join(DIAGRAMS_PATH, `${args.workflowType}.md`);
         const fileDir = dirname(filePath);
         if (!existsSync(fileDir)) {
@@ -336,18 +402,15 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           mkdirSync(WORKFLOWS_PATH, { recursive: true });
         }
 
-        // Write README files
         writeFileSync(join(FLOW_PATH, "README.md"), generateFlowReadme());
         writeFileSync(join(WORKFLOWS_PATH, "README.md"), generateWorkflowsReadme());
 
-        const catalogFiles = readdirSync(catalogPath).filter((f) => f.endsWith(".json"));
-        const availableIds = catalogFiles.map((f) => f.replace(".json", ""));
-        const workflowIds = computeWorkflowsToCopy(args.workflowIds, availableIds);
+        requireWorkflowIds(args.workflowIds);
 
         const copied = [];
         const errors = [];
 
-        for (const id of workflowIds) {
+        for (const id of args.workflowIds) {
           const srcFile = join(catalogPath, `${id}.json`);
 
           if (!existsSync(srcFile)) {
@@ -362,12 +425,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
               continue;
             }
 
-            // Create workflow directory and write workflow.json
             const workflowDir = join(WORKFLOWS_PATH, id);
             mkdirSync(workflowDir, { recursive: true });
             writeFileSync(join(workflowDir, "workflow.json"), JSON.stringify(content, null, 2));
 
-            // Load into memory
             store.loadDefinition(id, content, "project", PROJECT_ROOT);
             copied.push(id);
           } catch (e) {
@@ -376,7 +437,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return jsonResponse({
-          schemaVersion: 2,
+          schemaVersion: SCHEMA_VERSION,
           copied,
           errors: errors.length > 0 ? errors : undefined,
           path: WORKFLOWS_PATH,
@@ -394,14 +455,12 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           mkdirSync(targetDir, { recursive: true });
         }
 
-        const catalogAgentFiles = readdirSync(catalogAgentsPath).filter((f) => f.endsWith(".md"));
-        const availableIds = catalogAgentFiles.map((f) => f.replace(".md", ""));
-        const agentIds = computeAgentsToCopy(args.agentIds, availableIds);
+        requireAgentIds(args.agentIds);
 
         const copied = [];
         const errors = [];
 
-        for (const id of agentIds) {
+        for (const id of args.agentIds) {
           const srcFile = join(catalogAgentsPath, `${id}.md`);
 
           if (!existsSync(srcFile)) {
@@ -412,7 +471,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           try {
             const content = readFileSync(srcFile, "utf-8");
             if (!isValidAgentForCopy(content)) {
-              errors.push({ id, error: "invalid agent template (missing frontmatter)" });
+              errors.push({ id, error: "invalid agent template" });
               continue;
             }
 
@@ -424,7 +483,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return jsonResponse({
-          schemaVersion: 3,
+          schemaVersion: SCHEMA_VERSION,
           copied,
           errors: errors.length > 0 ? errors : undefined,
           path: targetDir,
@@ -434,34 +493,19 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
       case "LoadWorkflows": {
         if (args.path) {
           const pathArg = resolve(args.path);
-          // With --source-root: path is a direct workflow directory (non-standard layout)
-          // Without: path is a source root, workflows in <path>/.flow/workflows/
           const dirPath = args.sourceRoot ? pathArg : join(pathArg, ".flow", "workflows");
           const root = args.sourceRoot ? resolve(args.sourceRoot) : pathArg;
-          const loaded = loadExternalWorkflows(dirPath, root);
+          const result = loadExternalWorkflows(dirPath, root);
           return jsonResponse({
-            schemaVersion: 2,
-            loaded,
-            source: "external",
-            sourceRoot: root,
-            path: dirPath,
+            loaded: result.loaded.length,
+            errors: result.errors.length > 0 ? result.errors : undefined,
           });
         }
 
-        // Project: require explicit workflowIds or list available
         if (!existsSync(WORKFLOWS_PATH)) {
-          return jsonResponse({
-            schemaVersion: 2,
-            available: [],
-            loaded: [],
-            source: "project",
-            path: WORKFLOWS_PATH,
-            hint: "No .flow/workflows/ directory found. Use /flow:setup to set up workflows.",
-          });
+          return jsonResponse({ available: [], hint: "Run CopyWorkflows first" });
         }
 
-        // Discover available workflows in both flat and directory formats
-        // Uses statSync to follow symlinks
         const availableMap = new Map();
         const names = readdirSync(WORKFLOWS_PATH);
         for (const name of names) {
@@ -472,12 +516,10 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
           } catch {
             continue;
           }
-          // Flat format: {id}.json
           if (stat.isFile() && name.endsWith(".json")) {
             availableMap.set(name.replace(".json", ""), fullPath);
             continue;
           }
-          // Directory format: {id}/workflow.json
           if (stat.isDirectory()) {
             const wfFile = join(fullPath, "workflow.json");
             if (existsSync(wfFile)) {
@@ -488,18 +530,9 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         const available = [...availableMap.keys()];
 
         if (!args.workflowIds || args.workflowIds.length === 0) {
-          // List only — don't load
-          return jsonResponse({
-            schemaVersion: 2,
-            available,
-            loaded: [],
-            source: "project",
-            path: WORKFLOWS_PATH,
-            hint: "Pass workflowIds to load specific workflows.",
-          });
+          return jsonResponse({ available, hint: "Pass workflowIds to load." });
         }
 
-        // Load only the requested workflows
         const loaded = [];
         const errors = [];
         for (const id of args.workflowIds) {
@@ -522,12 +555,8 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
         }
 
         return jsonResponse({
-          schemaVersion: 2,
-          available,
-          loaded,
+          loaded: loaded.length,
           errors: errors.length > 0 ? errors : undefined,
-          source: "project",
-          path: WORKFLOWS_PATH,
         });
       }
 
@@ -574,7 +603,7 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
     }
   } catch (error) {
     return jsonResponse({
-      schemaVersion: 2,
+      schemaVersion: SCHEMA_VERSION,
       error: error.message,
       tool: name,
       args,
@@ -585,7 +614,6 @@ server.setRequestHandler(CallToolRequestSchema, async (request) => {
 const transport = new StdioServerTransport();
 await server.connect(transport);
 
-console.error(`Navigator MCP Server v2 running (stateless)`);
+console.error(`Navigator MCP Server v3 running`);
 console.error(`  Project: ${PROJECT_ROOT}`);
-console.error(`  Catalog: template-only (use ListCatalog to browse, CopyWorkflows to install)`);
-console.error(`  Workflows: load via LoadWorkflows tool`);
+console.error(`  Tools: Init, Start, Current, Next, ListWorkflows, Diagram, ...`);

@@ -44,7 +44,6 @@ flowchart TD
     class end_success successStep
     class hitl_cannot_reproduce,hitl_fix_failed hitlStep
     class lint_format gateStep
-    class verify_fix currentStep
 ```
 
 ### Step Instructions

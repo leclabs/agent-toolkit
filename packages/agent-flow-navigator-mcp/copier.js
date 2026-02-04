@@ -67,7 +67,7 @@ Step instructions are generated automatically from:
 1. **workflow.json** - \`name\` and \`description\` fields for each step
 2. **Baseline patterns** - Default guidance based on step type (analyze, implement, test, etc.)
 
-The \`Navigate\` API returns \`stepInstructions\` with all this combined.
+The navigation APIs (Start/Current/Next) return \`node\` with the step's name, description, and instructions.
 
 ## Customizing Step Instructions
 
@@ -122,15 +122,14 @@ export function isValidWorkflowForCopy(content) {
 }
 
 /**
- * Compute which workflow IDs to copy
- * @param {string[]} requestedIds - Specifically requested workflow IDs (may be empty)
- * @returns {string[]} IDs to copy
+ * Validate that workflow IDs are provided
+ * @param {string[]} ids - Workflow IDs to validate
+ * @throws {Error} If ids is empty or not provided
  */
-export function computeWorkflowsToCopy(requestedIds) {
-  if (!requestedIds || requestedIds.length === 0) {
+export function requireWorkflowIds(ids) {
+  if (!ids || ids.length === 0) {
     throw new Error("workflowIds is required. Use ListCatalog to see available workflows, then pass specific IDs.");
   }
-  return requestedIds;
 }
 
 /**
@@ -143,13 +142,12 @@ export function isValidAgentForCopy(content) {
 }
 
 /**
- * Compute which agent IDs to copy
- * @param {string[]} requestedIds - Specifically requested agent IDs
- * @returns {string[]} IDs to copy
+ * Validate that agent IDs are provided
+ * @param {string[]} ids - Agent IDs to validate
+ * @throws {Error} If ids is empty or not provided
  */
-export function computeAgentsToCopy(requestedIds) {
-  if (!requestedIds || requestedIds.length === 0) {
+export function requireAgentIds(ids) {
+  if (!ids || ids.length === 0) {
     throw new Error("agentIds is required. Use ListCatalog to see available agents, then pass specific IDs.");
   }
-  return requestedIds;
 }

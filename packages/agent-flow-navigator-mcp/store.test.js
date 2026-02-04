@@ -30,6 +30,118 @@ describe("validateWorkflow", () => {
     const workflow = { nodes: {}, edges: "invalid" };
     assert.strictEqual(validateWorkflow("test", workflow), false);
   });
+
+  it("should return true for fork with valid maxConcurrency", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+          maxConcurrency: 5,
+        },
+        step_a: { type: "task", name: "A" },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [{ from: "fork_test", to: "step_a" }],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), true);
+  });
+
+  it("should return false for fork with zero maxConcurrency", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+          maxConcurrency: 0,
+        },
+        step_a: { type: "task", name: "A" },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+      },
+      edges: [{ from: "fork_test", to: "step_a" }],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
+
+  it("should return false for fork with negative maxConcurrency", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+          maxConcurrency: -1,
+        },
+        step_a: { type: "task", name: "A" },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+      },
+      edges: [{ from: "fork_test", to: "step_a" }],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
+
+  it("should return false for fork with non-integer maxConcurrency", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+          maxConcurrency: 2.5,
+        },
+        step_a: { type: "task", name: "A" },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+      },
+      edges: [{ from: "fork_test", to: "step_a" }],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
+
+  it("should return false for fork with string maxConcurrency", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+          maxConcurrency: "5",
+        },
+        step_a: { type: "task", name: "A" },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+      },
+      edges: [{ from: "fork_test", to: "step_a" }],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
+
+  it("should return false for fork edge that targets its own join directly", () => {
+    const workflow = {
+      nodes: {
+        start: { type: "start" },
+        fork_test: {
+          type: "fork",
+          name: "Fork",
+          join: "join_test",
+        },
+        join_test: { type: "join", name: "Join", fork: "fork_test" },
+        end: { type: "end", result: "success" },
+      },
+      edges: [
+        { from: "start", to: "fork_test" },
+        { from: "fork_test", to: "join_test" }, // Invalid: fork edge directly to its own join
+        { from: "join_test", to: "end" },
+      ],
+    };
+    assert.strictEqual(validateWorkflow("test", workflow), false);
+  });
 });
 
 describe("WorkflowStore", () => {

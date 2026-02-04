@@ -25,9 +25,9 @@ flowchart TD
 
     start --> triage
     triage --> fork_investigate
-    fork_investigate -->|Branch: reproduce| reproduce
-    fork_investigate -->|Branch: code archaeology| code_archaeology
-    fork_investigate -->|Branch: git forensics| git_forensics
+    fork_investigate -->|Try to trigger the bug| reproduce
+    fork_investigate -->|Trace code paths related to symptoms| code_archaeology
+    fork_investigate -->|Check recent commits and git blame| git_forensics
     reproduce --> join_investigate
     code_archaeology --> join_investigate
     git_forensics --> join_investigate

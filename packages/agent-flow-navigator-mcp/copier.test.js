@@ -4,9 +4,9 @@ import {
   generateFlowReadme,
   generateWorkflowsReadme,
   isValidWorkflowForCopy,
-  computeWorkflowsToCopy,
+  requireWorkflowIds,
   isValidAgentForCopy,
-  computeAgentsToCopy,
+  requireAgentIds,
 } from "./copier.js";
 
 describe("generateFlowReadme", () => {
@@ -92,29 +92,21 @@ describe("isValidWorkflowForCopy", () => {
   });
 });
 
-describe("computeWorkflowsToCopy", () => {
-  const availableIds = ["wf1", "wf2", "wf3", "wf4"];
-
-  it("should throw when requestedIds is empty", () => {
-    assert.throws(() => computeWorkflowsToCopy([], availableIds), { message: /workflowIds is required/ });
+describe("requireWorkflowIds", () => {
+  it("should throw when ids is empty", () => {
+    assert.throws(() => requireWorkflowIds([]), { message: /workflowIds is required/ });
   });
 
-  it("should throw when requestedIds is undefined", () => {
-    assert.throws(() => computeWorkflowsToCopy(undefined, availableIds), { message: /workflowIds is required/ });
+  it("should throw when ids is undefined", () => {
+    assert.throws(() => requireWorkflowIds(undefined), { message: /workflowIds is required/ });
   });
 
-  it("should throw when requestedIds is null", () => {
-    assert.throws(() => computeWorkflowsToCopy(null, availableIds), { message: /workflowIds is required/ });
+  it("should throw when ids is null", () => {
+    assert.throws(() => requireWorkflowIds(null), { message: /workflowIds is required/ });
   });
 
-  it("should return only requested IDs when specified", () => {
-    const result = computeWorkflowsToCopy(["wf1", "wf3"], availableIds);
-    assert.deepStrictEqual(result, ["wf1", "wf3"]);
-  });
-
-  it("should return requested IDs even if not in available", () => {
-    const result = computeWorkflowsToCopy(["wf1", "wf99"], availableIds);
-    assert.deepStrictEqual(result, ["wf1", "wf99"]);
+  it("should not throw when ids are provided", () => {
+    assert.doesNotThrow(() => requireWorkflowIds(["wf1", "wf2"]));
   });
 });
 
@@ -144,21 +136,20 @@ describe("isValidAgentForCopy", () => {
   });
 });
 
-describe("computeAgentsToCopy", () => {
-  it("should throw when requestedIds is empty", () => {
-    assert.throws(() => computeAgentsToCopy([]), { message: /agentIds is required/ });
+describe("requireAgentIds", () => {
+  it("should throw when ids is empty", () => {
+    assert.throws(() => requireAgentIds([]), { message: /agentIds is required/ });
   });
 
-  it("should throw when requestedIds is undefined", () => {
-    assert.throws(() => computeAgentsToCopy(undefined), { message: /agentIds is required/ });
+  it("should throw when ids is undefined", () => {
+    assert.throws(() => requireAgentIds(undefined), { message: /agentIds is required/ });
   });
 
-  it("should throw when requestedIds is null", () => {
-    assert.throws(() => computeAgentsToCopy(null), { message: /agentIds is required/ });
+  it("should throw when ids is null", () => {
+    assert.throws(() => requireAgentIds(null), { message: /agentIds is required/ });
   });
 
-  it("should return requested IDs when specified", () => {
-    const result = computeAgentsToCopy(["developer", "tester"]);
-    assert.deepStrictEqual(result, ["developer", "tester"]);
+  it("should not throw when ids are provided", () => {
+    assert.doesNotThrow(() => requireAgentIds(["developer", "tester"]));
   });
 });

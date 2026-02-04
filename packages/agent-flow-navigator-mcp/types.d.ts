@@ -6,6 +6,8 @@
  * - end: Exit point with result classification
  * - task: Work performed by agent
  * - gate: Review/approval checkpoint
+ * - fork: Fan out to parallel branches
+ * - join: Collect parallel branches
  * - subflow: Connector to another workflow
  */
 
@@ -13,7 +15,7 @@
 // Node Types (Discriminated Union)
 // =============================================================================
 
-export type Node = StartNode | EndNode | TaskNode | GateNode | SubflowNode | ForkNode | JoinNode;
+export type Node = StartNode | EndNode | TaskNode | GateNode | ForkNode | JoinNode | SubflowNode;
 
 export interface StartNode {
   type: "start";
@@ -46,6 +48,7 @@ export interface TaskNode {
   type: "task";
   name: string;
   description?: string;
+  instructions?: string;
   agent?: string;
   emoji?: string;
   stage?: Stage;
@@ -63,6 +66,7 @@ export interface GateNode {
   type: "gate";
   name: string;
   description?: string;
+  instructions?: string;
   agent?: string;
   emoji?: string;
   stage?: Stage;
@@ -70,6 +74,30 @@ export interface GateNode {
   maxRetries?: number;
   config?: Record<string, unknown>;
   context_files?: string[];
+}
+
+/**
+ * Fork node - fan out to parallel branches.
+ * Branches are determined by outgoing edges.
+ */
+export interface ForkNode {
+  type: "fork";
+  name?: string;
+  description?: string;
+  join: string; // ID of paired join node
+  maxConcurrency?: number;
+}
+
+/**
+ * Join node - collect parallel branches.
+ * Strategy determines how to evaluate branch outcomes.
+ */
+export interface JoinNode {
+  type: "join";
+  name?: string;
+  description?: string;
+  fork: string; // ID of paired fork node
+  strategy?: "all-pass" | "any-pass";
 }
 
 /**
@@ -83,31 +111,7 @@ export interface SubflowNode {
   inputs?: Record<string, string>;
 }
 
-/**
- * Fork node - declares parallel branches within the same workflow.
- * Each branch names an entry step. Links to a join node that collects results.
- */
-export interface ForkNode {
-  type: "fork";
-  name: string;
-  description?: string;
-  branches: Record<string, { entryStep: string; description?: string }>;
-  join: string; // join node ID
-}
-
-/**
- * Join node - collects results from parallel branches.
- * Strategy determines how branch results are evaluated.
- */
-export interface JoinNode {
-  type: "join";
-  name: string;
-  description?: string;
-  fork: string; // fork node ID
-  strategy?: "all-pass" | "any-pass"; // default: "all-pass"
-}
-
-export type Stage = "planning" | "development" | "verification" | "delivery";
+export type Stage = "planning" | "development" | "verification" | "delivery" | "investigation";
 
 // =============================================================================
 // Edge Definition
@@ -139,82 +143,90 @@ export interface Workflow {
 }
 
 // =============================================================================
-// Engine Types
+// Navigation API Types (v3 - prose instructions)
 // =============================================================================
 
-export interface EvaluationResult {
-  nextStep: string | null;
-  action: EdgeAction;
-  retriesUsed?: number;
-  retriesRemaining?: number;
-  maxRetries?: number;
-  edge?: Edge;
-  reason?: string;
-}
-
-export type EdgeAction =
-  | "unconditional" // Edge with no 'on' condition
-  | "conditional" // Edge matched 'on' condition
-  | "retry" // Failed but within retry limit, looping back
-  | "escalate" // Failed and exceeded retry limit
-  | "no_outgoing_edges" // Terminal node (no edges)
-  | "no_matching_edge"; // No edge matched the output
-
-// =============================================================================
-// Navigate Options
-// =============================================================================
-
-export interface NavigateOptions {
+/**
+ * Start: Initialize workflow on task at any step
+ */
+export interface StartOptions {
+  /** Path to task file (writes workflow state) */
   taskFilePath?: string;
-  workflowType?: string;
-  result?: "passed" | "failed";
+  /** Workflow ID (required) */
+  workflowType: string;
+  /** User's task description */
   description?: string;
-  projectRoot?: string;
-  autonomy?: boolean;
-  /** Start at a specific step instead of the beginning (mid-flow recovery). Only used when starting a workflow (no taskFilePath). Ignored during advance. */
+  /** Start at specific step (for mid-flow recovery or child tasks) */
   stepId?: string;
 }
 
-export interface NavigateResponse {
+/**
+ * Current: Read current workflow position (read-only)
+ */
+export interface CurrentOptions {
+  /** Path to task file (required) */
+  taskFilePath: string;
+}
+
+/**
+ * Next: Advance workflow based on step outcome
+ */
+export interface NextOptions {
+  /** Path to task file (required) */
+  taskFilePath: string;
+  /** Outcome of current step (required) */
+  result: "passed" | "failed";
+}
+
+/**
+ * Unified response shape for all navigation operations.
+ * Returns current position and prose instructions.
+ * Graph topology is private - orchestrator receives actionable context.
+ */
+export interface NavigationResponse {
+  /** Current step ID */
   currentStep: string;
-  stage: Stage | null;
-  subagent: string | null;
-  stepInstructions: { name: string; description: string | null; guidance: string } | null;
-  terminal: "start" | "success" | "hitl" | "failure" | null;
-  action: string;
-  retriesIncremented: boolean;
-  autonomyContinued: boolean;
-  maxRetries: number;
-  orchestratorInstructions: string | null;
-  fork?: { branches: Record<string, { entryStep: string; description?: string }>; joinStep: string };
-  join?: { forkStep: string; strategy: string };
+  /** Prose instructions for the orchestrator - context-specific based on node type */
+  instructions: string;
+  /** Terminal type if at start/end/join node */
+  terminal: "start" | "success" | "hitl" | "failure" | "join" | null;
+  /** Metadata for task storage */
   metadata: {
     workflowType: string;
     currentStep: string;
     retryCount: number;
-    autonomy?: boolean;
+    userDescription: string | null;
+    stepName: string;
   };
-  sourceRoot: string | null;
+}
+
+/**
+ * Error response when transition fails
+ */
+export interface NavigationError {
+  error: string;
+  currentStep: string;
+  result?: string;
+  metadata: {
+    workflowType: string;
+    currentStep: string;
+    retryCount: number;
+    userDescription: string | null;
+  };
 }
 
 // =============================================================================
-// Context Resolution
+// Engine Types
 // =============================================================================
 
-/**
- * Resolve a context_files entry to an absolute path.
- * - "./path" → relative to sourceRoot (the workflow's source directory)
- * - "path"   → relative to projectRoot
- */
-export function resolveContextFile(file: string, projectRoot: string, sourceRoot?: string | null): string;
-
-export function resolveProseRefs(text: string | null, sourceRoot: string | null): string | null;
-
-export function buildContextInstructions(options: {
-  contextFiles?: string[];
-  projectRoot?: string | null;
-  sourceRoot?: string | null;
-}): string | null;
+export interface TransitionResult {
+  nextStep: string | null;
+  action?: "unconditional" | "conditional" | "retry" | "escalate";
+  newRetryCount?: number;
+  resetRetries?: boolean;
+  error?: string;
+  result?: string;
+}
 
 // =============================================================================
 // Store Types

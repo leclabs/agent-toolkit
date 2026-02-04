@@ -2,27 +2,30 @@
 
 [![npm](https://img.shields.io/npm/v/@leclabs/agent-flow-navigator-mcp)](https://npmjs.com/package/@leclabs/agent-flow-navigator-mcp)
 
-A workflow state machine MCP server that navigates agents through graph-based workflows.
+A **finite state machine** for workflow navigation, exposed via MCP.
 
-Navigator tracks task state and evaluates graph edges -- it tells the orchestrator _where to go next_, but doesn't drive. Think of it like a GPS: you tell it where you are and what happened, it tells you where to go.
+Traditional workflow engines use agents as tools. Navigator inverts this - the AI orchestrator stays in control and uses the FSM for navigation. Think GPS: you tell it where you are and what happened, it tells you where to go.
+
+## Key Properties
+
+- **FSM interpreter** -- Evaluates graph edges, tracks position, handles retries
+- **MCP interface** -- Generic protocol; currently uses Claude Code task file schema
+- **Inversion of control** -- Orchestrator drives, Navigator navigates
+- **Built-in catalog** -- 16 workflow templates, copy to customize
 
 ## Installation
 
-Run directly with npx:
-
 ```bash
+# Run directly
 npx -y @leclabs/agent-flow-navigator-mcp
-```
 
-Or install globally:
-
-```bash
+# Or install globally
 npm install -g @leclabs/agent-flow-navigator-mcp
 ```
 
-## Claude Code Configuration
+## MCP Configuration
 
-Add to your `.mcp.json`:
+Add to your Claude Code plugin's `.mcp.json`:
 
 ```json
 {
@@ -37,56 +40,81 @@ Add to your `.mcp.json`:
 
 ## Quick Start
 
-Navigator works with the [flow plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) to provide structured workflow execution:
-
-1. **Initialize workflows** -- Copy workflow templates to your project with `CopyWorkflows`
-2. **Start a task** -- Use `Navigate` with a workflow type and description
-3. **Follow the flow** -- Navigator tells you the current step and what to do
-4. **Advance on completion** -- Report `passed` or `failed` to move to the next step
-
 ```
-User: "Add dark mode support"
-  ↓
-Navigate(workflowType: "feature-development", description: "Add dark mode support")
-  ↓
-Navigator returns: currentStep: "parse_requirements", stage: "planning"
-  ↓
-Agent executes step, then calls Navigate(taskFilePath: "...", result: "passed")
-  ↓
-Navigator returns: currentStep: "explore_codebase", stage: "planning"
-  ↓
-... continues through workflow ...
+Init(taskFilePath, workflowType: "feature-development", description: "Add dark mode")
+  → { currentStep: "start", instructions: "→ Call Start()" }
+
+Start(taskFilePath)
+  → { currentStep: "parse_requirements", agent: "Planner", instructions: "..." }
+
+[Orchestrator executes step]
+
+Next(taskFilePath, result: "passed")
+  → { currentStep: "explore_codebase", agent: "Planner", instructions: "..." }
+
+[Loop until terminal node]
 ```
+
+The pattern: `Init` → `Start` → loop(`Current` → work → `Next`) → terminal
 
 ## MCP Tools Reference
 
-| Tool             | Description                                                  |
-| ---------------- | ------------------------------------------------------------ |
-| `Navigate`       | Start a workflow, get current state, or advance to next step |
-| `Diagram`        | Generate a mermaid flowchart for a workflow                  |
-| `ListWorkflows`  | List all available workflows                                 |
-| `SelectWorkflow` | Get workflow selection dialog for user interaction           |
-| `CopyWorkflows`  | Copy workflows from catalog to project                       |
-| `CopyAgents`     | Copy agent templates from catalog to project                 |
-| `ListCatalog`    | List workflows and agents available in the catalog           |
-| `LoadWorkflows`  | Load workflows at runtime from project or external plugin    |
+### Navigation Tools
 
-### Navigate
+| Tool      | Description                                             |
+| --------- | ------------------------------------------------------- |
+| `Init`    | Initialize workflow on task (idempotent)                |
+| `Start`   | Begin work - advance from start node to first real step |
+| `Current` | Read current workflow position (read-only)              |
+| `Next`    | Advance workflow based on step outcome                  |
 
-The primary tool. Operates in 3 modes:
+### Management Tools
 
-- **Start**: Pass `workflowType` + `description` to begin a workflow
-- **Current**: Pass `taskFilePath` to get current step state
-- **Advance**: Pass `taskFilePath` + `result` to move to the next step
+| Tool             | Description                                               |
+| ---------------- | --------------------------------------------------------- |
+| `Diagram`        | Generate a mermaid flowchart for a workflow               |
+| `ListWorkflows`  | List all available workflows                              |
+| `SelectWorkflow` | Get workflow selection dialog for user interaction        |
+| `CopyWorkflows`  | Copy workflows from catalog to project                    |
+| `CopyAgents`     | Copy agent templates from catalog to project              |
+| `ListCatalog`    | List workflows and agents available in the catalog        |
+| `LoadWorkflows`  | Load workflows at runtime from project or external plugin |
 
-| Parameter      | Type                 | Description                                               |
-| -------------- | -------------------- | --------------------------------------------------------- |
-| `workflowType` | string               | Workflow ID (for start only, e.g., "feature-development") |
-| `description`  | string               | User's task description (for start)                       |
-| `taskFilePath` | string               | Path to task file (for advance/current)                   |
-| `result`       | "passed" \| "failed" | Step result (for advance)                                 |
-| `autonomy`     | boolean              | Auto-continue through stage boundary end nodes            |
-| `stepId`       | string               | Start at a specific step (mid-flow recovery)              |
+### Init
+
+Initialize a workflow on a task. Idempotent: returns current state if already initialized. Task stays pending until `Start()` is called.
+
+| Parameter      | Type   | Description                                                      |
+| -------------- | ------ | ---------------------------------------------------------------- |
+| `taskFilePath` | string | Path to task file (writes workflow state)                        |
+| `workflowType` | string | Workflow ID (required for new init, e.g., "feature-development") |
+| `description`  | string | User's task description                                          |
+| `stepId`       | string | Start at specific step (for mid-flow recovery or child tasks)    |
+
+### Start
+
+Begin work - advance from start node to first real step. Sets task to in_progress. Requires `Init()` first.
+
+| Parameter      | Type   | Description                  |
+| -------------- | ------ | ---------------------------- |
+| `taskFilePath` | string | Path to task file (required) |
+
+### Current
+
+Read current workflow position. Returns step info and outgoing edges without modifying state.
+
+| Parameter      | Type   | Description                  |
+| -------------- | ------ | ---------------------------- |
+| `taskFilePath` | string | Path to task file (required) |
+
+### Next
+
+Advance workflow based on step outcome. Returns new step info and outgoing edges.
+
+| Parameter      | Type                 | Description                        |
+| -------------- | -------------------- | ---------------------------------- |
+| `taskFilePath` | string               | Path to task file (required)       |
+| `result`       | "passed" \| "failed" | Outcome of current step (required) |
 
 ### Diagram
 
@@ -129,9 +157,10 @@ Lists workflows available in the built-in catalog. No parameters.
 │  (Executes tasks, delegates to subagents)        │
 └──────────────────────┬──────────────────────────┘
                        │
-       Navigate ───────┼─────── Diagram
-       ListWorkflows ──┤        CopyWorkflows
-       SelectWorkflow ─┤        ListCatalog
+       Start ──────────┼─────── Diagram
+       Current ────────┤        CopyWorkflows
+       Next ───────────┤        ListCatalog
+       ListWorkflows ──┤        LoadWorkflows
                        │
 ┌──────────────────────┴──────────────────────────┐
 │                   NAVIGATOR                      │
@@ -152,8 +181,8 @@ Lists workflows available in the built-in catalog. No parameters.
 | Concept                 | Description                                                                            |
 | ----------------------- | -------------------------------------------------------------------------------------- |
 | **Workflow Definition** | A graph blueprint describing how to execute a type of work (nodes + conditional edges) |
-| **Navigate 3-Mode API** | Start a workflow, get current state, or advance -- one tool, three calling patterns    |
-| **Write-Through**       | State transitions are persisted to the task file atomically on every advance           |
+| **Start/Current/Next**  | Three explicit tools: initialize, read position, advance based on outcome              |
+| **Write-Through**       | State transitions are persisted to the task file atomically on Start and Next          |
 | **Conditional Edges**   | Edges with `on` condition (passed/failed) -- retry logic is on nodes via `maxRetries`  |
 | **HITL Escalation**     | When retries are exhausted, tasks route to end nodes with `escalation: "hitl"`         |
 
@@ -276,10 +305,19 @@ See `catalog/workflows/bug-hunt.json` for a complete working example.
 npm test
 ```
 
+## Building Your Own Plugin
+
+Navigator is designed to be used by Claude Code plugins. The [Flow plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) is just a session hook that injects rules. To build your own:
+
+1. **Add Navigator MCP** -- Configure in your plugin's `.mcp.json`
+2. **Write orchestration rules** -- Tell Claude how to use Init/Start/Current/Next
+3. **Inject via session hook** -- Rules become part of system instructions
+4. **Optionally add commands** -- Skills for task creation, workflow selection, etc.
+
 ## Links
 
 - [GitHub Repository](https://github.com/leclabs/agent-toolkit)
-- [Flow Plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow)
+- [Flow Plugin](https://github.com/leclabs/agent-toolkit/tree/main/plugins/flow) -- Reference Claude Code implementation
 
 ## License
 
